@@ -16,7 +16,8 @@ $Project "captioncompiler"
 
 $Project "client"
 {
-	"game\client\client_hl2mp.vpc"		[($WIN32||$POSIX) && $HL2MP]
+	"game\client\client_hl2mp.vpc"		[($WIN32||$POSIX) && $THS_HL2MP_MODIFIED]
+	"game\client\client_episodic_test_mod.vpc"		[($WIN32||$POSIX) && $THS_EPISODIC_MODIFIED]
 }
 
 $Project "fgdlib"
@@ -26,7 +27,7 @@ $Project "fgdlib"
 
 $Project "game_shader_dx9"
 {
-	"materialsystem\stdshaders\game_shader_dx9_hl2mp.vpc" [$HL2MP]
+	"materialsystem\stdshaders\game_shader_dx9_ths_main.vpc" [($WIN32||$POSIX)]
 }
 
 $Project "glview"
@@ -41,7 +42,8 @@ $Project "height2normal"
 
 $Project "server"
 {
-	"game\server\server_hl2mp.vpc"		[($WIN32||$POSIX) && $HL2MP]
+	"game\server\server_hl2mp.vpc"		[($WIN32||$POSIX) && $THS_HL2MP_MODIFIED]
+	"game\server\server_episodic_test_mod.vpc"		[($WIN32||$POSIX) && $THS_EPISODIC_MODIFIED]
 }
 
 $Project "responserules"
