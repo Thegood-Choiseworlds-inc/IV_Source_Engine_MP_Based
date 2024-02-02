@@ -10,7 +10,8 @@
 
 $Games
 {
-	"HL2MP"
+	"THS_HL2MP_MODIFIED"
+	"THS_EPISODIC_MODIFIED"
 }
 
 // Makes the VPC scripts work in the SDK's context
