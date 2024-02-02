@@ -1,0 +1,19 @@
+//-----------------------------------------------------------------------------
+//	CLIENT_EPISODIC_MOD.VPC
+//
+//	Project Script
+//-----------------------------------------------------------------------------
+
+$Macro SRCDIR		"..\.."
+$Macro GAMENAME 	"episodic_test" [!$SOURCESDK]
+$Macro GAMENAME 	"episodic_test" [$SOURCESDK]
+
+$Include "$SRCDIR\game\client\client_episodic_base.vpc"
+
+$Project "Client (Episodic Mod)"
+{
+	$Folder	"Source Files"
+	{
+		//$File	"hud_chat.cpp"
+	}	
+}
