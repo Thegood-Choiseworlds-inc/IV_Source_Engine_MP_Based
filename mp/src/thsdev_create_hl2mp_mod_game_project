@@ -1,0 +1,5 @@
+#!/bin/bash
+
+pushd `dirname $0`
+devtools/bin/vpc /THS_HL2MP_MODIFIED +game /mksln games
+popd
