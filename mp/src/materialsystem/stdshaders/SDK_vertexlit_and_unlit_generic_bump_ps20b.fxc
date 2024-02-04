@@ -124,7 +124,6 @@ sampler RandRotSampler						: register( s6 );	// RandomRotation sampler
 sampler FlashlightSampler					: register( s7 );
 sampler ShadowDepthSampler					: register( s8 );	// Flashlight shadow depth map sampler
 sampler DiffuseWarpSampler					: register( s9 );	// Lighting warp sampler (1D texture for diffuse lighting modification)
-
 sampler LightMapSampler			: register( s12 );
 
 struct PS_INPUT

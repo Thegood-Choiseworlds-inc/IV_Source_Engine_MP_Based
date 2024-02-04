@@ -10,6 +10,7 @@
 //  SKIP: !$FASTPATH && $FASTPATHENVMAPTINT
 //  SKIP: !$BUMPMAP && $DIFFUSEBUMPMAP
 //	SKIP: !$BUMPMAP && $BUMPMAP2
+//	SKIP: $BASEALPHAENVMAPMASK && ( $BUMPMAP && !$ENVMAPANISOTROPY )
 //	SKIP: !$BUMPMAP2 && $BUMPMASK
 //	SKIP: $ENVMAPMASK && $BUMPMAP2
 //	SKIP: $BASETEXTURENOENVMAP && ( !$BASETEXTURE2 || !$CUBEMAP )
@@ -24,6 +25,8 @@
 //	SKIP: !$BUMPMAP && ($NORMAL_DECODE_MODE == 2)
 //	SKIP: !$BUMPMAP && ($NORMALMASK_DECODE_MODE == 1)
 //	SKIP: !$BUMPMAP && ($NORMALMASK_DECODE_MODE == 2)
+//  SKIP: $ENVMAPANISOTROPY && !$ENVMAP && ( $BUMPMAP != 1 )
+//  SKIP: $ENVMAPANISOTROPY && $NORMALMAPALPHAENVMAPMASK
 
 // 360 compiler craps out on some combo in this family.  Content doesn't use blendmode 10 anyway
 //  SKIP: $FASTPATH && $PIXELFOGTYPE && $BASETEXTURE2 && $DETAILTEXTURE && $CUBEMAP && ($DETAIL_BLEND_MODE == 10 )
@@ -114,6 +117,20 @@ const float4 g_FlashlightAttenuationFactors	: register( c13 );
 const float3 g_FlashlightPos				: register( c14 );
 const float4x4 g_FlashlightWorldToTexture	: register( c15 ); // through c18
 const float4 g_ShadowTweaks					: register( c19 );
+
+#if ( ( CUBEMAP == 2 ) || ( ENVMAPANISOTROPY ) )
+	const float4 g_envMapParams : register( c20 );
+#endif
+
+#if ( CUBEMAP == 2 )
+	#define g_DiffuseCubemapScale g_envMapParams.y
+	#define g_fvDiffuseCubemapMin float3( g_envMapParams.z, g_envMapParams.z, g_envMapParams.z )
+	#define g_fvDiffuseCubemapMax float3( g_envMapParams.w, g_envMapParams.w, g_envMapParams.w )
+#endif
+
+#if ( ENVMAPANISOTROPY )
+	#define g_EnvmapAnisotropyScale g_envMapParams.x
+#endif
 
 #if PARALLAXCORRECT
 // Parallax cubemaps
@@ -261,9 +278,14 @@ HALF4 main( PS_INPUT i ) : COLOR
 	GetBaseTextureAndNormal( BaseTextureSampler, BaseTextureSampler2, BumpmapSampler, bBaseTexture2, bBumpmap || bNormalMapAlphaEnvmapMask, 
 		baseTexCoords, i.vertexColor.rgb, baseColor, baseColor2, vNormal );
 #endif
-
+	#if ( ENVMAPANISOTROPY )
+		HALF anisotropyFactor = g_EnvmapAnisotropyScale;
+	#endif
 #if BUMPMAP == 1	// not ssbump
 	vNormal.xyz = vNormal.xyz * 2.0f - 1.0f;					// make signed if we're not ssbump
+		#if ( ENVMAPANISOTROPY )
+			anisotropyFactor *= (HALF)vNormal.a;
+		#endif
 #endif
 
 	HALF3 lightmapColor1 = HALF3( 1.0f, 1.0f, 1.0f );
@@ -593,6 +615,20 @@ HALF4 main( PS_INPUT i ) : COLOR
 		// Calc Fresnel factor
 		half3 eyeVect = normalize(worldVertToEyeVector);
 		HALF fresnel = 1.0 - dot( worldSpaceNormal, eyeVect );
+		
+		#if ( ENVMAPANISOTROPY ) // For anisotropic reflections on macroscopically rough sufaces like asphalt
+			// Orthogonalize the view vector to the  surface normal, and use it as the anisotropy direction
+			reflectVect = normalize( reflectVect );
+			float3 rvec = cross( -eyeVect.xyz, worldSpaceNormal.xyz );
+			float3 tang = cross( rvec, worldSpaceNormal.xyz );
+				   rvec = cross( tang, reflectVect );
+			float3 reflectVectAniso = normalize( cross( rvec, worldSpaceNormal.xyz ) );
+			// Anisotropy amount is influenced by the view angle to the surface.  The more oblique the angle the more anisotropic the surface appears.
+			anisotropyFactor *= dot( reflectVectAniso, -eyeVect );
+			anisotropyFactor *= anisotropyFactor;
+			reflectVect = normalize( lerp( reflectVect, reflectVectAniso, anisotropyFactor ) );
+		#endif
+		
 		fresnel = pow( fresnel, 5.0 );
 		fresnel = fresnel * g_OneMinusFresnelReflection + g_FresnelReflection;
 		
@@ -614,6 +650,12 @@ HALF4 main( PS_INPUT i ) : COLOR
 #endif
 		
 		specularLighting = ENV_MAP_SCALE * texCUBE( EnvmapSampler, reflectVect );
+		
+		#if (CUBEMAP == 2) //cubemap darkened by lightmap mode
+			float3 cubemapLight = saturate( ( diffuseLighting - g_fvDiffuseCubemapMin ) * g_fvDiffuseCubemapMax );
+			specularLighting = lerp( specularLighting, specularLighting * cubemapLight, (HALF)g_DiffuseCubemapScale ); //reduce the cubemap contribution when the pixel is in shadow
+		#endif
+		
 		specularLighting *= specularFactor;
 								   
 		specularLighting *= g_EnvmapTint.rgb;

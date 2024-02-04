@@ -64,6 +64,11 @@ BEGIN_VS_SHADER( SDK_WorldVertexTransition_DX9, "Help for SDK_WorldVertexTransit
 		SHADER_PARAM( SSBUMP, SHADER_PARAM_TYPE_INTEGER, "0", "whether or not to use alternate bumpmap format with height" )
 		SHADER_PARAM( SEAMLESS_SCALE, SHADER_PARAM_TYPE_FLOAT, "0", "Scale factor for 'seamless' texture mapping. 0 means to use ordinary mapping" )
 
+		SHADER_PARAM(ENVMAPANISOTROPY, SHADER_PARAM_TYPE_BOOL, "0", "Enable anisotropic cubemap lookups for macroscopically rough/microscopically smooth surfaces, like wet asphalt")
+		SHADER_PARAM(ENVMAPANISOTROPYSCALE, SHADER_PARAM_TYPE_FLOAT, "1.0", "Scale anisotropy amount for cubemap lookups")
+		SHADER_PARAM(ENVMAPLIGHTSCALE, SHADER_PARAM_TYPE_FLOAT, "0.0", "How much the lightmap effects environment map reflection, 0.0 is off, 1.0 will allow complete blackness of the environment map if the lightmap is black")
+		SHADER_PARAM(ENVMAPLIGHTSCALEMINMAX, SHADER_PARAM_TYPE_VEC2, "[0.0 1.0]", "Thresholds for the lightmap envmap effect.  Setting the min higher increases the minimum light amount at which the envmap gets nerfed to nothing.")
+
 		SHADER_PARAM( PHONG, SHADER_PARAM_TYPE_BOOL, "0", "enables phong lighting" )
 		SHADER_PARAM( PHONGBOOST, SHADER_PARAM_TYPE_FLOAT, "1.0", "Phong overbrightening factor (specular mask channel should be authored to account for this)" )
 		SHADER_PARAM( PHONGFRESNELRANGES, SHADER_PARAM_TYPE_VEC3, "[0  0.5  1]", "Parameters for remapping fresnel output" )
@@ -128,6 +133,12 @@ BEGIN_VS_SHADER( SDK_WorldVertexTransition_DX9, "Help for SDK_WorldVertexTransit
 		info.m_nSelfShadowedBumpFlag = SSBUMP;
 		info.m_nSeamlessMappingScale = SEAMLESS_SCALE;
 		info.m_nAlphaTestReference = -1;
+
+		info.m_nEnvmapAnisotropy = ENVMAPANISOTROPY;
+		info.m_nEnvmapAnisotropyScale = ENVMAPANISOTROPYSCALE;
+
+		info.m_nEnvMapLightScale = ENVMAPLIGHTSCALE;
+		info.m_nEnvMapLightScaleMinMax = ENVMAPLIGHTSCALEMINMAX;
 
 		info.m_nPhong = PHONG;
 		info.m_nPhongBoost = PHONGBOOST;

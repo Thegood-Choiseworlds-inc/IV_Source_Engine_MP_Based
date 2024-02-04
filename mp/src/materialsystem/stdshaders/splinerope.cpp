@@ -3,7 +3,7 @@
 #include "BaseVSShader.h"
 #include "convar.h"
 
-#include "SDK_splinerope_ps20.inc"
+//#include "SDK_splinerope_ps20.inc"
 #include "SDK_splinerope_ps20b.inc"
 #include "SDK_splinerope_vs20.inc"
 
@@ -91,23 +91,23 @@ BEGIN_VS_SHADER( SDK_Cable_DX9, "Help for SplineRope" )
 			int numTexCoords = 4;
 			pShaderShadow->VertexShaderVertexFormat( flags, numTexCoords, s_TexCoordSize, 0 );
 
-			DECLARE_STATIC_VERTEX_SHADER( sdk_splinerope_vs20 );
-			SET_STATIC_VERTEX_SHADER( sdk_splinerope_vs20 );
+			DECLARE_STATIC_VERTEX_SHADER( SDK_splinerope_vs20 );
+			SET_STATIC_VERTEX_SHADER( SDK_splinerope_vs20 );
 
 			if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
-				DECLARE_STATIC_PIXEL_SHADER( sdk_splinerope_ps20b );
+				DECLARE_STATIC_PIXEL_SHADER( SDK_splinerope_ps20b );
 				SET_STATIC_PIXEL_SHADER_COMBO( SHADER_SRGB_READ, bShaderSrgbRead );
 				SET_STATIC_PIXEL_SHADER_COMBO( SHADOWDEPTH, bShadowDepth );
-				SET_STATIC_PIXEL_SHADER( sdk_splinerope_ps20b );
+				SET_STATIC_PIXEL_SHADER( SDK_splinerope_ps20b );
 			}
-			else
+			/*else
 			{
 				DECLARE_STATIC_PIXEL_SHADER( sdk_splinerope_ps20 );
 				SET_STATIC_PIXEL_SHADER_COMBO( SHADER_SRGB_READ, bShaderSrgbRead );
 				SET_STATIC_PIXEL_SHADER_COMBO( SHADOWDEPTH, bShadowDepth );
 				SET_STATIC_PIXEL_SHADER( sdk_splinerope_ps20 );
-			}
+			}*/
 		}
 		DYNAMIC_STATE
 		{
@@ -143,26 +143,26 @@ BEGIN_VS_SHADER( SDK_Cable_DX9, "Help for SplineRope" )
 				pShaderAPI->SetPixelShaderConstant( 1, vEyePos, 1 );
 			}
 
-			DECLARE_DYNAMIC_VERTEX_SHADER( sdk_splinerope_vs20 );
+			DECLARE_DYNAMIC_VERTEX_SHADER( SDK_splinerope_vs20 );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( DOWATERFOG, pShaderAPI->GetSceneFogMode() == MATERIAL_FOG_LINEAR_BELOW_FOG_Z );
-			SET_DYNAMIC_VERTEX_SHADER( sdk_splinerope_vs20 );
+			SET_DYNAMIC_VERTEX_SHADER( SDK_splinerope_vs20 );
 
 			if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
-				DECLARE_DYNAMIC_PIXEL_SHADER( sdk_splinerope_ps20b );
+				DECLARE_DYNAMIC_PIXEL_SHADER( SDK_splinerope_ps20b );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( WRITE_DEPTH_TO_DESTALPHA, pShaderAPI->ShouldWriteDepthToDestAlpha() );
 				//SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetSceneFogMode() == MATERIAL_FOG_LINEAR_BELOW_FOG_Z );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
-				SET_DYNAMIC_PIXEL_SHADER( sdk_splinerope_ps20b );
+				SET_DYNAMIC_PIXEL_SHADER( SDK_splinerope_ps20b );
 			}
-			else
+			/*else
 			{
 				DECLARE_DYNAMIC_PIXEL_SHADER( sdk_splinerope_ps20 );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( WRITE_DEPTH_TO_DESTALPHA, 0 );
 				//SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetSceneFogMode() == MATERIAL_FOG_LINEAR_BELOW_FOG_Z );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
 				SET_DYNAMIC_PIXEL_SHADER( sdk_splinerope_ps20 );
-			}
+			}*/
 		}
 		Draw( );
 	}

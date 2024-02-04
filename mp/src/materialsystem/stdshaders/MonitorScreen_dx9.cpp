@@ -6,7 +6,7 @@
 
 #include "BaseVSShader.h"
 #include "SDK_unlittwotexture_vs20.inc"
-#include "SDK_monitorscreen_ps20.inc"
+//#include "SDK_monitorscreen_ps20.inc"
 #include "SDK_monitorscreen_ps20b.inc"
 #include "cpp_shader_constant_register_map.h"
 
@@ -115,21 +115,21 @@ BEGIN_VS_SHADER( SDK_MonitorScreen_DX9,
 			int userDataSize = 0;
 			pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, NULL, userDataSize );
 
-			DECLARE_STATIC_VERTEX_SHADER( sdk_unlittwotexture_vs20 );
-			SET_STATIC_VERTEX_SHADER( sdk_unlittwotexture_vs20 );
+			DECLARE_STATIC_VERTEX_SHADER( SDK_unlittwotexture_vs20 );
+			SET_STATIC_VERTEX_SHADER( SDK_unlittwotexture_vs20 );
 
 			if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
-				DECLARE_STATIC_PIXEL_SHADER( sdk_monitorscreen_ps20b );
+				DECLARE_STATIC_PIXEL_SHADER( SDK_monitorscreen_ps20b );
 				SET_STATIC_PIXEL_SHADER_COMBO( TEXTURE2, (bHasTexture2)?(1):(0) );
-				SET_STATIC_PIXEL_SHADER( sdk_monitorscreen_ps20b );
+				SET_STATIC_PIXEL_SHADER( SDK_monitorscreen_ps20b );
 			}
-			else
+			/*else
 			{
 				DECLARE_STATIC_PIXEL_SHADER( sdk_monitorscreen_ps20 );
 				SET_STATIC_PIXEL_SHADER_COMBO( TEXTURE2, (bHasTexture2)?(1):(0) );
 				SET_STATIC_PIXEL_SHADER( sdk_monitorscreen_ps20 );
-			}
+			}*/
 
 			DefaultFog();
 
@@ -157,25 +157,25 @@ BEGIN_VS_SHADER( SDK_MonitorScreen_DX9,
 			pShaderAPI->SetPixelShaderConstant( PSREG_EYEPOS_SPEC_EXPONENT, vEyePos_SpecExponent, 1 );
 
 
-			DECLARE_DYNAMIC_VERTEX_SHADER( sdk_unlittwotexture_vs20 );
+			DECLARE_DYNAMIC_VERTEX_SHADER( SDK_unlittwotexture_vs20 );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( SKINNING, pShaderAPI->GetCurrentNumBones() > 0 );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( DOWATERFOG, pShaderAPI->GetSceneFogMode() == MATERIAL_FOG_LINEAR_BELOW_FOG_Z );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( COMPRESSED_VERTS, (int)vertexCompression );
-			SET_DYNAMIC_VERTEX_SHADER( sdk_unlittwotexture_vs20 );
+			SET_DYNAMIC_VERTEX_SHADER( SDK_unlittwotexture_vs20 );
 
 			if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
-				DECLARE_DYNAMIC_PIXEL_SHADER( sdk_monitorscreen_ps20b );
+				DECLARE_DYNAMIC_PIXEL_SHADER( SDK_monitorscreen_ps20b );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( WRITE_DEPTH_TO_DESTALPHA, bFullyOpaque && pShaderAPI->ShouldWriteDepthToDestAlpha() );
-				SET_DYNAMIC_PIXEL_SHADER( sdk_monitorscreen_ps20b );
+				SET_DYNAMIC_PIXEL_SHADER( SDK_monitorscreen_ps20b );
 			}
-			else
+			/*else
 			{
 				DECLARE_DYNAMIC_PIXEL_SHADER( sdk_monitorscreen_ps20 );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
 				SET_DYNAMIC_PIXEL_SHADER( sdk_monitorscreen_ps20 );
-			}
+			}*/
 		}
 		Draw();
 	}

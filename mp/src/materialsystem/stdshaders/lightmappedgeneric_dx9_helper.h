@@ -76,6 +76,11 @@ struct LightmappedGeneric_DX9_Vars_t
 	int m_nSelfShadowedBumpFlag;
 	int m_nSeamlessMappingScale;
 	int m_nAlphaTestReference;
+	int m_nEnvmapAnisotropy;
+	int m_nEnvmapAnisotropyScale;
+
+	int m_nEnvMapLightScale;
+	int m_nEnvMapLightScaleMinMax;
 
 	int m_nSoftEdges;
 	int m_nEdgeSoftnessStart;

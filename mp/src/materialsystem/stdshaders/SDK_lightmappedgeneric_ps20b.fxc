@@ -3,7 +3,7 @@
 // STATIC: "DETAILTEXTURE"				"0..1"
 // STATIC: "BUMPMAP"					"0..2"
 // STATIC: "BUMPMAP2"					"0..1"
-// STATIC: "CUBEMAP"					"0..1"
+// STATIC: "CUBEMAP"					"0..2"
 // STATIC: "ENVMAPMASK"					"0..1"
 // STATIC: "BASEALPHAENVMAPMASK"		"0..1"
 // STATIC: "SELFILLUM"					"0..1"
@@ -24,6 +24,8 @@
 // STATIC: "FLASHLIGHT"					"0..1"	[ps20b] [XBOX]
 // STATIC: "BASETEXTURETRANSFORM2"		"0..1"
 // STATIC: "PARALLAXCORRECT"			"0..1"
+// STATIC: "ENVMAPANISOTROPY"			"0..1"  [ps20b] [ps30]
+// STATIC: "ENVMAPANISOTROPY"			"0..0"  [ps20]
 
 // DYNAMIC: "FASTPATHENVMAPCONTRAST"	"0..1"
 // DYNAMIC: "FASTPATH"					"0..1"
@@ -42,8 +44,12 @@
 //  SKIP: ($DETAIL_BLEND_MODE == 2 ) || ($DETAIL_BLEND_MODE == 3 ) || ($DETAIL_BLEND_MODE == 4 )
 //  SKIP: ($DETAIL_BLEND_MODE == 5 ) || ($DETAIL_BLEND_MODE == 6 ) || ($DETAIL_BLEND_MODE == 7 )
 //  SKIP: ($DETAIL_BLEND_MODE == 8 ) || ($DETAIL_BLEND_MODE == 9 )
+//  SKIP: ($DETAIL_BLEND_MODE == 9) && ( $ENVMAPANISOTROPY )
 //  SKIP ($DETAIL_BLEND_MODE == 10 )
 //  SKIP ($DETAIL_BLEND_MODE == 11 )
+
+// program too complex for ps20. Don't do darkened cubemaps and 2 bump maps at the same time. Fairly arbitrary pairing just to get the damn thing compiling
+//	SKIP: ( $CUBEMAP == 2 ) && ( $BUMPMAP2 ) [ps20]
 
 //  SKIP: $PARALLAXCORRECT && !$CUBEMAP
 

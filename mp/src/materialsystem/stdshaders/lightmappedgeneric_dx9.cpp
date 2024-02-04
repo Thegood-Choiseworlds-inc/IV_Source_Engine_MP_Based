@@ -81,7 +81,9 @@ BEGIN_VS_SHADER( SDK_LightmappedGeneric,
 		SHADER_PARAM( PHONGBOOST, SHADER_PARAM_TYPE_FLOAT, "1.0", "Phong overbrightening factor (specular mask channel should be authored to account for this)" )
 		SHADER_PARAM( PHONGFRESNELRANGES, SHADER_PARAM_TYPE_VEC3, "[0  0.5  1]", "Parameters for remapping fresnel output" )
 		SHADER_PARAM( PHONGEXPONENT, SHADER_PARAM_TYPE_FLOAT, "5.0", "Phong exponent for local specular lights" )
-
+		SHADER_PARAM( ENVMAPANISOTROPY, SHADER_PARAM_TYPE_BOOL, "0", "Enable anisotropic cubemap lookups for macroscopically rough/microscopically smooth surfaces, like wet asphalt" )
+		SHADER_PARAM( ENVMAPANISOTROPYSCALE, SHADER_PARAM_TYPE_FLOAT, "1.0", "Scale anisotropy amount for cubemap lookups" )
+		
 #ifdef PARALLAX_CORRECTED_CUBEMAPS
 		// Parallax cubemaps
 		SHADER_PARAM( ENVMAPPARALLAX, SHADER_PARAM_TYPE_BOOL, "0", "Enables parallax correction code for env_cubemaps" )
@@ -90,6 +92,8 @@ BEGIN_VS_SHADER( SDK_LightmappedGeneric,
 		SHADER_PARAM( ENVMAPPARALLAXOBB3, SHADER_PARAM_TYPE_VEC4, "[0 0 1 0]", "The third line of the parallax correction OBB matrix" )
 		SHADER_PARAM( ENVMAPORIGIN, SHADER_PARAM_TYPE_VEC3, "[0 0 0]", "The world space position of the env_cubemap being corrected" )
 #endif
+		SHADER_PARAM( ENVMAPLIGHTSCALE, SHADER_PARAM_TYPE_FLOAT, "0.0", "How much the lightmap effects environment map reflection, 0.0 is off, 1.0 will allow complete blackness of the environment map if the lightmap is black" )
+		SHADER_PARAM( ENVMAPLIGHTSCALEMINMAX, SHADER_PARAM_TYPE_VEC2, "[0.0 1.0]", "Thresholds for the lightmap envmap effect.  Setting the min higher increases the minimum light amount at which the envmap gets nerfed to nothing." )
 END_SHADER_PARAMS
 
 	void SetupVars( LightmappedGeneric_DX9_Vars_t& info )
@@ -141,6 +145,10 @@ END_SHADER_PARAMS
 		info.m_nSelfShadowedBumpFlag = SSBUMP;
 		info.m_nSeamlessMappingScale = SEAMLESS_SCALE;
 		info.m_nAlphaTestReference = ALPHATESTREFERENCE;
+		info.m_nEnvmapAnisotropy = ENVMAPANISOTROPY;
+		info.m_nEnvmapAnisotropyScale = ENVMAPANISOTROPYSCALE;
+		info.m_nEnvMapLightScale = ENVMAPLIGHTSCALE;
+		info.m_nEnvMapLightScaleMinMax = ENVMAPLIGHTSCALEMINMAX;
 
 		info.m_nSoftEdges = SOFTEDGES;
 		info.m_nEdgeSoftnessStart = EDGESOFTNESSSTART;

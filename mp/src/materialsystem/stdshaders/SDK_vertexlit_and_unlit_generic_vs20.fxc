@@ -14,8 +14,7 @@
 //  STATIC: "TREESWAY"					"0..2"
 //  DYNAMIC: "COMPRESSED_VERTS"			"0..1"
 //	DYNAMIC: "DYNAMIC_LIGHT"			"0..1"
-//	DYNAMIC: "STATIC_LIGHT_VERTEX"		"0..1"
-//	DYNAMIC: "STATIC_LIGHT_LIGHTMAP"	"0..1"
+//	DYNAMIC: "STATIC_LIGHT"				"0..1"
 //	DYNAMIC: "DOWATERFOG"				"0..1"
 //	DYNAMIC: "SKINNING"					"0..1"
 //  DYNAMIC: "LIGHTING_PREVIEW"			"0..1"	[PC]
@@ -87,7 +86,7 @@ const float4 g_vMiscParams4					: register( SHADER_SPECIFIC_CONST_9 );
 //		 cMorphTargetTextureDim.z = 4tuples/morph
 const float3 cMorphTargetTextureDim			: register( SHADER_SPECIFIC_CONST_10 );
 const float4 cMorphSubrect					: register( SHADER_SPECIFIC_CONST_11 );
-sampler2D morphSampler						: register( D3DVERTEXTEXTURESAMPLER0, s0 );
+sampler2D morphSampler						: register( s0 );
 #endif
 
 struct VS_INPUT
@@ -157,7 +156,7 @@ VS_OUTPUT main( const VS_INPUT v )
 	VS_OUTPUT o = ( VS_OUTPUT )0;
 
 	bool bDynamicLight = DYNAMIC_LIGHT ? true : false;
-	bool bStaticLight = STATIC_LIGHT_VERTEX ? true : false;
+	bool bStaticLight = STATIC_LIGHT ? true : false;
 	bool bDoLighting = !g_bVertexColor && (bDynamicLight || bStaticLight);
 
 	float4 vPosition = v.vPos;
