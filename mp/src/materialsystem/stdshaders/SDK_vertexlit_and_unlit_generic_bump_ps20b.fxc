@@ -25,6 +25,10 @@
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"						[ps20b]
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"						[ps30] [PC]
 
+// DYNAMIC: "STATIC_LIGHT_LIGHTMAP"	    "0..1"  [ps20b] [ps30]
+// DYNAMIC: "STATIC_LIGHT_LIGHTMAP"	    "0..0"  [ps20]
+// DYNAMIC: "DEBUG_LUXELS"				"0..1"	[ps20b] [ps30]
+
 // We don't use light combos when doing the flashlight
 // SKIP: ( $FLASHLIGHT != 0 ) && ( $NUM_LIGHTS > 0 )				[PC]
 
@@ -65,6 +69,10 @@
 // SKIP: $NORMALMAPALPHAENVMAPMASK && $ENVMAPMASK
 // SKIP: $ENVMAPMASK && !$CUBEMAP
 
+// Debugging luxels only makes sense if we have lightmaps on this geometry.
+// SKIP: ($STATIC_LIGHT_LIGHTMAP == 0) && ($DEBUG_LUXELS == 1)
+// SKIP: ($SELFILLUMFRESNEL == 1) && ($DEBUG_LUXELS == 1)
+
 #include "common_flashlight_fxc.h"
 #include "common_vertexlitgeneric_dx9.h"
 
@@ -102,6 +110,10 @@ const float4 g_FlashlightAttenuationFactors	: register( c22 );
 const float3 g_FlashlightPos				: register( c23 );
 const float4x4 g_FlashlightWorldToTexture	: register( c24 ); // through c27
 
+#if DEBUG_LUXELS && !SELFILLUMFRESNEL
+const float4 g_LuxelScale : register( c11 );
+#endif
+
 sampler BaseTextureSampler					: register( s0 );
 sampler EnvmapSampler						: register( s1 );
 sampler DetailSampler						: register( s2 );
@@ -112,6 +124,8 @@ sampler RandRotSampler						: register( s6 );	// RandomRotation sampler
 sampler FlashlightSampler					: register( s7 );
 sampler ShadowDepthSampler					: register( s8 );	// Flashlight shadow depth map sampler
 sampler DiffuseWarpSampler					: register( s9 );	// Lighting warp sampler (1D texture for diffuse lighting modification)
+
+sampler LightMapSampler			: register( s12 );
 
 struct PS_INPUT
 {
@@ -243,6 +257,7 @@ float4 main( PS_INPUT i ) : COLOR
 #endif
 	}
 
+#if !STATIC_LIGHT_LIGHTMAP
 	if ( bDiffuseLighting )
 	{
 		diffuseLighting = PixelShaderDoLighting( i.worldPos_projPosZ.xyz, worldSpaceNormal,
@@ -250,6 +265,18 @@ float4 main( PS_INPUT i ) : COLOR
 				cAmbientCube, NormalizeSampler, nNumLights, cLightInfo, bHalfLambert,
 				false, 1.0f, bDoDiffuseWarp, DiffuseWarpSampler );
 	}
+#endif
+
+#if STATIC_LIGHT_LIGHTMAP
+	// This matches the behavior of vertex lighting, which multiplies by cOverbright (which is not accessible here)
+	// And converts from Gamma space to Linear space before being used.
+	float2 lightmapTexCoords = i.baseTexCoord2_tangentSpaceVertToEyeVectorXY.xy;
+	#if DEBUG_LUXELS && !SELFILLUMFRESNEL
+		lightmapTexCoords.xy *= g_LuxelScale.xy;
+	#endif
+	float3 f3LightmapColor = GammaToLinear( 2.0f * tex2D( LightMapSampler, lightmapTexCoords ).rgb );
+	diffuseLighting = f3LightmapColor;
+#endif
 
 	float3 albedo = baseColor;
 	if (bBlendTintByBaseAlpha)
