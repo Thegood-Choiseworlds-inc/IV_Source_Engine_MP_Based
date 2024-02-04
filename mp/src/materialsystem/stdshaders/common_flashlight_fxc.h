@@ -846,8 +846,8 @@ float3 DoFlashlight( float3 flashlightPos, float3 worldPos, float4 flashlightSpa
 	/*if ( flashlightSpacePosition.w < 0 )
 	{
 		return float3(0,0,0);
-	}*/
-	else
+	}
+	else*/
 	{
 		float3 vProjCoords = flashlightSpacePosition.xyz / flashlightSpacePosition.w;
 		float3 flashlightColor = float3(1,1,1);
