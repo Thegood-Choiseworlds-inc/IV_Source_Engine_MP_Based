@@ -51,6 +51,10 @@ float4 main( PS_INPUT i ) : COLOR
 	float3 spotColor = tex2D( SpotSampler, i.spotTexCoord );
 #endif
 
+#if ( defined(SHADER_MODEL_PS_2_B) || defined(SHADER_MODEL_PS_3_0) )
+	spotColor *= i.spotTexCoord.www > float3(0,0,0);	// Catch back projection (PC-only at the moment)
+#endif
+
 	float4 baseSample = tex2D( BaseTextureSampler, i.baseTexCoord );
 	float4 irisSample = tex2D( IrisSampler, i.irisTexCoord );
 

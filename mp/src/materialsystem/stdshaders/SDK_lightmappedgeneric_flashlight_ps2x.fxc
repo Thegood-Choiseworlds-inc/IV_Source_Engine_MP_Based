@@ -169,6 +169,10 @@ float4 main( PS_INPUT i ) : COLOR
 	spotColor = tex2D( SpotSampler, vProjCoords );
 #endif
 
+#if ( defined(SHADER_MODEL_PS_2_B) || defined(SHADER_MODEL_PS_3_0) )
+	spotColor *= i.spotTexCoord.www > float3(0,0,0);	// Catch back projection (PC-only at the moment)
+#endif
+
 	float4 baseColor = 0.0f;
 	float4 baseColor2 = 0.0f;
 	float4 vNormal = float4(0, 0, 1, 1);
