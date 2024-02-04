@@ -792,9 +792,12 @@ void DoSpecularFlashlight( float3 flashlightPos, float3 worldPos, float4 flashli
 	flashlightColor = tex2D( FlashlightSampler, vProjCoords );
 #endif
 
+#if defined(SHADER_MODEL_PS_2_B) || defined(SHADER_MODEL_PS_3_0)
+	flashlightColor *= flashlightSpacePosition.www > float3(0,0,0);	// Catch back projection (ps2b and up)
+#endif
 
 #if defined(SHADER_MODEL_PS_2_0) || defined(SHADER_MODEL_PS_2_B) || defined(SHADER_MODEL_PS_3_0)
-	flashlightColor *= flashlightSpacePosition.w > 0;
+	//flashlightColor *= flashlightSpacePosition.w > 0;
 	flashlightColor *= cFlashlightColor.xyz;						// Flashlight color
 #endif
 
@@ -840,10 +843,10 @@ float3 DoFlashlight( float3 flashlightPos, float3 worldPos, float4 flashlightSpa
 					sampler RandomRotationSampler, int nShadowLevel, bool bDoShadows, bool bAllowHighQuality,
 					const float2 vScreenPos, bool bClip, float4 vShadowTweaks = float4(3/1024.0f, 0.0005f, 0.0f, 0.0f), bool bHasNormal = true )
 {
-	if ( flashlightSpacePosition.w < 0 )
+	/*if ( flashlightSpacePosition.w < 0 )
 	{
 		return float3(0,0,0);
-	}
+	}*/
 	else
 	{
 		float3 vProjCoords = flashlightSpacePosition.xyz / flashlightSpacePosition.w;
@@ -858,6 +861,7 @@ float3 DoFlashlight( float3 flashlightPos, float3 worldPos, float4 flashlightSpa
 #if ( defined( _X360 ) )
 
 		float3 ltz = vProjCoords.xyz < float3( 0.0f, 0.0f, 0.0f );
+		ltz.z = 0.0f; // don't clip the near plane per pixel since we don't do that on the PC.
 		float3 gto = vProjCoords.xyz > float3( 1.0f, 1.0f, 1.0f );
 
 		[branch]
@@ -887,6 +891,9 @@ float3 DoFlashlight( float3 flashlightPos, float3 worldPos, float4 flashlightSpa
 		flashlightColor = tex2D( FlashlightSampler, vProjCoords );
 #endif
 
+	#if	( defined(SHADER_MODEL_PS_2_B) || defined(SHADER_MODEL_PS_3_0) )
+		flashlightColor *= flashlightSpacePosition.www > float3(0,0,0);	// Catch back projection (ps2b and up)
+	#endif
 #if defined(SHADER_MODEL_PS_2_0) || defined(SHADER_MODEL_PS_2_B) || defined(SHADER_MODEL_PS_3_0)
 		flashlightColor *= cFlashlightColor.xyz;						// Flashlight color
 #endif
