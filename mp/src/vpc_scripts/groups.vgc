@@ -65,6 +65,8 @@ $Group "everything"
 	"vtfdiff"
 	"vvis_dll"
 	"vvis_launcher"
+	"hammer_dll"
+	"hammer_launcher"
 }
 
 $Group "dedicated"
