@@ -24,6 +24,10 @@
 
 bool LoadStudioModel( char const* pModelName, CUtlBuffer& buf );
 
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+extern float SoftenCosineTerm( float flDot );
+extern float CalculateAmbientOcclusion( Vector *pPosition, Vector *pNormal );
 
 //-----------------------------------------------------------------------------
 // Purpose: Writes a glview text file containing the collision surface in question
@@ -226,7 +230,7 @@ static void ComputeMaxDirectLighting( DetailObjectLump_t& prop, Vector* maxcolor
 		origin4.DuplicateVector( origin );
 		normal4.DuplicateVector( normal );
 
-		GatherSampleLightSSE ( out, dl, -1, origin4, &normal4, 1, iThread );
+		GatherSampleLightSSE ( out, dl, -1, origin4, &normal4, 1, iThread, GATHERLFLAGS_STATICPROP );
 		VectorMA( maxcolor[dl->light.style], out.m_flFalloff.m128_f32[0] * out.m_flDot[0].m128_f32[0], dl->light.intensity, maxcolor[dl->light.style] );
 	}
 }
@@ -524,8 +528,7 @@ private:
 	bool TestPointAgainstSkySurface( Vector const &pt, dface_t *pFace )
 	{
 		// Create sky face winding.
-		Vector v( 0.0f, 0.0f, 0.0f );
-		winding_t *pWinding = WindingFromFace( pFace, v );
+		winding_t *pWinding = WindingFromFace( pFace, Vector( 0.0f, 0.0f, 0.0f ) );
 
 		// Test point in winding. (Since it is at the node, it is in the plane.)
 		bool bRet = PointInWinding( pt, pWinding );
@@ -738,9 +741,9 @@ void ComputeIndirectLightingAtPoint( Vector &position, Vector &normal, Vector &o
 			ColorRGBExp32ToVector( *pLightmap, lightmapColor );
 		}
 
-		float invLengthSqr = 1.0f / (1.0f + ((vEnd - position) * surfEnum.m_HitFrac / 128.0).LengthSqr());
+		const float invLengthSqr = 1.0f / ( 1.0f + ( ( vEnd - position ) * surfEnum.m_HitFrac / 128.0 ).LengthSqr() );
 		// Include falloff using invsqrlaw.
-		VectorMultiply( lightmapColor, invLengthSqr * dtexdata[pTex->texdata].reflectivity, lightmapColor );
+		VectorMultiply( lightmapColor, dtexdata[pTex->texdata].reflectivity * invLengthSqr, lightmapColor );
 		VectorAdd( outColor, lightmapColor, outColor );
 	}
 
@@ -772,8 +775,8 @@ static void ComputeAmbientLighting( int iThread, DetailObjectLump_t& prop, Vecto
 		return;
 	}
 
-	Vector radcolor[NUMVERTEXNORMALS];
-	ComputeAmbientLightingAtPoint( iThread, origin, radcolor, color );
+	//Vector radcolor[NUMVERTEXNORMALS];
+	ComputeAmbientLightingAtPoint( iThread, origin, NULL, color );
 }
 
 
