@@ -43,7 +43,7 @@ extern ConVar mat_specular_disable_on_missing;
 		{												\
 			params[(parm)]->SetFloatValue( (value) );	\
 		}
-
+#if 0
 // useful pixel shader declaration macro for ps20/20b c++ code
 #define SET_STATIC_PS2X_PIXEL_SHADER_NO_COMBOS( basename )		\
 		if( g_pHardwareConfig->SupportsPixelShaders_2_b() )		\
@@ -68,7 +68,22 @@ extern ConVar mat_specular_disable_on_missing;
 			DECLARE_DYNAMIC_PIXEL_SHADER( basename##_ps20 );		\
 			SET_DYNAMIC_PIXEL_SHADER( basename##_ps20 );			\
 		}
+#endif
 
+// useful pixel shader declaration macro for ps20/20b c++ code
+#define SET_STATIC_PS2X_PIXEL_SHADER_NO_COMBOS( basename )		\
+		if( g_pHardwareConfig->SupportsPixelShaders_2_b() )		\
+		{														\
+			DECLARE_STATIC_PIXEL_SHADER( basename##_ps20b );	\
+			SET_STATIC_PIXEL_SHADER( basename##_ps20b );		\
+		}														
+
+#define SET_DYNAMIC_PS2X_PIXEL_SHADER_NO_COMBOS( basename )		\
+		if( g_pHardwareConfig->SupportsPixelShaders_2_b() )		\
+		{														\
+			DECLARE_DYNAMIC_PIXEL_SHADER( basename##_ps20b );	\
+			SET_DYNAMIC_PIXEL_SHADER( basename##_ps20b );		\
+		}														
 
 //-----------------------------------------------------------------------------
 // Base class for shaders, contains helper methods.

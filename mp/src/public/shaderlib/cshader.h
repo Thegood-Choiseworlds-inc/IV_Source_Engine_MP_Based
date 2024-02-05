@@ -372,7 +372,6 @@ inline bool CShader_IsFlag2Set( IMaterialVar **params, MaterialVarFlags2_t _flag
 	shader ## _Static_Index _vshIndex( pShaderShadow, params ); \
 	const int vsh ## shader = 1
 
-
 // psh_forgot_to_set_dynamic_ ## var is used to make sure that you set all
 // all combos.  If you don't, you will get an undefined variable used error 
 // in the SET_DYNAMIC_PIXEL_SHADER block.
