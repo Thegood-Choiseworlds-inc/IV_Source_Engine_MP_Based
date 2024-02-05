@@ -25,6 +25,7 @@ enum GDIV_TYPE
 	ivTargetSrc,
 	ivInteger,
 	ivString,
+	ivStringInstanced,
 	ivChoices,
 	ivFlags,
 	ivDecal,

@@ -86,6 +86,7 @@ class GameData
 		GDclass *BeginInstanceRemap( const char *pszClassName, const char *pszInstancePrefix, Vector &Origin, QAngle &Angle );
 		bool	RemapKeyValue( const char *pszKey, const char *pszInValue, char *pszOutValue, TNameFixup NameFixup );
 		bool	RemapNameField( const char *pszInValue, char *pszOutValue, TNameFixup NameFixup );
+		bool	RemapInstanceField(const char *pszInValue, char *pszOutValue, TNameFixup NameFixup);
 		bool	LoadFGDMaterialExclusions( TokenReader &tr );
 		bool	LoadFGDAutoVisGroups( TokenReader &tr );
 
