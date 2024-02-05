@@ -68,13 +68,24 @@ static void RemoveKey( KeyValues *kv, const char *pSubKeyName )
 	}
 }
 
+#if MAPBASE
+void CreateWorldVertexTransitionPatchedMaterial( const char *pOriginalMaterialName, const char *pPatchedMaterialName, const char *shaderName )
+#else
 void CreateWorldVertexTransitionPatchedMaterial( const char *pOriginalMaterialName, const char *pPatchedMaterialName )
+#endif
 {
 	KeyValues *kv = LoadMaterialKeyValues( pOriginalMaterialName, 0 );
 	if( kv )
 	{
 		// change shader to Lightmappedgeneric (from worldvertextransition*)
+#if !MAPBASE
 		kv->SetName( "LightmappedGeneric" );
+#else
+		if (Q_stristr(shaderName, "sdk_worldvertextransition"))
+			kv->SetName("SDK_LightmappedGeneric");
+		else
+			kv->SetName("LightmappedGeneric");
+#endif
 		// don't need no stinking $basetexture2 or any other second texture vars
 		RemoveKey( kv, "$basetexture2" );
 		RemoveKey( kv, "$bumpmap2" );
@@ -95,7 +106,11 @@ void CreateWorldVertexTransitionPatchedMaterial( const char *pOriginalMaterialNa
 	}
 }
 
+#if MAPBASE
+int CreateBrushVersionOfWorldVertexTransitionMaterial( int originalTexInfo, const char *shaderName)
+#else
 int CreateBrushVersionOfWorldVertexTransitionMaterial( int originalTexInfo )
+#endif
 {
 	// Don't make cubemap tex infos for nodes
 	if ( originalTexInfo == TEXINFO_NODE )
@@ -119,8 +134,11 @@ int CreateBrushVersionOfWorldVertexTransitionMaterial( int originalTexInfo )
 	if( !bHasTexData )
 	{
 		// Create the new vmt material file
+#if MAPBASE
+		CreateWorldVertexTransitionPatchedMaterial(pOriginalMaterialName, patchedMaterialName, shaderName);
+#else
 		CreateWorldVertexTransitionPatchedMaterial( pOriginalMaterialName, patchedMaterialName );
-
+#endif
 		// Make a new texdata
 		nTexDataID = AddCloneTexData( pTexData, patchedMaterialName );
 	}
@@ -196,7 +214,11 @@ void WorldVertexTransitionFixup( void )
 			continue;
 
 		const char *pShaderName = GetShaderNameForTexInfo( pSide->texinfo );
+#if MAPBASE
+		if (!pShaderName || (!Q_stristr(pShaderName, "worldvertextransition") && !Q_stristr(pShaderName, "sdk_worldvertextransition")))
+#else
 		if ( !pShaderName || !Q_stristr( pShaderName, "worldvertextransition" ) )
+#endif
 		{
 			continue;
 		}
@@ -207,6 +229,10 @@ void WorldVertexTransitionFixup( void )
 			currentEntity++;
 		}
 
+#if MAPBASE
+		pSide->texinfo = CreateBrushVersionOfWorldVertexTransitionMaterial(pSide->texinfo, pShaderName);
+#else
 		pSide->texinfo = CreateBrushVersionOfWorldVertexTransitionMaterial( pSide->texinfo );
+#endif
 	}
 }

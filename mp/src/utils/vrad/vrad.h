@@ -81,6 +81,11 @@ struct directlight_t
 	float	soffset;
 	float	toffset;
 
+	// Flag indicating that even though light.type is emit_skylight, treat this light as a
+	// directional light source in vrad
+	bool	m_bSkyLightIsDirectionalLight;
+	float	m_flSkyLightSunAngularExtent;
+
 	int		dorecalc; // position, vector, spot angle, etc.
 	IncrementalLightID	m_IncrementalID;
 
@@ -93,6 +98,8 @@ struct directlight_t
 
 	directlight_t(void)
 	{
+		m_bSkyLightIsDirectionalLight = false;
+		m_flSkyLightSunAngularExtent = 0.0f;
 		m_flEndFadeDistance = -1.0;							// end<start indicates not set
 		m_flStartFadeDistance= 0.0;
 		m_flCapDist = 1.0e22;
@@ -290,6 +297,7 @@ extern bool g_bStaticPropPolys;
 extern bool g_bTextureShadows;
 extern bool g_bShowStaticPropNormals;
 extern bool g_bDisablePropSelfShadowing;
+extern bool g_bFiniteFalloffModel;							// whether to use 1/xxx or not
 
 extern CUtlVector<char const *> g_NonShadowCastingMaterialStrings;
 extern void ForceTextureShadowsOnModel( const char *pModelName );
@@ -386,6 +394,8 @@ inline byte PVSCheck( const byte *pvs, int iCluster )
 // outputs 1 in fractionVisible if no occlusion, 0 if full occlusion, and in-between values
 void TestLine( FourVectors const& start, FourVectors const& stop, fltx4 *pFractionVisible, int static_prop_index_to_ignore=-1);
 
+void TestLine_IgnoreSky( FourVectors const& start, FourVectors const& stop, fltx4 *pFractionVisible, int static_prop_index_to_ignore=-1);
+
 // returns 1 if the ray sees the sky, 0 if it doesn't, and in-between values for partial coverage
 void TestLine_DoesHitSky( FourVectors const& start, FourVectors const& stop,
                           fltx4 *pFractionVisible, bool canRecurse = true, int static_prop_to_skip=-1, bool bDoDebug = false );
@@ -446,12 +456,14 @@ float TraceLeafBrushes( int leafIndex, const Vector &start, const Vector &end, C
 struct SSE_sampleLightOutput_t
 {
 	fltx4 m_flDot[NUM_BUMP_VECTS+1];
+	fltx4 m_flSunAmount[NUM_BUMP_VECTS + 1];
 	fltx4 m_flFalloff;
-	fltx4 m_flSunAmount;
 };
 
 #define GATHERLFLAGS_FORCE_FAST 1
 #define GATHERLFLAGS_IGNORE_NORMALS 2
+#define GATHERLFLAGS_NO_OCCLUSION   4	/* Ignore occlusion for local lights (but not sun, sky or bounce lighting) */
+#define GATHERLFLAGS_STATICPROP		8	/* Paths for static props */
 
 // SSE Gather light stuff
 void GatherSampleLightSSE( SSE_sampleLightOutput_t &out, directlight_t *dl, int facenum, 
@@ -518,6 +530,8 @@ public:
 
 	// utility
 	virtual	void GetDispSurfNormal( int ndxFace, Vector &pt, Vector &ptNormal, bool bInside ) = 0;
+	virtual void GetDispSurfPointAndNormalFromUV( int ndxFace, Vector &pt, Vector &ptNormal,
+												  Vector2D &uv, bool bInside ) = 0;
 	virtual void GetDispSurf( int ndxFace, CVRADDispColl **ppDispTree ) = 0;
 
 	// bsp tree functions

@@ -60,8 +60,11 @@ bool		g_bDumpRtEnv = false;
 bool		bRed2Black = true;
 bool		g_bFastAmbient = false;
 bool        g_bNoSkyRecurse = false;
+bool        g_bFiniteFalloffModel = false;					// whether to use 1/xxx or not
 bool		g_bDumpPropLightmaps = false;
 
+extern bool g_bNoSoften;
+extern bool g_bNoAO;
 
 int			junk;
 
@@ -2004,6 +2007,9 @@ bool RadWorld_Go()
 
 	InitMacroTexture( source );
 
+	if(!g_bNoAO)
+	Msg("Brush AO Calculating...\n");
+
 	if( g_pIncremental )
 	{
 		g_pIncremental->PrepareForLighting();
@@ -2308,6 +2314,8 @@ void VRAD_ComputeOtherLighting()
 	{
 		StaticPropMgr()->ComputeLighting( THREADINDEX_MAIN );
 	}
+	if(!g_bNoAO)
+	Msg("Brush AO Calculating was Done!!!\n");
 }
 
 extern void CloseDispLuxels();
@@ -2367,14 +2375,17 @@ int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 
 	int mapArg = -1;
 
-	// default to LDR
-	SetHDRMode( false );
+	// default to HDR
+	SetHDRMode( true );
+	g_bNoAO = true; //IV Note: Force Disable AO before -final Checked
+
 	int i;
 	for( i=1 ; i<argc ; i++ )
 	{
 		if ( !Q_stricmp( argv[i], "-StaticPropLighting" ) )
 		{
-			g_bStaticPropLighting = true;
+			//g_bStaticPropLighting = true;
+			Warning("Force Enabled with -final Command!!!\n");
 		}
 		else if ( !stricmp( argv[i], "-StaticPropNormals" ) )
 		{
@@ -2386,7 +2397,8 @@ int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 		}
 		else if ( !Q_stricmp( argv[i], "-StaticPropPolys" ) )
 		{
-			g_bStaticPropPolys = true;
+			//g_bStaticPropPolys = true;
+			Warning("Force Enabled with -final Command!!!\n");
 		}
 		else if ( !Q_stricmp( argv[i], "-nossprops" ) )
 		{
@@ -2394,7 +2406,8 @@ int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 		}
 		else if ( !Q_stricmp( argv[i], "-textureshadows" ) )
 		{
-			g_bTextureShadows = true;
+			//g_bTextureShadows = true;
+			Warning("Force Enabled with -final Command!!!\n");
 		}
 		else if ( !strcmp(argv[i], "-dump") )
 		{
@@ -2490,6 +2503,11 @@ int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 		else if (!Q_stricmp(argv[i],"-fast"))
 		{
 			do_fast = true;
+			g_bNoAO = true;
+			g_bNoSoften = true;
+
+			Warning("Ambient Occludion Disabled!!!\n");
+			Warning("Soften Disabled!!!\n");
 		}
 		else if (!Q_stricmp(argv[i],"-noskyboxrecurse"))
 		{
@@ -2497,7 +2515,28 @@ int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 		}
 		else if (!Q_stricmp(argv[i],"-final"))
 		{
-			g_flSkySampleScale = 16.0;
+			g_flSkySampleScale = 32.0;
+			g_bStaticPropLighting = true;
+			g_bStaticPropPolys = true;
+			g_bTextureShadows = true;
+			g_bNoAO = false;
+			g_bNoSoften = false;
+
+			Warning("Checked Final State!!! Perfomance Loss!!!\n");
+		}
+		else if (!Q_stricmp( argv[i], "-finitefalloff" ) )
+		{
+			g_bFiniteFalloffModel = true;
+		}
+		else if (!Q_stricmp(argv[i], "-disableao"))
+		{
+			g_bNoAO = true;
+			Warning("Ambient Occludion Disabled!!!\n");
+		}
+		else if (!Q_stricmp(argv[i], "-disablesoften"))
+		{
+			g_bNoSoften = true;
+			Warning("Soften Disabled!!!\n");
 		}
 		else if (!Q_stricmp(argv[i],"-extrasky"))
 		{
@@ -2611,7 +2650,9 @@ int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 		}
 		else if ( !Q_stricmp( argv[i], "-ldr" ) )
 		{
-			SetHDRMode( false );
+			//SetHDRMode( false );
+			Warning("Not Supported!!! Force to HRD Light...\n");
+			SetHDRMode(true);
 		}
 		else if (!Q_stricmp(argv[i],"-maxchop"))
 		{
@@ -2852,6 +2893,8 @@ void PrintUsage( int argc, char **argv )
         "  -OnlyStaticProps   : Only perform direct static prop lighting (vrad debug option)\n"
 		"  -StaticPropNormals : when lighting static props, just show their normal vector\n"
 		"  -textureshadows : Allows texture alpha channels to block light - rays intersecting alpha surfaces will sample the texture\n"
+		"  -disableao : Force Disable Ambient Occlusion for Brushes\n"
+		"  -disablesoften : Force Disable Soften\n"
 		"  -noskyboxrecurse : Turn off recursion into 3d skybox (skybox shadows on world)\n"
 		"  -nossprops      : Globally disable self-shadowing on static props\n"
 		"\n"
@@ -2888,12 +2931,12 @@ void PrintUsage( int argc, char **argv )
 int RunVRAD( int argc, char **argv )
 {
 #if defined(_MSC_VER) && ( _MSC_VER >= 1310 )
-	Msg("Valve Software - vrad.exe SSE (" __DATE__ ")\n" );
+	Msg("Valve Software and THS inc 2024 - vrad.exe SSE (" __DATE__ ")\n" );
 #else
-	Msg("Valve Software - vrad.exe (" __DATE__ ")\n" );
+	Msg("Valve Software and THS inc 2024 - vrad.exe (" __DATE__ ")\n" );
 #endif
 
-	Msg("\n      Valve Radiosity Simulator     \n");
+	Msg("\n      Valve and THS Radiosity Simulator     \n");
 
 	verbose = true;  // Originally FALSE
 

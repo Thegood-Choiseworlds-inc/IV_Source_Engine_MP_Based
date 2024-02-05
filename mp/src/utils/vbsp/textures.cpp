@@ -241,15 +241,26 @@ int	FindMiptex (const char *name)
 		bool bKeepLighting = ( ( propVal = GetMaterialVar( matID, "%compileKeepLight" ) ) &&
 			StringIsTrue( propVal ) );
 
+		const char *pShaderName = GetMaterialShaderName(matID);
+
 		// handle materials that want to be treated as water.
 		if ( ( propVal = GetMaterialVar( matID, "%compileWater" ) ) &&
 			StringIsTrue( propVal ) )
 		{
+			bool is_ivwater_shader = !Q_strncasecmp(pShaderName, "IVWater", 7);
+
+			if (is_ivwater_shader)
+				Msg("Used IVWater Shader!!! for Simple Water System use Water or SDK_Water!!!");
+
 			textureref[i].contents &= ~(CONTENTS_SOLID|CONTENTS_DETAIL);
 			textureref[i].contents |= CONTENTS_WATER;
-			textureref[i].flags |= SURF_WARP | SURF_NOSHADOWS | SURF_NODECALS;
 
-			if ( g_DisableWaterLighting && !bKeepLighting )
+			if (is_ivwater_shader)
+				textureref[i].flags |= SURF_WARP | SURF_NODECALS;
+			else
+				textureref[i].flags |= SURF_WARP | SURF_NOSHADOWS | SURF_NODECALS;
+
+			if (g_DisableWaterLighting && !bKeepLighting && !is_ivwater_shader)
 			{
 				textureref[i].flags |= SURF_NOLIGHT;
 			}
@@ -257,7 +268,7 @@ int	FindMiptex (const char *name)
 			// Set this so that we can check at the end of the process the presence of a a WaterLODControl entity.
 			g_bHasWater = true;
 		}
-		const char *pShaderName = GetMaterialShaderName(matID);
+
 		if ( !bKeepLighting && !Q_strncasecmp( pShaderName, "water", 5 ) || !Q_strncasecmp( pShaderName, "UnlitGeneric", 12 ) )
 		{
 			//if ( !(textureref[i].flags & SURF_NOLIGHT) )

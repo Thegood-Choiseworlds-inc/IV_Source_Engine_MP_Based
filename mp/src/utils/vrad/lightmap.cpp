@@ -32,6 +32,95 @@ enum
 #define SMOOTHING_GROUP_HARD_EDGE	0xff000000
 
 //==========================================================================//
+// Ambient occlusion
+//==========================================================================//
+bool g_bNoSoften = false;
+bool g_bNoAO = false;
+
+float CalculateAmbientOcclusion( Vector *pPosition, Vector *pNormal )
+{
+	// Just call through to the simd version of this function
+	FourVectors position4;
+	position4.DuplicateVector( *pPosition );
+
+	FourVectors normal4;
+	position4.DuplicateVector( *pNormal );
+
+	fltx4 ao = CalculateAmbientOcclusion4( position4, normal4, -1 );
+
+	return SubFloat( ao, 0 );
+}
+
+fltx4 CalculateAmbientOcclusion4( const FourVectors &position4, const FourVectors &normal4, int static_prop_index_to_ignore )
+{
+	if ( g_bNoAO )
+	{
+		return Four_Ones;
+	}
+
+	DirectionalSampler_t sampler;
+	int nSamples = 32;
+	if ( do_fast )
+	{
+		nSamples /= 2;
+	}
+
+	fltx4 totalVisible = Four_Zeros;
+	fltx4 totalPossibleVisible = Four_Zeros;
+	for ( int i = 0; i < nSamples; i++ )
+	{
+		FourVectors rayStart = position4;
+		rayStart += normal4;
+
+		// Ray direction on the sphere
+		FourVectors rayDirection;
+		rayDirection.DuplicateVector( sampler.NextValue() );
+
+		// Mirror ray along normal so all rays are on the hemisphere defined by the normal
+		fltx4 rayDotN = rayDirection * normal4; // dot product
+		fltx4 absRayDotN = AbsSIMD( rayDotN );
+		rayDirection = rayDirection - Mul( normal4, rayDotN ) + Mul( normal4, absRayDotN );
+
+		// Set length of ray
+		FourVectors rayEnd = rayDirection;
+		rayEnd *= 36.0f;
+		rayEnd += rayStart;
+
+		// Raytrace for visibility function
+		fltx4 fractionVisible = Four_Ones;
+		TestLine_IgnoreSky( rayStart, rayEnd, &fractionVisible, static_prop_index_to_ignore );
+		totalVisible = AddSIMD( totalVisible, MulSIMD( fractionVisible, absRayDotN ) );
+		totalPossibleVisible = AddSIMD( totalPossibleVisible, absRayDotN );
+	}
+
+	fltx4 ao = DivSIMD( totalVisible, totalPossibleVisible );
+	ao = MulSIMD( ao, ao ); // Square ao term - This is an artistic choice by the CS:GO team
+	return ao;
+}
+
+//==========================================================================//
+// Give surfaces a softer look instead of the harsher linear N.L look
+//==========================================================================//
+float SoftenCosineTerm( float flDot )
+{
+	if ( g_bNoSoften )
+		return flDot;
+
+	flDot = MAX( flDot, 0.0f );
+	return ( flDot + ( flDot * flDot ) ) * 0.5f; // This is cheaper than an exponent in shader code
+}
+
+fltx4 SoftenCosineTerm( fltx4 dots )
+{
+	if ( g_bNoSoften )
+		return dots;
+
+	dots = MaxSIMD( dots, Four_Zeros );
+	fltx4 dotsSquared = MulSIMD( dots, dots );
+	return MulSIMD( AddSIMD( dots, dotsSquared ), Four_PointFives );
+}
+
+//==========================================================================//
 // CNormalList.
 //==========================================================================//
 
@@ -1128,6 +1217,16 @@ static void ParseLightGeneric( entity_t *e, directlight_t *dl )
 	Vector	        dest;
 
 	dl->light.style = (int)FloatForKey (e, "style");
+	dl->m_bSkyLightIsDirectionalLight = false;
+
+	if( (int)FloatForKeyWithDefault(e, "_castentityshadow", 1.0f ) != 0 )
+	{
+		dl->light.flags |= DWL_FLAGS_CASTENTITYSHADOWS;
+	}
+	else
+	{
+		dl->light.flags &= ~DWL_FLAGS_CASTENTITYSHADOWS;
+	}
 	
 	// get intenfsity
 	if( g_bHDR && LightForKey( e, "_lightHDR", dl->light.intensity ) ) 
@@ -1170,90 +1269,102 @@ static void ParseLightGeneric( entity_t *e, directlight_t *dl )
 
 static void SetLightFalloffParams( entity_t * e, directlight_t * dl )
 {
-	float d50=FloatForKey( e, "_fifty_percent_distance" );
 	dl->m_flStartFadeDistance = 0;
 	dl->m_flEndFadeDistance = - 1;
 	dl->m_flCapDist = 1.0e22;
-	if ( d50 )
+	if ( g_bFiniteFalloffModel )
 	{
 		float d0 = FloatForKey( e, "_zero_percent_distance" );
-		if ( d0 < d50 )
-		{
-			Warning( "light has _fifty_percent_distance of %f but _zero_percent_distance of %f\n", d50, d0);
-			d0 = 2.0 * d50;
-		}
-		float a = 0, b = 1, c = 0;
-		if ( ! SolveInverseQuadraticMonotonic( 0, 1.0, d50, 2.0, d0, 256.0, a, b, c ))
-		{
-			Warning( "can't solve quadratic for light %f %f\n", d50, d0 );
-		}
-		// it it possible that the parameters couldn't be used because of enforing monoticity. If so, rescale so at
-		// least the 50 percent value is right
-//		printf("50 percent=%f 0 percent=%f\n",d50,d0);
-// 		printf("a=%f b=%f c=%f\n",a,b,c);
-		float v50 = c + d50 * ( b + d50 * a );
-		float scale = 2.0 / v50;
-		a *= scale;
-		b *= scale;
-		c *= scale;
-// 		printf("scaled=%f a=%f b=%f c=%f\n",scale,a,b,c);
-// 		for(float d=0;d<1000;d+=20)
-// 			printf("at %f, %f\n",d,1.0/(c+d*(b+d*a)));
-		dl->light.quadratic_attn = a;
-		dl->light.linear_attn = b;
-		dl->light.constant_attn = c;
-
-
-
-		if ( IntForKey(e, "_hardfalloff" ) )
-		{
-			dl->m_flEndFadeDistance = d0;
-			dl->m_flStartFadeDistance = 0.75 * d0 + 0.25 * d50;		// start fading 3/4 way between 50 and 0. could allow adjust
-		}
-		else
-		{
-			// now, we will find the point at which the 1/x term reaches its maximum value, and
-			// prevent the light from going past there. If a user specifes an extreme falloff, the
-			// quadratic will start making the light brighter at some distance. We handle this by
-			// fading it from the minimum brightess point down to zero at 10x the minimum distance
-			if ( fabs( a ) > 0. )
-			{
-				float flMax = b / ( - 2.0 * a );				// where f' = 0
-				if ( flMax > 0.0 )
-				{
-					dl->m_flCapDist = flMax;
-					dl->m_flStartFadeDistance = flMax;
-					dl->m_flEndFadeDistance = 10.0 * flMax;
-				}
-			}
-		}
+		dl->light.constant_attn = 1.0;
+		dl->light.linear_attn = 0; //-2.0 * ( 1.0 / d0 );
+		dl->light.quadratic_attn = -1.0 / ( d0 * d0 );
+// 		for(float d=0;d<200;d+=20)
+// 			printf("at %f, %f\n",d,1.0+d*d*dl->light.quadratic_attn );
 	}
 	else
 	{
-		dl->light.constant_attn = FloatForKey (e, "_constant_attn" );
-		dl->light.linear_attn = FloatForKey (e, "_linear_attn" );
-		dl->light.quadratic_attn = FloatForKey (e, "_quadratic_attn" );
-
-		dl->light.radius = FloatForKey (e, "_distance");
-
-		// clamp values to >= 0
-		if ( dl->light.constant_attn < EQUAL_EPSILON )
-			dl->light.constant_attn = 0;
-
-		if ( dl->light.linear_attn < EQUAL_EPSILON )
-			dl->light.linear_attn = 0;
-
-		if ( dl->light.quadratic_attn < EQUAL_EPSILON )
-			dl->light.quadratic_attn = 0;
-
-		if ( dl->light.constant_attn < EQUAL_EPSILON && dl->light.linear_attn < EQUAL_EPSILON && dl->light.quadratic_attn < EQUAL_EPSILON )
-			dl->light.constant_attn = 1;
-
-		// scale intensity for unit 100 distance
-		float ratio = ( dl->light.constant_attn + 100 * dl->light.linear_attn + 100 * 100 * dl->light.quadratic_attn );
-		if ( ratio > 0 )
+		float d50=FloatForKey( e, "_fifty_percent_distance" );
+		if ( d50 )
 		{
-			VectorScale( dl->light.intensity, ratio, dl->light.intensity );
+			float d0 = FloatForKey( e, "_zero_percent_distance" );
+			if ( d0 < d50 )
+			{
+				Warning( "light has _fifty_percent_distance of %f but _zero_percent_distance of %f\n", d50, d0);
+				d0 = 2.0 * d50;
+			}
+			float a = 0, b = 1, c = 0;
+			if ( ! SolveInverseQuadraticMonotonic( 0, 1.0, d50, 2.0, d0, 256.0, a, b, c ))
+			{
+				Warning( "can't solve quadratic for light %f %f\n", d50, d0 );
+			}
+			// it it possible that the parameters couldn't be used because of enforing monoticity. If so, rescale so at
+			// least the 50 percent value is right
+//		printf("50 percent=%f 0 percent=%f\n",d50,d0);
+// 		printf("a=%f b=%f c=%f\n",a,b,c);
+			float v50 = c + d50 * ( b + d50 * a );
+			float scale = 2.0 / v50;
+			a *= scale;
+			b *= scale;
+			c *= scale;
+// 		printf("scaled=%f a=%f b=%f c=%f\n",scale,a,b,c);
+// 		for(float d=0;d<200;d+=20)
+// 			printf("at %f, %f\n",d,1.0/(c+d*(b+d*a)));
+			dl->light.quadratic_attn = a;
+			dl->light.linear_attn = b;
+			dl->light.constant_attn = c;
+
+
+
+			if ( IntForKey(e, "_hardfalloff" ) )
+			{
+				dl->m_flEndFadeDistance = d0;
+				dl->m_flStartFadeDistance = 0.75 * d0 + 0.25 * d50;		// start fading 3/4 way between 50 and 0. could allow adjust
+			}
+			else
+			{
+				// now, we will find the point at which the 1/x term reaches its maximum value, and
+				// prevent the light from going past there. If a user specifes an extreme falloff, the
+				// quadratic will start making the light brighter at some distance. We handle this by
+				// fading it from the minimum brightess point down to zero at 10x the minimum distance
+				if ( fabs( a ) > 0. )
+				{
+					float flMax = b / ( - 2.0 * a );				// where f' = 0
+					if ( flMax > 0.0 )
+					{
+						dl->m_flCapDist = flMax;
+						dl->m_flStartFadeDistance = flMax;
+						dl->m_flEndFadeDistance = 10.0 * flMax;
+					}
+				}
+			}
+		}
+		else
+		{
+			dl->light.constant_attn = FloatForKey (e, "_constant_attn" );
+			dl->light.linear_attn = FloatForKey (e, "_linear_attn" );
+			dl->light.quadratic_attn = FloatForKey (e, "_quadratic_attn" );
+
+			dl->light.radius = FloatForKey (e, "_distance");
+
+			// clamp values to >= 0
+			if ( dl->light.constant_attn < EQUAL_EPSILON )
+				dl->light.constant_attn = 0;
+
+			if ( dl->light.linear_attn < EQUAL_EPSILON )
+				dl->light.linear_attn = 0;
+
+			if ( dl->light.quadratic_attn < EQUAL_EPSILON )
+				dl->light.quadratic_attn = 0;
+
+			if ( dl->light.constant_attn < EQUAL_EPSILON && dl->light.linear_attn < EQUAL_EPSILON && dl->light.quadratic_attn < EQUAL_EPSILON )
+				dl->light.constant_attn = 1;
+
+			// scale intensity for unit 100 distance
+			float ratio = ( dl->light.constant_attn + 100 * dl->light.linear_attn + 100 * 100 * dl->light.quadratic_attn );
+			if ( ratio > 0 )
+			{
+				VectorScale( dl->light.intensity, ratio, dl->light.intensity );
+			}
 		}
 	}
 }
@@ -1341,8 +1452,10 @@ bool CanLeafTraceToSky( int iLeaf )
 	return false;
 }
 
-void BuildVisForLightEnvironment( void )
+void BuildVisForLightEnvironment( int nNumLights, directlight_t** pLights )
 {
+	// FIXME: The work in this function is executed redundantly for multiple emit_skylight lights.
+
 	// Create the vis.
 	for ( int iLeaf = 0; iLeaf < numleafs; ++iLeaf )
 	{
@@ -1363,8 +1476,10 @@ void BuildVisForLightEnvironment( void )
 				{
 					dleafs[iLeaf].flags |= LEAF_FLAGS_SKY;
 				}
-				MergeDLightVis( gSkyLight, dleafs[iLeaf].cluster );
-				MergeDLightVis( gAmbient, dleafs[iLeaf].cluster );
+				for ( int iLight = 0; iLight < nNumLights; ++iLight )
+				{
+					MergeDLightVis( pLights[iLight], dleafs[iLeaf].cluster );
+				}
 				break;
 			}
 		}
@@ -1480,15 +1595,17 @@ static void ParseLightEnvironment( entity_t* e, directlight_t* dl )
 
 	ParseLightGeneric( e, dl );
 
-	char *angle_str=ValueForKeyWithDefault( e, "SunSpreadAngle" );
-	if (angle_str)
-	{
-		g_SunAngularExtent=atof(angle_str);
-		g_SunAngularExtent=sin((M_PI/180.0)*g_SunAngularExtent);
-		printf("sun extent from map=%f\n",g_SunAngularExtent);
-	}
 	if ( !gSkyLight )
 	{
+		char *angle_str=ValueForKeyWithDefault( e, "SunSpreadAngle" );
+		if (angle_str)
+		{
+			g_SunAngularExtent=atof(angle_str);
+			g_SunAngularExtent=sin((M_PI/180.0)*g_SunAngularExtent);
+			dl->m_flSkyLightSunAngularExtent = g_SunAngularExtent;
+			printf("sun extent from map=%f\n",g_SunAngularExtent);
+		}
+
 		// Sky light.
 		gSkyLight = dl;
 		dl->light.type = emit_skylight;
@@ -1511,12 +1628,44 @@ static void ParseLightEnvironment( entity_t* e, directlight_t* dl )
 						 gAmbient->light.intensity );
 		}
 		
-		BuildVisForLightEnvironment();
+		// skylight and ambient light never cast entity shadows
+		gSkyLight->light.flags &= ~DWL_FLAGS_CASTENTITYSHADOWS;
+		gAmbient->light.flags &= ~DWL_FLAGS_CASTENTITYSHADOWS;
+
+		directlight_t* lights[] = { gSkyLight, gAmbient };
+		BuildVisForLightEnvironment( 2, lights );
  
 		// Add sky and sky ambient lights to the list.
 		AddDLightToActiveList( gSkyLight );
 		AddDLightToActiveList( gAmbient );
 	}
+}
+
+static void ParseLightDirectional( entity_t* e, directlight_t* dl )
+{
+	Vector dest;
+	GetVectorForKey (e, "origin", dest );
+	dl = AllocDLight( dest, true );
+
+	ParseLightGeneric( e, dl );
+
+	char *angle_str=ValueForKeyWithDefault( e, "SunSpreadAngle" );
+	if (angle_str)
+	{
+		dl->m_flSkyLightSunAngularExtent = atof(angle_str);
+		dl->m_flSkyLightSunAngularExtent = sin((M_PI/180.0)*dl->m_flSkyLightSunAngularExtent);
+	}
+
+	dl->light.type = emit_skylight;
+	// For the engine, emit_skylight is the type we want.
+	// Set an additional flag identifying this as "not the global skylight" for vrad. This will cause it to use the angular extent associated with this light
+	// instead of the global one.
+	dl->m_bSkyLightIsDirectionalLight = true;
+
+	// directional lights never cast entity shadows
+	dl->light.flags &= ~DWL_FLAGS_CASTENTITYSHADOWS;
+
+	BuildVisForLightEnvironment( 1, &dl );
 }
 
 static void ParseLightPoint( entity_t* e, directlight_t* dl )
@@ -1571,6 +1720,8 @@ void CreateDirectLights (void)
 			dl = AllocDLight( p->origin, true );
 
 			dl->light.type = emit_surface;
+			dl->light.flags &= ~DWL_FLAGS_CASTENTITYSHADOWS;
+
 			VectorCopy (p->normal, dl->light.normal);
 			Assert( VectorLength( p->normal ) > 1.0e-20 );
 			// scale intensity by number of texture instances
@@ -1602,6 +1753,11 @@ void CreateDirectLights (void)
 		else if (!strcmp(name, "light_environment")) 
 		{
 			ParseLightEnvironment( e, dl );
+		}
+		else if (!strcmp(name, "light_directional")) 
+		{
+			ParseLightDirectional( e, dl );
+			qprintf("Parsed light_directional \n");
 		}
 		else if (!strcmp(name, "light")) 
 		{
@@ -1653,7 +1809,7 @@ void ExportDirectLightsToWorldLights()
 		wl->constant_attn = dl->light.constant_attn;
 		wl->linear_attn = dl->light.linear_attn;
 		wl->quadratic_attn = dl->light.quadratic_attn;
-		wl->flags = 0;
+		wl->flags = dl->light.flags;
 	}
 }
 
@@ -1666,7 +1822,7 @@ void ExportDirectLightsToWorldLights()
 
 #define CONSTANT_DOT (.7/2)
 
-#define NSAMPLES_SUN_AREA_LIGHT 30							// number of samples to take for an
+#define NSAMPLES_SUN_AREA_LIGHT 300							// number of samples to take for an
                                                             // non-point sun light
 
 // Helper function - gathers light from sun (emit_skylight)
@@ -1680,18 +1836,27 @@ void GatherSampleSkyLightSSE( SSE_sampleLightOutput_t &out, directlight_t *dl, i
 
 	fltx4 dot;
 
+	float fSunAngularExtent = g_SunAngularExtent;
+	if ( dl->m_bSkyLightIsDirectionalLight )
+	{
+		fSunAngularExtent = dl->m_flSkyLightSunAngularExtent;
+	}
+
 	if ( bIgnoreNormals )
 		dot = ReplicateX4( CONSTANT_DOT );
 	else
 		dot = NegSIMD( pNormals[0] * dl->light.normal );
 
 	dot = MaxSIMD( dot, Four_Zeros );
+
+	dot = SoftenCosineTerm( dot );
+
 	int zeroMask = TestSignSIMD ( CmpEqSIMD( dot, Four_Zeros ) );
 	if (zeroMask == 0xF)
 		return;
 
 	int nsamples = 1;
-	if ( g_SunAngularExtent > 0.0f )
+	if ( fSunAngularExtent > 0.0f )
 	{
 		nsamples = NSAMPLES_SUN_AREA_LIGHT;
 		if ( do_fast || force_fast )
@@ -1713,7 +1878,7 @@ void GatherSampleSkyLightSSE( SSE_sampleLightOutput_t &out, directlight_t *dl, i
 		{
 			// jitter light source location
 			Vector ofs = sampler.NextValue();
-			ofs *= MAX_TRACE_LENGTH * g_SunAngularExtent;
+			ofs *= MAX_TRACE_LENGTH * fSunAngularExtent;
 			delta += ofs;
 		}
 		FourVectors delta4;
@@ -1728,15 +1893,21 @@ void GatherSampleSkyLightSSE( SSE_sampleLightOutput_t &out, directlight_t *dl, i
 	fltx4 seeAmount = MulSIMD ( totalFractionVisible, ReplicateX4 ( 1.0f / nsamples ) );
 	out.m_flDot[0] = MulSIMD ( dot, seeAmount );
 	out.m_flFalloff = Four_Ones;
-	out.m_flSunAmount = MulSIMD ( seeAmount, ReplicateX4( 10000.0f ) );
+	out.m_flSunAmount[0] = MulSIMD( out.m_flDot[0], out.m_flFalloff );
 	for ( int i = 1; i < normalCount; i++ )
 	{
 		if ( bIgnoreNormals )
-			out.m_flDot[i] = ReplicateX4 ( CONSTANT_DOT );
+		{
+			out.m_flDot[i] = ReplicateX4( CONSTANT_DOT );
+			out.m_flSunAmount[i] = Four_Zeros;
+		}
 		else
 		{
 			out.m_flDot[i] = NegSIMD( pNormals[i] * dl->light.normal );
+			out.m_flDot[i] = MaxSIMD( out.m_flDot[i], Four_Zeros );
+			out.m_flDot[i] = SoftenCosineTerm( out.m_flDot[i] );
 			out.m_flDot[i] = MulSIMD( out.m_flDot[i], seeAmount );
+			out.m_flSunAmount[i] = MulSIMD( out.m_flDot[i], out.m_flFalloff );
 		}
 	}
 }
@@ -1779,6 +1950,8 @@ void GatherSampleAmbientSkySSE( SSE_sampleLightOutput_t &out, directlight_t *dl,
 		else
 			dots[0] = NegSIMD( pNormals[0] * anorm );
 
+		dots[0] = SoftenCosineTerm( dots[0] );
+
 		fltx4 validity = CmpGtSIMD( dots[0], ReplicateX4( EQUAL_EPSILON ) );
 
 		// No possibility of anybody getting lit
@@ -1795,6 +1968,9 @@ void GatherSampleAmbientSkySSE( SSE_sampleLightOutput_t &out, directlight_t *dl,
 				dots[i] = ReplicateX4( CONSTANT_DOT );
 			else
 				dots[i] = NegSIMD( pNormals[i] * anorm );
+
+			dots[i] = SoftenCosineTerm( dots[i] );
+
 			fltx4 validity2 = CmpGtSIMD( dots[i], ReplicateX4 ( EQUAL_EPSILON ) );
 			dots[i] = AndSIMD( validity2, dots[i] );
 			possibleHitCount[i] = AddSIMD( AndSIMD( AndSIMD( validity, validity2 ), Four_Ones ), possibleHitCount[i] );
@@ -1828,6 +2004,7 @@ void GatherSampleAmbientSkySSE( SSE_sampleLightOutput_t &out, directlight_t *dl,
 		out.m_flDot[i] = MulSIMD( factor, sumdot );
 		out.m_flDot[i] = ReciprocalSIMD( out.m_flDot[i] );
 		out.m_flDot[i] = MulSIMD( ambient_intensity[i], out.m_flDot[i] );
+		out.m_flSunAmount[i] = Four_Zeros;
 	}
 
 }
@@ -1863,6 +2040,8 @@ void GatherSampleStandardLightSSE( SSE_sampleLightOutput_t &out, directlight_t *
 		dot = delta * pNormals[0];
 	dot = MaxSIMD( Four_Zeros, dot );
 
+	dot = SoftenCosineTerm( dot );
+
 	// Affix dot to zero if past fade distz
 	bool bHasHardFalloff = ( dl->m_flEndFadeDistance > dl->m_flStartFadeDistance );
 	if ( bHasHardFalloff )
@@ -1891,7 +2070,14 @@ void GatherSampleStandardLightSSE( SSE_sampleLightOutput_t &out, directlight_t *
 		out.m_flFalloff = MulSIMD( out.m_flFalloff, quadratic );
 		out.m_flFalloff = AddSIMD( out.m_flFalloff, MulSIMD( linear, falloffEvalDist ) );
 		out.m_flFalloff = AddSIMD( out.m_flFalloff, constant );
-		out.m_flFalloff = ReciprocalSIMD( out.m_flFalloff );
+		if ( g_bFiniteFalloffModel )
+		{
+			out.m_flFalloff = MaxSIMD( Four_Zeros, out.m_flFalloff );
+		}
+		else
+		{
+			out.m_flFalloff = ReciprocalSIMD( out.m_flFalloff );
+		}
 		break;
 
 	case emit_surface:
@@ -1930,7 +2116,14 @@ void GatherSampleStandardLightSSE( SSE_sampleLightOutput_t &out, directlight_t *
 		out.m_flFalloff = MulSIMD( out.m_flFalloff, quadratic );
 		out.m_flFalloff = AddSIMD( out.m_flFalloff, MulSIMD( linear, falloffEvalDist ) );
 		out.m_flFalloff = AddSIMD( out.m_flFalloff, constant );
-		out.m_flFalloff = ReciprocalSIMD( out.m_flFalloff );
+		if ( g_bFiniteFalloffModel )
+		{
+			out.m_flFalloff = MaxSIMD( Four_Zeros, out.m_flFalloff );
+		}
+		else
+		{
+			out.m_flFalloff = ReciprocalSIMD( out.m_flFalloff );
+		}
 		out.m_flFalloff = MulSIMD( out.m_flFalloff, dot2 );
 
 		// outside the inner cone
@@ -1976,20 +2169,27 @@ void GatherSampleStandardLightSSE( SSE_sampleLightOutput_t &out, directlight_t *
 		out.m_flFalloff = MulSIMD( mult, out.m_flFalloff );
 	}
 
-	// Raytrace for visibility function
-	fltx4 fractionVisible = Four_Ones;
-	TestLine( pos, src, &fractionVisible, static_prop_index_to_ignore);
-	dot = MulSIMD( fractionVisible, dot );
-	out.m_flDot[0] = dot;
+	if ( !( nLFlags & GATHERLFLAGS_NO_OCCLUSION ) )
+	{
+		// Raytrace for visibility function
+		fltx4 fractionVisible = Four_Ones;
+		TestLine( pos, src, &fractionVisible, static_prop_index_to_ignore);
+		dot = MulSIMD( fractionVisible, dot );
+	}
 
+	out.m_flDot[0] = dot;
 	for ( int i = 1; i < normalCount; i++ )
 	{
 		if ( bIgnoreNormals )
-			out.m_flDot[i] = ReplicateX4( (float) CONSTANT_DOT );
+		{
+			out.m_flDot[i] = ReplicateX4( (float)CONSTANT_DOT );
+			out.m_flSunAmount[i] = Four_Zeros; 
+		}
 		else
 		{
 			out.m_flDot[i] = pNormals[i] * delta;
 			out.m_flDot[i] = MaxSIMD( Four_Zeros, out.m_flDot[i] );
+			out.m_flSunAmount[i] = Four_Zeros;
 		}
 	}
 }
@@ -2007,9 +2207,11 @@ void GatherSampleLightSSE( SSE_sampleLightOutput_t &out, directlight_t *dl, int 
 					   float flEpsilon )
 {
 	for ( int b = 0; b < normalCount; b++ )
+	{
 		out.m_flDot[b] = Four_Zeros;
+		out.m_flSunAmount[b] = Four_Zeros;
+	}
 	out.m_flFalloff = Four_Zeros;
-	out.m_flSunAmount = Four_Zeros;
 	Assert( normalCount <= (NUM_BUMP_VECTS+1) );
 
 	// skylights work fundamentally differently than normal lights
@@ -2034,18 +2236,40 @@ void GatherSampleLightSSE( SSE_sampleLightOutput_t &out, directlight_t *dl, int 
 		return;
 	}
 
+	// Ambient occlusion for the 4 sample positions & normals
+	fltx4 ao = Four_Ones;
+	bool bIgnoreNormals = (nLFlags & GATHERLFLAGS_IGNORE_NORMALS) != 0;
+	if ( !bIgnoreNormals ) // Don't calculate ambient occlusion for objects that ignore normals for gathering light
+	{
+		if ( nLFlags & GATHERLFLAGS_STATICPROP )
+		{
+			// for static props we want the sun amount for the basis normals to be mutliplied by the ao of the main vertex normal only.
+			// lightmaps using this path do not send basis normals here, we do so for static props to take advantage of the SIMD optimisation this path provides.
+			ao = CalculateAmbientOcclusion4( pos, *pNormals, static_prop_index_to_ignore );
+			fltx4 ao0 = SplatXSIMD( ao );
+			ao = ao0;
+		}
+		else
+		{
+			ao = CalculateAmbientOcclusion4( pos, *pNormals, static_prop_index_to_ignore );
+		}
+	}
+
 	// NOTE: Notice here that if the light is on the back side of the face
 	// (tested by checking the dot product of the face normal and the light position)
 	// we don't want it to contribute to *any* of the bumped lightmaps. It glows
 	// in disturbing ways if we don't do this.
 	out.m_flDot[0] = MaxSIMD ( out.m_flDot[0], Four_Zeros );
 	fltx4 notZero = CmpGtSIMD( out.m_flDot[0], Four_Zeros );
+	out.m_flDot[0] = MulSIMD( out.m_flDot[0], ao );
+	out.m_flSunAmount[0] = MulSIMD( out.m_flSunAmount[0], ao );
 	for ( int n = 1; n < normalCount; n++ )
 	{
 		out.m_flDot[n] = MaxSIMD( out.m_flDot[n], Four_Zeros );
 		out.m_flDot[n] = AndSIMD( out.m_flDot[n], notZero );
+		out.m_flDot[n] = MulSIMD( out.m_flDot[n], ao );
+		out.m_flSunAmount[n] = MulSIMD( out.m_flSunAmount[n], ao );
 	}
-
 }
 
 /*
@@ -2486,6 +2710,44 @@ static void ComputeIlluminationPointAndNormalsSSE( lightinfo_t const& l, FourVec
 }
 
 //-----------------------------------------------------------------------------
+// Compute the illumination point + normal for the sample on a displacement
+// (see ComputeIlluminationPointAndNormalsSSE above)
+//-----------------------------------------------------------------------------
+static void ComputeIlluminationPointAndNormalsForDisp( lightinfo_t const& l, FourVectors &pos, FourVectors &norm, SSE_SampleInfo_t* pInfo )
+{
+	pInfo->m_PointNormals[ 0 ] = norm;
+
+	if ( pInfo->m_NormalCount > 1 )
+	{
+		Vector bv[ 4 ][ NUM_BUMP_VECTS ];
+		for ( int j = 0; j < 4; j++ )
+		{
+			// TODO: using Vec may slow things down a bit
+			GetBumpNormals( pInfo->m_pTexInfo->textureVecsTexelsPerWorldUnits[ 0 ],
+							pInfo->m_pTexInfo->textureVecsTexelsPerWorldUnits[ 1 ],
+							l.facenormal, norm.Vec( j ), bv[ j ] );
+		}
+		for ( int b = 0; b < NUM_BUMP_VECTS; b++ )
+		{
+			pInfo->m_PointNormals[ b + 1 ].LoadAndSwizzle( bv[ 0 ][ b ], bv[ 1 ][ b ], bv[ 2 ][ b ], bv[ 3 ][ b ] );
+		}
+	}
+
+	pInfo->m_Points = pos;
+
+	// FIXME: move sample point off the surface a bit, this is done so that
+	// light sampling will not be affected by a bug	where raycasts will
+	// intersect with the face being lit. We really should just have that
+	// logic in GatherSampleLight
+	FourVectors faceNormal = norm;
+	pInfo->m_Points += faceNormal;
+
+	// TODO: this may slow things down a bit ( using Vec )
+	for ( int j = 0; j < 4; j++ )
+		pInfo->m_Clusters[ j ] = ClusterFromPoint( pos.Vec( j ) );
+}
+
+//-----------------------------------------------------------------------------
 // Iterates over all lights and computes lighting at up to 4 sample points
 //-----------------------------------------------------------------------------
 static void GatherSampleLightAt4Points( SSE_SampleInfo_t& info, int sampleIdx, int numSamples )
@@ -2558,7 +2820,7 @@ static void GatherSampleLightAt4Points( SSE_SampleInfo_t& info, int sampleIdx, i
 		{
 			for ( int i = 0; i < numSamples; i++ )
 			{
-				pLightmaps[n][sampleIdx + i].AddLight( SubFloat( fxdot[n], i ), dl->light.intensity, SubFloat( out.m_flSunAmount, i ) );
+				pLightmaps[n][sampleIdx + i].AddLight( SubFloat( fxdot[n], i ), dl->light.intensity, SubFloat( out.m_flSunAmount[n], i ) );
 			}
 		}
 	}
@@ -2632,7 +2894,7 @@ static void ResampleLightAt4Points( SSE_SampleInfo_t& info, int lightStyleIndex,
 		{
 			for( int n = 0; n < info.m_NormalCount; ++n )
 			{
-				pLightmap[i][n].AddLight( SubFloat( fxdot[n], i ), dl->light.intensity, SubFloat( out.m_flSunAmount, i ) );
+				pLightmap[i][n].AddLight( SubFloat( fxdot[n], i ), dl->light.intensity, SubFloat( out.m_flSunAmount[n], i ) );
 			}
 		}
 	}
@@ -2641,7 +2903,7 @@ static void ResampleLightAt4Points( SSE_SampleInfo_t& info, int lightStyleIndex,
 bool PointsInWinding ( FourVectors const & point, winding_t *w, int &invalidBits )
 {
 	FourVectors edge, toPt, cross, testCross, p0, p1;
-	fltx4 invalidMask;
+	fltx4 invalidMask = Four_Zeros;
 
 	//
 	// get the first normal to test
@@ -2653,7 +2915,9 @@ bool PointsInWinding ( FourVectors const & point, winding_t *w, int &invalidBits
 	edge = p1;
 	edge -= p0;
 	testCross = edge ^ toPt;
-	testCross.VectorNormalizeFast();
+	// safer against /0 - testCross.VectorNormalizeFast();
+	fltx4 mag_sq = testCross * testCross;
+	testCross *= ReciprocalSqrtEstSaturateSIMD( mag_sq );
 
 	for( int ndxPt = 1; ndxPt < w->numpoints; ndxPt++ )
 	{
@@ -2664,7 +2928,9 @@ bool PointsInWinding ( FourVectors const & point, winding_t *w, int &invalidBits
 		edge = p1;
 		edge -= p0;
 		cross = edge ^ toPt;
-		cross.VectorNormalizeFast();
+		// safer against /0 - cross.VectorNormalizeFast();
+		mag_sq = cross * cross;
+		cross *= ReciprocalSqrtEstSaturateSIMD( mag_sq );
 
 		fltx4 dot = cross * testCross;
 		invalidMask = OrSIMD( invalidMask, CmpLtSIMD( dot, Four_Zeros ) );
@@ -2706,6 +2972,29 @@ static int SupersampleLightAtPoint( lightinfo_t& l, SSE_SampleInfo_t& info,
 
 	FourVectors superSampleLightCoord;
 	FourVectors superSamplePosition;
+	superSamplePosition.DuplicateVector( sample.pos );
+
+	Vector wsError;
+	FourVectors superSampleWorldSpaceError;
+
+	float stepU = 0.0f;
+	float stepV = 0.0f;
+	if ( info.m_IsDispFace )
+	{
+		// compensate for error when transforming back to worldspace (only enabled for displacements)
+		Vector toWorld;
+		LuxelSpaceToWorld( &l, temp.x, temp.y, toWorld );
+		VectorSubtract( sample.pos, toWorld, wsError );
+		superSampleWorldSpaceError.DuplicateVector( wsError );
+
+		// lightmap size
+		int width = l.face->m_LightmapTextureSizeInLuxels[ 0 ] + 1;
+		int height = l.face->m_LightmapTextureSizeInLuxels[ 1 ] + 1;
+
+		// calculate the steps in uv space
+		stepU = 1.0f / (float)width;
+		stepV = 1.0f / (float)height;
+	}
 
 	if ( flags & NON_AMBIENT_ONLY )
 	{
@@ -2727,6 +3016,29 @@ static int SupersampleLightAtPoint( lightinfo_t& l, SSE_SampleInfo_t& info,
 			// it lies within the sample winding
 			LuxelSpaceToWorld( &l, superSampleLightCoord[0], superSampleLightCoord[1], superSamplePosition );
 
+			if ( info.m_IsDispFace )
+			{
+				// Fix up error from world to luxel and back again
+				superSamplePosition += superSampleWorldSpaceError;
+
+				// Find pos and norm for disp from uv supersample offsets
+ 				Vector vDispP[4], vDispN[4];
+  				for ( int i = 0; i < 4; i++ )
+ 				{
+ 					vDispP[ i ] = superSamplePosition.Vec( i );
+					Vector2D uv;
+
+					uv.x = sample.coord[0] + ( aRow[ s ] * stepU );
+					uv.y = sample.coord[1] + ( aRow[ i ] * stepV );
+
+					StaticDispMgr()->GetDispSurfPointAndNormalFromUV( info.m_FaceNum, vDispP[ i ], vDispN[ i ], uv, false );
+				}
+				superSamplePosition = FourVectors( vDispP[ 0 ], vDispP[ 1 ], vDispP[ 2 ], vDispP[ 3 ] );
+				superSampleNormal = FourVectors( vDispN[ 0 ], vDispN[ 1 ], vDispN[ 2 ], vDispN[ 3 ] );
+
+				ComputeIlluminationPointAndNormalsForDisp( l, superSamplePosition, superSampleNormal, &info );
+			}
+
 			// A winding should exist only if the sample wasn't a uniform luxel, or if g_bDumpPatches is true.
 			int invalidBits = 0;
 			if ( sample.w && !PointsInWinding( superSamplePosition, sample.w, invalidBits ) )
@@ -2734,7 +3046,8 @@ static int SupersampleLightAtPoint( lightinfo_t& l, SSE_SampleInfo_t& info,
 
 			// Compute the super-sample illumination point and normal
 			// We're assuming the flat normal is the same for all supersamples
-			ComputeIlluminationPointAndNormalsSSE( l, superSamplePosition, superSampleNormal, &info, 4 );
+			if ( !info.m_IsDispFace )
+				ComputeIlluminationPointAndNormalsSSE( l, superSamplePosition, superSampleNormal, &info, 4 );
 
 			// Resample the non-ambient light at this point...
 			LightingValue_t result[4][NUM_BUMP_VECTS+1];
@@ -2764,11 +3077,36 @@ static int SupersampleLightAtPoint( lightinfo_t& l, SSE_SampleInfo_t& info,
 
 		LuxelSpaceToWorld( &l, superSampleLightCoord[0], superSampleLightCoord[1], superSamplePosition );
 
+		if ( info.m_IsDispFace )
+		{
+			// Fix up error from world to luxel and back again
+			superSamplePosition += superSampleWorldSpaceError;
+
+			// Find pos and norm for disp from uv supersample offsets
+			Vector vDispP[ 4 ], vDispN[ 4 ];
+			for ( int i = 0; i < 4; i++ )
+			{
+				vDispP[ i ] = superSamplePosition.Vec( i );
+				Vector uvOffsets = superSampleOffsets.Vec( i );
+				Vector2D uv;
+
+				uv.x = sample.coord[ 0 ] + ( uvOffsets.x * stepU );
+				uv.y = sample.coord[ 1 ] + ( uvOffsets.y * stepV );
+
+				StaticDispMgr()->GetDispSurfPointAndNormalFromUV( info.m_FaceNum, vDispP[ i ], vDispN[ i ], uv, false );
+			}
+			superSamplePosition = FourVectors( vDispP[ 0 ], vDispP[ 1 ], vDispP[ 2 ], vDispP[ 3 ] );
+			superSampleNormal = FourVectors( vDispN[ 0 ], vDispN[ 1 ], vDispN[ 2 ], vDispN[ 3 ] );
+
+			ComputeIlluminationPointAndNormalsForDisp( l, superSamplePosition, superSampleNormal, &info );
+		}
+
 		int invalidBits = 0;
 		if ( sample.w && !PointsInWinding( superSamplePosition, sample.w, invalidBits ) )
 			return 0;
 
-		ComputeIlluminationPointAndNormalsSSE( l, superSamplePosition, superSampleNormal, &info, 4 );
+		if ( !info.m_IsDispFace )
+			ComputeIlluminationPointAndNormalsSSE( l, superSamplePosition, superSampleNormal, &info, 4 );
 
 		LightingValue_t result[4][NUM_BUMP_VECTS+1];
 		ResampleLightAt4Points( info, lightStyleIndex, AMBIENT_ONLY, result );
@@ -2955,7 +3293,6 @@ static void BuildSupersampleFaceLights( lightinfo_t& l, SSE_SampleInfo_t& info, 
 				// Recompute the luxel intensity based on the supersampling
 				ComputeLuxelIntensity( info, i, ppLightSamples, pSampleIntensity );
 			}
-
 		}
 
 		// We've finished another pass
@@ -3160,8 +3497,9 @@ void BuildFacelights (int iThread, int facenum)
 		return;
 	}
 
-	// get rid of the -extra functionality on displacement surfaces
-	if (do_extra && !sampleInfo.m_IsDispFace)
+	// Enabling supersampling for displacements (previous revision always disabled do_extra for disp)
+	// improves continuity significantly between disp and brush surfaces, especially when using high frequency alpha shadow materials
+	if ( do_extra )
 	{
 		// For each lightstyle, perform a supersampling pass
 		for ( i = 0; i < MAXLIGHTMAPS; ++i )
@@ -3354,7 +3692,6 @@ void BuildPatchLights( int facenum )
 #endif
 }
 
-
 /*
   =============
   PrecompLightmapOffsets
@@ -3409,7 +3746,10 @@ void PrecompLightmapOffsets()
 		{
 	        lightdatasize += nLuxels * 4 * lightstyles;
 		}
-    }
+
+		// Add room for additional light data here that will be packed into lightmap alpha
+		//lightdatasize += nLuxels * 4 * lightstyles; //IV Note: Will be Used with CS:GO CSM Method Later...
+	}
 
 	// The incremental lighting code needs us to preserve the contents of dlightdata
 	// since it only recomposites lighting for faces that have lights that touch them.
