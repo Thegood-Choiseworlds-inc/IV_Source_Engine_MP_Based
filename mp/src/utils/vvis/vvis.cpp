@@ -1076,7 +1076,7 @@ int RunVVis( int argc, char **argv )
 	double		start, end;
 
 
-	Msg( "Valve Software - vvis.exe (%s)\n", __DATE__ );
+	Msg( "Valve Software and THS inc 2024 - vvis.exe (%s)\n", __DATE__ );
 
 	verbose = false;
 
