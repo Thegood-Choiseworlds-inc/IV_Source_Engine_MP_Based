@@ -29,9 +29,12 @@
 	#include "fx_quad.h"
 	#include "fx.h"
 
-	extern void DrawHalo( IMaterial* pMaterial, const Vector &source, float scale, float const *color, float flHDRColorScale );
+#ifndef HL2MP
+	extern void DrawHalo( IMaterial* pMaterial, const Vector &source, float scale, float const *color, float flHDRColorScale = 1.0f );
+#else
+    extern void DrawHalo( IMaterial* pMaterial, const Vector &source, float scale, float const *color, float flHDRColorScale );
+#endif
 	extern void FormatViewModelAttachment( Vector &vOrigin, bool bInverse );
-
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
