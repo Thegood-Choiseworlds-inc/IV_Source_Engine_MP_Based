@@ -89,6 +89,8 @@ OUTPUTS:
 #include "mapbase/matchers.h"
 #endif
 
+#include "fgdlib\entitydefs.h"
+
 #include "tier0/vprof.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -132,11 +134,17 @@ CEventAction::CEventAction( const char *ActionData )
 		return;
 
 	char szToken[256];
+	
+	char chDelim = VMF_IOPARAM_STRING_DELIMITER;
+	if (!strchr(ActionData, VMF_IOPARAM_STRING_DELIMITER))
+	{
+		chDelim = ',';
+	}
 
 	//
 	// Parse the target name.
 	//
-	const char *psz = nexttoken(szToken, ActionData, ',', sizeof(szToken));
+	const char *psz = nexttoken(szToken, ActionData, chDelim);
 	if (szToken[0] != '\0')
 	{
 		m_iTarget = AllocPooledString(szToken);
@@ -145,7 +153,7 @@ CEventAction::CEventAction( const char *ActionData )
 	//
 	// Parse the input name.
 	//
-	psz = nexttoken(szToken, psz, ',', sizeof(szToken));
+	psz = nexttoken(szToken, psz, chDelim);
 	if (szToken[0] != '\0')
 	{
 		m_iTargetInput = AllocPooledString(szToken);
@@ -158,7 +166,7 @@ CEventAction::CEventAction( const char *ActionData )
 	//
 	// Parse the parameter override.
 	//
-	psz = nexttoken(szToken, psz, ',', sizeof(szToken));
+	psz = nexttoken(szToken, psz, chDelim);
 	if (szToken[0] != '\0')
 	{
 		m_iParameter = AllocPooledString(szToken);
@@ -167,7 +175,7 @@ CEventAction::CEventAction( const char *ActionData )
 	//
 	// Parse the delay.
 	//
-	psz = nexttoken(szToken, psz, ',', sizeof(szToken));
+	psz = nexttoken(szToken, psz, chDelim);
 	if (szToken[0] != '\0')
 	{
 		m_flDelay = atof(szToken);
@@ -176,7 +184,7 @@ CEventAction::CEventAction( const char *ActionData )
 	//
 	// Parse the number of times to fire.
 	//
-	nexttoken(szToken, psz, ',', sizeof(szToken));
+	nexttoken(szToken, psz, chDelim);
 	if (szToken[0] != '\0')
 	{
 		m_nTimesToFire = atoi(szToken);

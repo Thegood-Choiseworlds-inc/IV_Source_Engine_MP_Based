@@ -46,6 +46,16 @@ $Project "server"
 	"game\server\server_episodic_test_mod.vpc"		[($WIN32||$POSIX) && $THS_EPISODIC_MODIFIED]
 }
 
+$Project "hammer_dll"
+{
+	"hammer\hammer_dll.vpc" [$WIN32]
+}
+
+$Project "hammer_launcher"
+{
+	"hammer_launcher\hammer_launcher.vpc" [$WIN32]
+}
+
 $Project "responserules"
 {
 	"responserules\runtime\response_rules.vpc" [($WINDOWS||$X360||$POSIX) && $NEW_RESPONSE_SYSTEM]

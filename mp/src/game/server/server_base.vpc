@@ -387,6 +387,7 @@ $Project
 		$File	"func_occluder.cpp"
 		$File	"func_reflective_glass.cpp"
 		$File	"func_smokevolume.cpp"
+		$File	"func_instance_io_proxy.cpp"
 		$File	"game.cpp"
 		$File	"game.h"
 		$File	"game_ui.cpp"

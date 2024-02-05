@@ -624,6 +624,7 @@ enum tRemapOperation
 	// Remaps brush sides and sidelists
 	REMAP_SIDES,
 #endif
+	REMAP_INSTANCE_VARIABLE
 };
 
 
@@ -657,8 +658,10 @@ bool GameData::RemapKeyValue( const char *pszKey, const char *pszInValue, char *
 	{
 		RemapOperation.SetLessFunc( &CUtlType_LessThan );
 		RemapOperation.Insert( ivAngle, REMAP_ANGLE );
+		RemapOperation.Insert( ivStringInstanced, REMAP_NAME );
 		RemapOperation.Insert( ivTargetDest, REMAP_NAME );
 		RemapOperation.Insert( ivTargetSrc, REMAP_NAME );
+		RemapOperation.Insert( ivFilterClass, REMAP_NAME );
 		RemapOperation.Insert( ivOrigin, REMAP_POSITION );
 		RemapOperation.Insert( ivAxis, REMAP_ANGLE );
 		RemapOperation.Insert( ivAngleNegativePitch, REMAP_ANGLE_NEGATIVE_PITCH );
@@ -668,6 +671,7 @@ bool GameData::RemapKeyValue( const char *pszKey, const char *pszInValue, char *
 		RemapOperation.Insert( ivSideList, REMAP_SIDES );
 		RemapOperation.Insert( ivVecLine, REMAP_POSITION );
 #endif
+		RemapOperation.Insert( ivInstanceVariable, REMAP_INSTANCE_VARIABLE );
 	}
 
 	if ( !m_InstanceClass )
@@ -795,6 +799,9 @@ bool GameData::RemapKeyValue( const char *pszKey, const char *pszInValue, char *
 			}
 			break;
 #endif
+		case REMAP_INSTANCE_VARIABLE:
+			RemapInstanceField( pszInValue, pszOutValue, NameFixup );
+			break;
 	}
 
 	return ( strcmpi( pszInValue, pszOutValue ) != 0 );
@@ -834,6 +841,43 @@ bool GameData::RemapNameField( const char *pszInValue, char *pszOutValue, TNameF
 	return ( strcmpi( pszInValue, pszOutValue ) != 0 );
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: this function will attempt to remap a instance field.
+// Input  : pszInvalue - the original value
+// Output : returns true if the value changed
+//			pszOutValue - the new value if changed
+//-----------------------------------------------------------------------------
+bool GameData::RemapInstanceField( const char *pszInValue, char *pszOutValue, TNameFixup NameFixup )
+{
+	strcpy( pszOutValue, pszInValue );
+
+	const char *pszInEdit = strchr( pszInValue, ' ' );
+	char *pchOutEdit = strchr( pszOutValue, ' ' );
+
+	if ( pszInEdit && pchOutEdit )
+	{
+		pszInEdit++;
+		pchOutEdit++;
+
+		if ( pszInEdit[ 0 ] && pszInEdit[ 0 ] != '@' && pszInEdit[ 0 ] != '!' && 
+			 pszInEdit[ 0 ] != '-' && pszInEdit[ 0 ] != '.' && 
+			 !( pszInEdit[ 0 ] >= '0' && pszInEdit[ 0 ] <= '9' ) )
+		{	// ! or @ at the start of a value or a number means it is global and should not be remapped
+			switch( NameFixup )
+			{
+			case NAME_FIXUP_PREFIX:
+				sprintf( pchOutEdit, "%s-%s", m_InstancePrefix, pszInEdit );
+				break;
+
+			case NAME_FIXUP_POSTFIX:
+				sprintf( pchOutEdit, "%s-%s", pszInEdit, m_InstancePrefix );
+				break;
+			}
+		}
+	}
+
+	return ( strcmpi( pszInValue, pszOutValue ) != 0 );
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: Gathers any FGD-defined material directory exclusions
