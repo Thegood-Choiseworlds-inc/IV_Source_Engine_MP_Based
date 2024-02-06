@@ -1637,7 +1637,7 @@ void CClientShadowMgr::InitDepthTextureShadows()
 				m_nDepthTextureResolution_hight = depthTex->GetActualWidth();
 				r_flashlightdepthres_hight.SetValue(m_nDepthTextureResolution_hight);
 			}
-			else
+			else if (i > 0)
 			{
 				m_nDepthTextureResolution = depthTex->GetActualWidth();
 				r_flashlightdepthres.SetValue(m_nDepthTextureResolution);
