@@ -535,6 +535,8 @@ $Project
 		$File	"point_spotlight.cpp"
 		$File	"point_template.cpp"
 		$File	"point_template.h"
+		$File	"point_dynamic_light.h"
+		$File	"point_dynamic_light.cpp"
 		$File	"pointanglesensor.cpp"
 		$File	"PointAngularVelocitySensor.cpp"
 		$File	"pointhurt.cpp"

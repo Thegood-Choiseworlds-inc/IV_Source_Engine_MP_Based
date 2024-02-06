@@ -16,8 +16,14 @@
 #include "tier0/memdbgon.h"
 
 
-extern ConVar cl_sunlight_ortho_size;
-extern ConVar cl_sunlight_depthbias;
+//extern ConVar cl_sunlight_ortho_size;
+//extern ConVar cl_sunlight_depthbias;
+
+#ifdef IV_SHADOWS_ADVANCED
+extern ConVar r_flashlightdepthres_glight;
+extern ConVar mat_slopescaledepthbias_shadowmap;
+extern ConVar mat_depthbias_shadowmap;
+#endif
 
 ConVar cl_globallight_freeze( "cl_globallight_freeze", "0" );
 #ifdef MAPBASE
@@ -26,14 +32,16 @@ ConVar cl_globallight_freeze( "cl_globallight_freeze", "0" );
 ConVar cl_globallight_xoffset( "cl_globallight_xoffset", "0" );
 ConVar cl_globallight_yoffset( "cl_globallight_yoffset", "0" );
 
-static ConVar cl_globallight_slopescaledepthbias_shadowmap( "cl_globallight_slopescaledepthbias_shadowmap", "16", FCVAR_CHEAT );
-static ConVar cl_globallight_shadowfiltersize( "cl_globallight_shadowfiltersize", "0.1", FCVAR_CHEAT );
-static ConVar cl_globallight_depthbias_shadowmap( "cl_globallight_depthbias_shadowmap", "0.00001", FCVAR_CHEAT );
-static ConVar cl_globallight_depthres( "cl_globallight_depthres", "8192", FCVAR_CHEAT );
+//static ConVar cl_globallight_slopescaledepthbias_shadowmap( "cl_globallight_slopescaledepthbias_shadowmap", "16", FCVAR_CHEAT );
+//static ConVar cl_globallight_shadowfiltersize( "cl_globallight_shadowfiltersize", "0.1", FCVAR_CHEAT );
+//static ConVar cl_globallight_depthbias_shadowmap( "cl_globallight_depthbias_shadowmap", "0.00001", FCVAR_CHEAT );
+//static ConVar cl_globallight_depthres( "cl_globallight_depthres", "8192", FCVAR_CHEAT );
 #else
 ConVar cl_globallight_xoffset( "cl_globallight_xoffset", "-800" );
 ConVar cl_globallight_yoffset( "cl_globallight_yoffset", "1600" );
 #endif
+
+ConVar cl_globallight_affect_to_local_light_shadows("cl_globallight_affect_to_local_light_shadows", "0", FCVAR_CHEAT, "Enable/Disable Affecting to Local Light Rended To Texture Shadows");
 
 //------------------------------------------------------------------------------
 // Purpose : Sunlights shadow control entity
@@ -77,6 +85,9 @@ private:
 	float m_flEastOffset;
 	float m_flForwardOffset;
 	float m_flOrthoSize;
+#ifdef IV_SHADOWS_ADVANCED
+	bool m_bHightResMode;
+#endif
 #endif
 	bool m_bEnableShadows;
 	bool m_bOldEnableShadows;
@@ -109,6 +120,9 @@ IMPLEMENT_CLIENTCLASS_DT(C_GlobalLight, DT_GlobalLight, CGlobalLight)
 	RecvPropFloat(RECVINFO(m_flEastOffset)),
 	RecvPropFloat(RECVINFO(m_flForwardOffset)),
 	RecvPropFloat(RECVINFO(m_flOrthoSize)),
+#ifdef IV_SHADOWS_ADVANCED
+	RecvPropBool(RECVINFO(m_bHightResMode)),
+#endif
 #endif
 	RecvPropBool(RECVINFO(m_bEnableShadows)),
 END_RECV_TABLE()
@@ -293,10 +307,10 @@ void C_GlobalLight::ClientThink()
 
 #ifdef MAPBASE
 		//state.m_bDrawShadowFrustum = true; // Don't draw that huge debug thing
-		state.m_flShadowMapResolution = cl_globallight_depthres.GetFloat();
-		state.m_flShadowFilterSize = cl_globallight_shadowfiltersize.GetFloat();
-		state.m_flShadowSlopeScaleDepthBias = cl_globallight_slopescaledepthbias_shadowmap.GetFloat();
-		state.m_flShadowDepthBias = cl_globallight_depthbias_shadowmap.GetFloat();
+		state.m_flShadowMapResolution = m_bHightResMode ? r_flashlightdepthres_glight.GetFloat() * 2 : r_flashlightdepthres_glight.GetFloat();
+		state.m_flShadowFilterSize = m_bHightResMode ? .7 : .5;
+		state.m_flShadowSlopeScaleDepthBias = mat_slopescaledepthbias_shadowmap.GetFloat();
+		state.m_flShadowDepthBias = mat_depthbias_shadowmap.GetFloat();
 		state.m_bEnableShadows = m_bEnableShadows;
 		state.m_pSpotlightTexture = m_SpotlightTexture;
 		state.m_nSpotlightTextureFrame = m_nSpotlightTextureFrame;
@@ -342,7 +356,8 @@ void C_GlobalLight::ClientThink()
 		m_LocalFlashlightHandle = CLIENTSHADOW_INVALID_HANDLE;
 	}
 
-	g_pClientShadowMgr->SetShadowFromWorldLightsEnabled( !bSupressWorldLights );
+	if (cl_globallight_affect_to_local_light_shadows.GetBool())
+		g_pClientShadowMgr->SetShadowFromWorldLightsEnabled(!bSupressWorldLights);
 
 	BaseClass::ClientThink();
 } 

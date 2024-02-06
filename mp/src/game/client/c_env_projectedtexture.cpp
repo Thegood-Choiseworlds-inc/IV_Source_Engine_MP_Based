@@ -31,6 +31,7 @@ extern ConVarRef mat_depthbias_shadowmap;
 #if IVBASE && IV_SHADOWS_ADVANCED
 extern ConVar r_flashlightdepthres;
 extern ConVar r_flashlightdepthres_hight;
+extern ConVar r_flashlightdepthres_glight;
 #endif
 
 float C_EnvProjectedTexture::m_flVisibleBBoxMinHeight = -FLT_MAX;
@@ -417,7 +418,8 @@ void C_EnvProjectedTexture::UpdateLight( void )
 		state.m_flShadowDepthBias = mat_depthbias_shadowmap.GetFloat();
 		state.m_flShadowAtten = m_flShadowAtten;
 #if IVBASE && IV_SHADOWS_ADVANCED
-		state.m_flShadowMapResolution = m_nShadowResMode == 2 ? r_flashlightdepthres_hight.GetFloat() : r_flashlightdepthres.GetFloat();
+		state.m_flShadowMapResolution = m_nShadowResMode == 3 ? r_flashlightdepthres_glight.GetFloat() :
+			m_nShadowResMode == 2 ? r_flashlightdepthres_hight.GetFloat() : r_flashlightdepthres.GetFloat();
 #endif
 		state.m_flShadowFilterSize = m_flShadowFilter;
 #else

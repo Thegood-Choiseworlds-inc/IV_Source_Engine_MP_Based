@@ -32,6 +32,7 @@ BEGIN_DATADESC( CEnvDOFController )
 	DEFINE_THINKFUNC( UpdateParamBlend ),
 
 	// Inputs
+	DEFINE_INPUTFUNC(FIELD_BOOLEAN, "SetDofEnabled", InputSetDofEnabled),
 	DEFINE_INPUTFUNC( FIELD_FLOAT,	"SetNearBlurDepth",		InputSetNearBlurDepth ),
 	DEFINE_INPUTFUNC( FIELD_FLOAT,	"SetNearFocusDepth",	InputSetNearFocusDepth ),
 	DEFINE_INPUTFUNC( FIELD_FLOAT,	"SetFarFocusDepth",		InputSetFarFocusDepth ),
@@ -91,6 +92,11 @@ void CEnvDOFController::Activate()
 int CEnvDOFController::UpdateTransmitState()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
+}
+
+void CEnvDOFController::InputSetDofEnabled(inputdata_t &inputdata)
+{
+	m_bDOFEnabled = inputdata.value.Bool();
 }
 
 void CEnvDOFController::InputSetNearBlurDepth( inputdata_t &inputdata )

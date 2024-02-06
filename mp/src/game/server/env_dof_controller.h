@@ -30,6 +30,7 @@ public:
 	void	UpdateParamBlend();
 
 	// Inputs
+	void	InputSetDofEnabled(inputdata_t &inputdata);
 	void	InputSetNearBlurDepth( inputdata_t &inputdata );
 	void	InputSetNearFocusDepth( inputdata_t &inputdata );
 	void	InputSetFarFocusDepth( inputdata_t &inputdata );

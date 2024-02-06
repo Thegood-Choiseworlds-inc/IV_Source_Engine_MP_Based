@@ -344,6 +344,7 @@ void CFlashlightEffect::UpdateLightNew(const Vector &vecPos, const Vector &vecFo
 	state.m_FarZ = r_flashlightfar.GetFloat();
 	state.m_bEnableShadows = r_flashlightdepthtexture.GetBool();
 	state.m_flShadowMapResolution = r_flashlightdepthres.GetInt();
+	state.m_flShadowFilterSize = 3;
 
 	state.m_pSpotlightTexture = m_FlashlightTexture;
 	state.m_nSpotlightTextureFrame = 0;
