@@ -31,6 +31,8 @@ static IVEngineServer *g_pEngineServer = NULL;
 ConVar cl_worldlight_use_new_method("cl_worldlight_use_new_method", "1", FCVAR_NONE, "Uses the new world light iteration method which splits lights into multiple lists for each cluster.");
 #endif
 
+extern ConVar r_shadowfromanyworldlight;
+
 //-----------------------------------------------------------------------------
 // Singleton exposure
 //-----------------------------------------------------------------------------
@@ -319,6 +321,9 @@ void CWorldLights::FindBrightestLightSourceOld( const Vector &vecPosition, Vecto
 	{
 		dworldlight_t *light = &m_pWorldLights[i];
 
+		if (!(light->flags & DWL_FLAGS_CASTENTITYSHADOWS) && !r_shadowfromanyworldlight.GetBool())
+			continue;
+
 		// Skip skyambient
 		if(light->type == emit_skyambient)
 		{
@@ -449,6 +454,9 @@ void CWorldLights::FindBrightestLightSourceNew( const Vector &vecPosition, Vecto
 		{
 			int ssIndex = m_WorldLightsIndexList[m_WorldLightsInCluster[nCluster].firstLight + j];
 			dworldlight_t *light = &m_pWorldLights[ssIndex];
+
+			if (!(light->flags & DWL_FLAGS_CASTENTITYSHADOWS) && !r_shadowfromanyworldlight.GetBool())
+				continue;
 
 			// Calculate square distance to this worldlight
 			Vector vecDelta = light->origin - vecPosition;

@@ -2151,6 +2151,7 @@ FORCEINLINE fltx4 CeilSIMD( const fltx4 &a )
 
 }
 
+fltx4 AbsSIMD( const fltx4 & x );		// To make it more coherent with the whole API (the whole SIMD API is postfixed with SIMD except a couple of methods. Well...)
 fltx4 fabs( const fltx4 & x );
 // Round towards negative infinity
 // This is the implementation that was here before; it assumes
@@ -2742,6 +2743,23 @@ public:
 
 };
 
+inline FourVectors Mul( const FourVectors &a, const fltx4 &b )	
+{
+	FourVectors ret;
+	ret.x = MulSIMD( a.x, b );
+	ret.y = MulSIMD( a.y, b );
+	ret.z = MulSIMD( a.z, b );
+	return ret;
+}
+
+inline FourVectors Mul( const FourVectors &a, const FourVectors &b )	
+{
+	FourVectors ret;
+	ret.x = MulSIMD( a.x, b.x );
+	ret.y = MulSIMD( a.y, b.y );
+	ret.z = MulSIMD( a.z, b.z );
+	return ret;
+}
 /// form 4 cross products
 inline FourVectors operator ^(const FourVectors &a, const FourVectors &b)
 {
@@ -2749,6 +2767,24 @@ inline FourVectors operator ^(const FourVectors &a, const FourVectors &b)
 	ret.x=SubSIMD(MulSIMD(a.y,b.z),MulSIMD(a.z,b.y));
 	ret.y=SubSIMD(MulSIMD(a.z,b.x),MulSIMD(a.x,b.z));
 	ret.z=SubSIMD(MulSIMD(a.x,b.y),MulSIMD(a.y,b.x));
+	return ret;
+}
+
+inline FourVectors operator-(const FourVectors &a, const FourVectors &b)
+{
+	FourVectors ret;
+	ret.x=SubSIMD(a.x,b.x);
+	ret.y=SubSIMD(a.y,b.y);
+	ret.z=SubSIMD(a.z,b.z);
+	return ret;
+}
+
+inline FourVectors operator+( const FourVectors &a, const FourVectors &b )
+{
+	FourVectors ret;
+	ret.x = AddSIMD( a.x, b.x );
+	ret.y = AddSIMD( a.y, b.y );
+	ret.z = AddSIMD( a.z, b.z );
 	return ret;
 }
 
@@ -2905,6 +2941,12 @@ FourVectors CurlNoiseSIMD( FourVectors const &v );
 inline fltx4 fabs( const fltx4 & x )
 {
 	return AndSIMD( x, LoadAlignedSIMD( g_SIMD_clear_signmask ) );
+}
+
+// Convenience version
+inline fltx4 AbsSIMD( const fltx4 & x )
+{
+	return fabs( x );
 }
 
 /// negate all four components of a SIMD packed single

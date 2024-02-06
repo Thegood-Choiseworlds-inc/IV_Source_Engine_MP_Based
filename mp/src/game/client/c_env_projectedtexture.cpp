@@ -28,6 +28,12 @@
 extern ConVarRef mat_slopescaledepthbias_shadowmap;
 extern ConVarRef mat_depthbias_shadowmap;
 
+#if IVBASE && IV_SHADOWS_ADVANCED
+extern ConVar r_flashlightdepthres;
+extern ConVar r_flashlightdepthres_hight;
+extern ConVar r_flashlightdepthres_glight;
+#endif
+
 float C_EnvProjectedTexture::m_flVisibleBBoxMinHeight = -FLT_MAX;
 
 
@@ -55,6 +61,9 @@ IMPLEMENT_CLIENTCLASS_DT( C_EnvProjectedTexture, DT_EnvProjectedTexture, CEnvPro
 	RecvPropFloat(	 RECVINFO( m_flNearZ )	),
 	RecvPropFloat(	 RECVINFO( m_flFarZ )	),
 	RecvPropInt(	 RECVINFO( m_nShadowQuality )	),
+#if IVBASE && IV_SHADOWS_ADVANCED
+	RecvPropInt(RECVINFO(m_nShadowResMode)),
+#endif
 #ifdef MAPBASE
 	RecvPropFloat(	 RECVINFO( m_flConstantAtten ) ),
 	RecvPropFloat(	 RECVINFO( m_flLinearAtten ) ),
@@ -78,6 +87,9 @@ C_EnvProjectedTexture *C_EnvProjectedTexture::Create( )
 	pEnt->m_bLightWorld = true;
 	pEnt->m_bLightOnlyTarget = false;
 	pEnt->m_nShadowQuality = 1;
+#if IVBASE && IV_SHADOWS_ADVANCED
+	pEnt->m_nShadowResMode = 1;
+#endif
 	pEnt->m_flLightFOV = 10.0f;
 #ifdef MAPBASE
 	pEnt->m_flLightHorFOV = 10.0f;
@@ -405,6 +417,10 @@ void C_EnvProjectedTexture::UpdateLight( void )
 		state.m_flShadowSlopeScaleDepthBias = mat_slopescaledepthbias_shadowmap.GetFloat();
 		state.m_flShadowDepthBias = mat_depthbias_shadowmap.GetFloat();
 		state.m_flShadowAtten = m_flShadowAtten;
+#if IVBASE && IV_SHADOWS_ADVANCED
+		state.m_flShadowMapResolution = m_nShadowResMode == 3 ? r_flashlightdepthres_glight.GetFloat() :
+			m_nShadowResMode == 2 ? r_flashlightdepthres_hight.GetFloat() : r_flashlightdepthres.GetFloat();
+#endif
 		state.m_flShadowFilterSize = m_flShadowFilter;
 #else
 		state.m_fQuadraticAtten = 0.0;

@@ -15,7 +15,7 @@ $Configuration
 	$Compiler
 	{
 		$AdditionalIncludeDirectories		"$BASE,..\common,..\vmpi"
-		$PreprocessorDefinitions			"$BASE;MACRO_MATHLIB;PROTECTED_THINGS_DISABLE"
+		$PreprocessorDefinitions			"$BASE;MACRO_MATHLIB;PROTECTED_THINGS_DISABLE;IVBASE"
 		
 		$PreprocessorDefinitions			"$BASE;MAPBASE_VSCRIPT"	[$MAPBASE_VSCRIPT]
 	}

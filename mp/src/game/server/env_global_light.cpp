@@ -76,6 +76,9 @@ private:
 	CNetworkVar( float, m_flEastOffset ); // xoffset
 	CNetworkVar( float, m_flForwardOffset ); // yoffset
 	CNetworkVar( float, m_flOrthoSize );
+#ifdef IV_SHADOWS_ADVANCED
+	CNetworkVar(bool, m_bHightResMode);
+#endif
 #endif
 	CNetworkVar( bool, m_bEnableShadows );
 };
@@ -97,6 +100,9 @@ BEGIN_DATADESC( CGlobalLight )
 	DEFINE_KEYFIELD( m_flEastOffset,	FIELD_FLOAT, "eastoffset" ),
 	DEFINE_KEYFIELD( m_flForwardOffset,	FIELD_FLOAT, "forwardoffset" ),
 	DEFINE_KEYFIELD( m_flOrthoSize,	FIELD_FLOAT, "orthosize" ),
+#ifdef IV_SHADOWS_ADVANCED
+	DEFINE_KEYFIELD(m_bHightResMode, FIELD_BOOLEAN, "hightresmodestate"),
+#endif
 #endif
 	DEFINE_KEYFIELD( m_bEnableShadows, FIELD_BOOLEAN, "enableshadows" ),
 	DEFINE_FIELD( m_LightColor, FIELD_COLOR32 ), 
@@ -158,6 +164,9 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE(CGlobalLight, DT_GlobalLight)
 	SendPropFloat(SENDINFO(m_flEastOffset), 0, SPROP_NOSCALE ),
 	SendPropFloat(SENDINFO(m_flForwardOffset), 0, SPROP_NOSCALE ),
 	SendPropFloat(SENDINFO(m_flOrthoSize), 0, SPROP_NOSCALE ),
+#ifdef IV_SHADOWS_ADVANCED
+	SendPropBool(SENDINFO(m_bHightResMode)),
+#endif
 #endif
 	SendPropBool( SENDINFO( m_bEnableShadows ) ),
 END_SEND_TABLE()
@@ -183,6 +192,9 @@ CGlobalLight::CGlobalLight()
 	m_nSpotlightTextureFrame = 0;
 	m_flBrightnessScale = 1.0f;
 	m_flOrthoSize = 1000.0f;
+#ifdef IV_SHADOWS_ADVANCED
+	m_bHightResMode = false;
+#endif
 #endif
 	m_bEnabled = true;
 }

@@ -38,6 +38,9 @@ BEGIN_DATADESC( CEnvProjectedTexture )
 	DEFINE_KEYFIELD( m_flNearZ, FIELD_FLOAT, "nearz" ),
 	DEFINE_KEYFIELD( m_flFarZ, FIELD_FLOAT, "farz" ),
 	DEFINE_KEYFIELD( m_nShadowQuality, FIELD_INTEGER, "shadowquality" ),
+#if IVBASE && IV_SHADOWS_ADVANCED
+	DEFINE_KEYFIELD( m_nShadowResMode, FIELD_INTEGER, "shadowresmode" ),
+#endif
 #ifdef MAPBASE
 	DEFINE_KEYFIELD( m_bAlwaysDraw, FIELD_BOOLEAN, "alwaysdraw" ),
 	DEFINE_KEYFIELD( m_bProjectedTextureVersion, FIELD_BOOLEAN, "ProjectedTextureVersion" ),
@@ -113,6 +116,9 @@ IMPLEMENT_SERVERCLASS_ST( CEnvProjectedTexture, DT_EnvProjectedTexture )
 	SendPropFloat( SENDINFO( m_flNearZ ), 16, SPROP_ROUNDDOWN, 0.0f,  500.0f ),
 	SendPropFloat( SENDINFO( m_flFarZ ),  18, SPROP_ROUNDDOWN, 0.0f, 1500.0f ),
 	SendPropInt( SENDINFO( m_nShadowQuality ), 1, SPROP_UNSIGNED ),  // Just one bit for now
+#if IVBASE && IV_SHADOWS_ADVANCED
+	SendPropInt(SENDINFO(m_nShadowResMode), 1, SPROP_UNSIGNED),
+#endif
 #ifdef MAPBASE
 	SendPropFloat( SENDINFO( m_flConstantAtten ) ),
 	SendPropFloat( SENDINFO( m_flLinearAtten ) ),
@@ -156,6 +162,9 @@ CEnvProjectedTexture::CEnvProjectedTexture( void )
 	m_flNearZ = 4.0f;
 	m_flFarZ = 750.0f;
 	m_nShadowQuality = 0;
+#if IVBASE && IV_SHADOWS_ADVANCED
+	m_nShadowResMode = 1;
+#endif
 #ifdef MAPBASE
 	m_flQuadraticAtten = 0.0f;
 	m_flLinearAtten = 100.0f;

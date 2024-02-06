@@ -101,7 +101,8 @@ static ConVar r_flashlightmodels( "r_flashlightmodels", "1" );
 static ConVar r_shadowrendertotexture( "r_shadowrendertotexture", "0" );
 #ifdef ASW_PROJECTED_TEXTURES
 static ConVar r_shadow_lightpos_lerptime( "r_shadow_lightpos_lerptime", "0.5" );
-static ConVar r_shadowfromworldlights_debug( "r_shadowfromworldlights_debug", "0", FCVAR_CHEAT );
+static ConVar r_shadowfromworldlights_debug( "r_shadowfromworldlights_debug", "0", FCVAR_CHEAT, "Render To Texture Shadows Local Angles Debug" );
+ConVar r_shadowfromanyworldlight( "r_shadowfromanyworldlight", "0", FCVAR_CHEAT, "Enable Render to Texture Shadows from Any Local World Light unless Sky Light" );
 static ConVar r_shadow_shortenfactor( "r_shadow_shortenfactor", "2" , 0, "Makes shadows cast from local lights shorter" );
 static ConVar r_shadow_mincastintensity( "r_shadow_mincastintensity", "0.3", FCVAR_CHEAT, "Minimum brightness of a light to be classed as shadow casting", true, 0, false, 0 );
 #endif
@@ -109,11 +110,27 @@ static ConVar r_flashlight_version2( "r_flashlight_version2", "0", FCVAR_CHEAT |
 
 ConVar r_flashlightdepthtexture( "r_flashlightdepthtexture", "1" );
 
+#if MAPBASE
+#if IVBASE
+#define SHADOW_RES_DEFAULT "1024"
+#if IV_SHADOWS_ADVANCED
+#define SHADOW_RES_HIGHT "2048"
+#define SHADOW_RES_GLIGHT "4096"
+#endif
+#else
+#define SHADOW_RES_DEFAULT "2048"
+#endif
+#endif
+
 #if defined( _X360 )
 ConVar r_flashlightdepthres( "r_flashlightdepthres", "512" );
 #else
-#ifdef MAPBASE
-ConVar r_flashlightdepthres( "r_flashlightdepthres", "2048" );
+#ifdef MAPBASE 
+ConVar r_flashlightdepthres( "r_flashlightdepthres", SHADOW_RES_DEFAULT );
+#if IVBASE && IV_SHADOWS_ADVANCED
+ConVar r_flashlightdepthres_hight("r_flashlightdepthres_hight", SHADOW_RES_HIGHT);
+ConVar r_flashlightdepthres_glight("r_flashlightdepthres_glight", SHADOW_RES_GLIGHT);
+#endif
 #else
 ConVar r_flashlightdepthres( "r_flashlightdepthres", "1024" );
 #endif
@@ -987,7 +1004,11 @@ private:
 	ClientShadowHandle_t CreateProjectedTexture( ClientEntityHandle_t entity, int flags );
 
 	// Lock down the usage of a shadow depth texture...must be unlocked use on subsequent views / frames
+#if !IV_SHADOWS_ADVANCED
 	bool	LockShadowDepthTexture( CTextureReference *shadowDepthTexture );
+#else
+	bool	LockShadowDepthTexture( CTextureReference* shadowDepthTexture, int shadow_res_in, CTextureReference* dummy_result );
+#endif
 	void	UnlockAllShadowDepthTextures();
 
 	// Set and clear flashlight target renderable
@@ -1024,7 +1045,11 @@ private:
 	CMaterialReference m_SimpleShadow;
 	CMaterialReference m_RenderShadow;
 	CMaterialReference m_RenderModelShadow;
+#if !IVBASE && !IV_SHADOWS_ADVANCED
 	CTextureReference m_DummyColorTexture;
+#else
+	CUtlVector<CTextureReference> m_DummyColorTexture;
+#endif
 	CUtlLinkedList< ClientShadow_t, ClientShadowHandle_t >	m_Shadows;
 	CTextureAllocator m_ShadowAllocator;
 
@@ -1045,6 +1070,10 @@ private:
 	// If either changes in a frame, PreRender() will catch it and do the appropriate allocation, deallocation or reallocation
 	bool m_bDepthTextureActive;
 	int m_nDepthTextureResolution; // Assume square (height == width)
+#if IVBASE && IV_SHADOWS_ADVANCED
+	int m_nDepthTextureResolution_hight;
+	int m_nDepthTextureResolution_glight;
+#endif
 
 	CUtlVector< CTextureReference > m_DepthTextureCache;
 	CUtlVector< bool > m_DepthTextureCacheLocks;
@@ -1271,6 +1300,11 @@ CClientShadowMgr::CClientShadowMgr() :
 	m_bDepthTextureActive( false )
 {
 	m_nDepthTextureResolution = r_flashlightdepthres.GetInt();
+#if IVBASE && IV_SHADOWS_ADVANCED
+	m_nDepthTextureResolution_hight = r_flashlightdepthres_hight.GetInt();
+	m_nDepthTextureResolution_glight = r_flashlightdepthres_glight.GetInt();
+#endif
+
 	m_bThreaded = false;
 }
 
@@ -1385,6 +1419,16 @@ static void ShadowRestoreFunc( int nChangeFlags )
 	s_ClientShadowMgr.RestoreRenderState();
 }
 
+#if MAPBASE
+#if IVBASE && !IV_SHADOWS_ADVANCED
+#define MAX_PJ_SHADOWS 3
+#elif IV_SHADOWS_ADVANCED
+#define MAX_PJ_SHADOWS 12
+#endif
+#else
+#define MAX_PJ_SHADOWS 5
+#endif
+
 //-----------------------------------------------------------------------------
 // Initialization, shutdown
 //-----------------------------------------------------------------------------
@@ -1404,7 +1448,7 @@ bool CClientShadowMgr::Init()
 	m_nMaxDepthTextureShadows = bTools ? 4 : 1;	// Just one shadow depth texture in games, more in tools
 #else
 	// 5 lets mappers use up to 4 shadow-casting projected textures, which is better than 3.
-	int iNumShadows = CommandLine()->ParmValue( "-numshadowtextures", 5 );
+	int iNumShadows = CommandLine()->ParmValue( "-numshadowtextures", MAX_PJ_SHADOWS );
 	m_nMaxDepthTextureShadows = iNumShadows;
 #endif
 
@@ -1433,9 +1477,13 @@ bool CClientShadowMgr::Init()
 	// These need to be referenced here since the cvars don't exist in the initial declaration
 	mat_slopescaledepthbias_shadowmap = ConVarRef( "mat_slopescaledepthbias_shadowmap" );
 	mat_depthbias_shadowmap = ConVarRef( "mat_depthbias_shadowmap" );
-
+#if IVBASE
+	mat_slopescaledepthbias_shadowmap.SetValue("4");
+	mat_depthbias_shadowmap.SetValue("0.00005");
+#else
 	mat_slopescaledepthbias_shadowmap.SetValue( "16" ); // Would do something like 2 here, but it causes citizens to look weird under flashlights
 	mat_depthbias_shadowmap.SetValue( "0.00005" );
+#endif
 #endif
 
 	return true;
@@ -1453,6 +1501,9 @@ void CClientShadowMgr::Shutdown()
 }
 
 
+ConVar r_shadowdepth_skip_render_targets_allocation("r_shadowdepth_skip_render_targets_allocation", "0", FCVAR_CHEAT, "Skip Render Depth Targets Reallocation. Use that, if game crashes on shadows"
+	"resolution changes");
+
 //-----------------------------------------------------------------------------
 // Initialize, shutdown depth-texture shadows
 //-----------------------------------------------------------------------------
@@ -1463,6 +1514,11 @@ void CClientShadowMgr::InitDepthTextureShadows()
 #if defined(MAPBASE) //&& !defined(ASW_PROJECTED_TEXTURES)
  	// SAUL: set m_nDepthTextureResolution to the depth resolution we want
 	m_nDepthTextureResolution = r_flashlightdepthres.GetInt();
+
+#if IVBASE && IV_SHADOWS_ADVANCED
+	m_nDepthTextureResolution_hight = r_flashlightdepthres_hight.GetInt();
+	m_nDepthTextureResolution_glight = r_flashlightdepthres_glight.GetInt();
+#endif
 #endif
 
 	if( !m_bDepthTextureActive )
@@ -1473,7 +1529,9 @@ void CClientShadowMgr::InitDepthTextureShadows()
 #if !defined( _X360 )
 		ImageFormat nullFormat = materials->GetNullTextureFormat();			// Vendor-dependent null texture format (takes as little memory as possible)
 #endif
-		materials->BeginRenderTargetAllocation();
+
+		if (!r_shadowdepth_skip_render_targets_allocation.GetBool())
+			materials->BeginRenderTargetAllocation();
 
 #if defined( _X360 )
 		// For the 360, we'll be rendering depth directly into the dummy depth and Resolve()ing to the depth texture.
@@ -1482,13 +1540,32 @@ void CClientShadowMgr::InitDepthTextureShadows()
 		m_DummyColorTexture.InitRenderTargetSurface( r_flashlightdepthres.GetInt(), r_flashlightdepthres.GetInt(), IMAGE_FORMAT_BGR565, true );
 #else
 #if defined(MAPBASE) //&& !defined(ASW_PROJECTED_TEXTURES)
+#if IVBASE && IV_SHADOWS_ADVANCED
+		m_DummyColorTexture.Purge();
+
+		CTextureReference depthTex_dummy;
+
 		// SAUL: we want to create a render target of specific size, so use RT_SIZE_NO_CHANGE
-		m_DummyColorTexture.InitRenderTarget( m_nDepthTextureResolution, m_nDepthTextureResolution, RT_SIZE_NO_CHANGE, nullFormat, MATERIAL_RT_DEPTH_NONE, false, "_rt_ShadowDummy" );
+		depthTex_dummy.InitRenderTarget( m_nDepthTextureResolution, m_nDepthTextureResolution, RT_SIZE_NO_CHANGE, nullFormat, MATERIAL_RT_DEPTH_NONE, false, "_rt_ShadowDummy" );
+		m_DummyColorTexture.AddToTail(depthTex_dummy);
+		depthTex_dummy.InitRenderTarget( m_nDepthTextureResolution_hight, m_nDepthTextureResolution_hight, RT_SIZE_NO_CHANGE, nullFormat, MATERIAL_RT_DEPTH_NONE, false, "_rt_ShadowDummy_Second" );
+		m_DummyColorTexture.AddToTail(depthTex_dummy);
+		depthTex_dummy.InitRenderTarget( m_nDepthTextureResolution_glight, m_nDepthTextureResolution_glight, RT_SIZE_NO_CHANGE, nullFormat, MATERIAL_RT_DEPTH_NONE, false, "_rt_ShadowDummy_Third" );
+		m_DummyColorTexture.AddToTail(depthTex_dummy);
+		depthTex_dummy.InitRenderTarget( m_nDepthTextureResolution_glight * 2, m_nDepthTextureResolution_glight * 2, RT_SIZE_NO_CHANGE, nullFormat, MATERIAL_RT_DEPTH_NONE, false, "_rt_ShadowDummy_Final" );
+		m_DummyColorTexture.AddToTail(depthTex_dummy);
+#else
+		m_DummyColorTexture.InitRenderTarget(m_nDepthTextureResolution, m_nDepthTextureResolution, RT_SIZE_NO_CHANGE, nullFormat, MATERIAL_RT_DEPTH_NONE, false, "_rt_ShadowDummy");
+#endif
 #else
 		m_DummyColorTexture.InitRenderTarget( r_flashlightdepthres.GetInt(), r_flashlightdepthres.GetInt(), RT_SIZE_OFFSCREEN, nullFormat, MATERIAL_RT_DEPTH_NONE, false, "_rt_ShadowDummy" );
 #endif
 #endif
-
+		Msg("Begin Creating Shadow Depth Render Targets...\n");
+		Msg("===========================================================================================\n");
+#if IVBASE && IV_SHADOWS_ADVANCED
+		Msg("Advanced Shadows Mode Enabled!!!\n");
+#endif
 		// Create some number of depth-stencil textures
 		m_DepthTextureCache.Purge();
 		m_DepthTextureCacheLocks.Purge();
@@ -1509,29 +1586,74 @@ void CClientShadowMgr::InitDepthTextureShadows()
 #if defined(MAPBASE) //&& !defined(ASW_PROJECTED_TEXTURES)
 			// SAUL: we want to create a *DEPTH TEXTURE* of specific size, so use RT_SIZE_NO_CHANGE and MATERIAL_RT_DEPTH_ONLY
 			// However, MATERIAL_RT_DEPTH_ONLY forces point filtering to be enabled which negatively affect PCF, so the standard MATERIAL_RT_DEPTH_NONE works better.
+#if IVBASE && IV_SHADOWS_ADVANCED
+			if (i == 0)
+			{
+				int glight_hight_res = m_nDepthTextureResolution_glight * 2;
+				depthTex.InitRenderTarget(glight_hight_res, glight_hight_res, RT_SIZE_NO_CHANGE, dstFormat, MATERIAL_RT_DEPTH_NONE, false, strRTName);
+				Assert(depthTex->GetActualWidth() == glight_hight_res);
+			}
+			else if (i == 1)
+			{
+				depthTex.InitRenderTarget(m_nDepthTextureResolution_glight, m_nDepthTextureResolution_glight, RT_SIZE_NO_CHANGE, dstFormat, MATERIAL_RT_DEPTH_NONE, false, strRTName);
+				Assert(depthTex->GetActualWidth() == m_nDepthTextureResolution_glight);
+			}
+			else if (i <= 6)
+			{
+				depthTex.InitRenderTarget(m_nDepthTextureResolution_hight, m_nDepthTextureResolution_hight, RT_SIZE_NO_CHANGE, dstFormat, MATERIAL_RT_DEPTH_NONE, false, strRTName);
+				Assert(depthTex->GetActualWidth() == m_nDepthTextureResolution_hight);
+			}
+			else
+			{
+				depthTex.InitRenderTarget(m_nDepthTextureResolution, m_nDepthTextureResolution, RT_SIZE_NO_CHANGE, dstFormat, MATERIAL_RT_DEPTH_NONE, false, strRTName);
+				Assert(depthTex->GetActualWidth() == m_nDepthTextureResolution);
+			}
+#else
 			depthTex.InitRenderTarget( m_nDepthTextureResolution, m_nDepthTextureResolution, RT_SIZE_NO_CHANGE, dstFormat, MATERIAL_RT_DEPTH_NONE, false, strRTName );
+
+			// SAUL: ensure the depth texture size wasn't changed
+			Assert(depthTex->GetActualWidth() == m_nDepthTextureResolution);
+#endif
 #else
 			depthTex.InitRenderTarget( m_nDepthTextureResolution, m_nDepthTextureResolution, RT_SIZE_OFFSCREEN, dstFormat, MATERIAL_RT_DEPTH_NONE, false, strRTName );
 #endif
 #endif
 
-#if defined(MAPBASE) //&& !defined(ASW_PROJECTED_TEXTURES)
-			// SAUL: ensure the depth texture size wasn't changed
-			Assert(depthTex->GetActualWidth() == m_nDepthTextureResolution);
-#endif
-
+#if !IVBASE && !IV_SHADOWS_ADVANCED
 			if ( i == 0 )
 			{
 				// Shadow may be resized during allocation (due to resolution constraints etc)
 				m_nDepthTextureResolution = depthTex->GetActualWidth();
 				r_flashlightdepthres.SetValue( m_nDepthTextureResolution );
 			}
+#else
+			if (i == 1)
+			{
+				m_nDepthTextureResolution_glight = depthTex->GetActualWidth();
+				r_flashlightdepthres_glight.SetValue(m_nDepthTextureResolution_glight);
+			}
+			else if (i <= 6 && i > 0)
+			{
+				m_nDepthTextureResolution_hight = depthTex->GetActualWidth();
+				r_flashlightdepthres_hight.SetValue(m_nDepthTextureResolution_hight);
+			}
+			else
+			{
+				m_nDepthTextureResolution = depthTex->GetActualWidth();
+				r_flashlightdepthres.SetValue(m_nDepthTextureResolution);
+			}
+#endif
 
 			m_DepthTextureCache.AddToTail( depthTex );
 			m_DepthTextureCacheLocks.AddToTail( bFalse );
+
+			Msg("Added Shadow Depth Target - '%s'; Shadow Resolution - W = '%i', H = '%i'\n", depthTex->GetName(), depthTex->GetActualWidth(), depthTex->GetActualHeight());
 		}
 
-		materials->EndRenderTargetAllocation();
+		Msg("===========================================================================================\n");
+
+		if (!r_shadowdepth_skip_render_targets_allocation.GetBool())
+			materials->EndRenderTargetAllocation();
 	}
 }
 
@@ -1539,8 +1661,10 @@ void CClientShadowMgr::ShutdownDepthTextureShadows()
 {
 	if( m_bDepthTextureActive )
 	{
+#if !IV_SHADOWS_ADVANCED
 		// Shut down the dummy texture
 		m_DummyColorTexture.Shutdown();
+#endif
 
 		while( m_DepthTextureCache.Count() )
 		{
@@ -1549,6 +1673,15 @@ void CClientShadowMgr::ShutdownDepthTextureShadows()
 			m_DepthTextureCacheLocks.Remove( m_DepthTextureCache.Count()-1 );
 			m_DepthTextureCache.Remove( m_DepthTextureCache.Count()-1 );
 		}
+
+#if IVBASE && IV_SHADOWS_ADVANCED
+		while ( m_DummyColorTexture.Count() )
+		{
+			// Shut down the dummy texture
+			m_DummyColorTexture[m_DummyColorTexture.Count() - 1].Shutdown();
+			m_DummyColorTexture.Remove(m_DummyColorTexture.Count() - 1);
+		}
+#endif
 
 		m_bDepthTextureActive = false;
 	}
@@ -2108,6 +2241,7 @@ ClientShadowHandle_t CClientShadowMgr::CreateProjectedTexture( ClientEntityHandl
 	if( !( flags & SHADOW_FLAGS_FLASHLIGHT ) )
 	{
 		IClientRenderable *pRenderable = ClientEntityList().GetClientRenderableFromHandle( entity );
+
 		if ( !pRenderable )
 			return m_Shadows.InvalidIndex();
 
@@ -3278,13 +3412,28 @@ void CClientShadowMgr::PreRender()
 
 		bool bDepthTextureActive     = r_flashlightdepthtexture.GetBool();
 		int  nDepthTextureResolution = r_flashlightdepthres.GetInt();
+#if IV_SHADOWS_ADVANCED
+		int nDepthTextureResolution_hight = r_flashlightdepthres_hight.GetInt();
+		int nDepthTextureResolution_glight = r_flashlightdepthres_glight.GetInt();
+
+		bool depth_res_state = (nDepthTextureResolution == m_nDepthTextureResolution) && (nDepthTextureResolution_hight == m_nDepthTextureResolution_hight)
+			&& (nDepthTextureResolution_glight == m_nDepthTextureResolution_glight);
+#endif
 
 		// If shadow depth texture size or enable/disable changed, do appropriate deallocation/(re)allocation
+#if !IV_SHADOWS_ADVANCED
 		if ( ( bDepthTextureActive != m_bDepthTextureActive ) || ( nDepthTextureResolution != m_nDepthTextureResolution ) )
+#else
+		if ((bDepthTextureActive != m_bDepthTextureActive) || !depth_res_state)
+#endif
 		{
 			// If shadow depth texturing remains on, but resolution changed, shut down and reinitialize depth textures
 			if ( ( bDepthTextureActive == true ) && ( m_bDepthTextureActive == true ) &&
+#if !IV_SHADOWS_ADVANCED
 				 ( nDepthTextureResolution != m_nDepthTextureResolution ) )
+#else
+				!depth_res_state)
+#endif
 			{
 				ShutdownDepthTextureShadows();	
 				InitDepthTextureShadows();
@@ -4464,14 +4613,20 @@ void CClientShadowMgr::ComputeShadowDepthTextures( const CViewSetup &viewSetup )
 #endif
 
 		CTextureReference shadowDepthTexture;
+#if IVBASE && IV_SHADOWS_ADVANCED
+		CTextureReference dummy_out;
+		bool bGotShadowDepthTexture = LockShadowDepthTexture( &shadowDepthTexture, (int)flashlightState.m_flShadowMapResolution, &dummy_out);
+#else
 		bool bGotShadowDepthTexture = LockShadowDepthTexture( &shadowDepthTexture );
+#endif
+
 		if ( !bGotShadowDepthTexture )
 		{
 			// If we don't get one, that means we have too many this frame so bind no depth texture
 			static int bitchCount = 0;
 			if( bitchCount < 10 )
 			{
-				Warning( "Too many shadow maps this frame!\n"  );
+				Warning( "Too many shadow maps this frame or Depth Texture is NOT Corrected!!!!\n"  );
 				bitchCount++;
 			}
 
@@ -4546,7 +4701,11 @@ void CClientShadowMgr::ComputeShadowDepthTextures( const CViewSetup &viewSetup )
 		pRenderContext->SetShadowDepthBiasFactors( flashlightState.m_flShadowSlopeScaleDepthBias, flashlightState.m_flShadowDepthBias );
 
 		// Render to the shadow depth texture with appropriate view
+#if !IV_SHADOWS_ADVANCED
 		view->UpdateShadowDepthTexture( m_DummyColorTexture, shadowDepthTexture, shadowView );
+#else
+		view->UpdateShadowDepthTexture( dummy_out, shadowDepthTexture, shadowView );
+#endif
 
 #ifdef MAPBASE
 		if ( j <= ( INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST ) )
@@ -4695,15 +4854,43 @@ void CClientShadowMgr::ComputeShadowTextures( const CViewSetup &view, int leafCo
 //-------------------------------------------------------------------------------------------------------
 // Lock down the usage of a shadow depth texture...must be unlocked for use on subsequent views / frames
 //-------------------------------------------------------------------------------------------------------
+#if !IV_SHADOWS_ADVANCED
 bool CClientShadowMgr::LockShadowDepthTexture( CTextureReference *shadowDepthTexture )
+#else
+bool CClientShadowMgr::LockShadowDepthTexture( CTextureReference* shadowDepthTexture, int shadow_res_in, CTextureReference* dummy_result )
+#endif
 {
 	for ( int i=0; i < m_DepthTextureCache.Count(); i++ )		// Search for cached shadow depth texture
 	{
 		if ( m_DepthTextureCacheLocks[i] == false )				// If a free one is found
 		{
-			*shadowDepthTexture = m_DepthTextureCache[i];
+#if !IV_SHADOWS_ADVANCED
+			* shadowDepthTexture = m_DepthTextureCache[i];
 			m_DepthTextureCacheLocks[i] = true;
 			return true;
+#else
+			if (shadow_res_in == m_DepthTextureCache[i]->GetActualWidth())
+			{
+				*shadowDepthTexture = m_DepthTextureCache[i];
+				
+				for (int j = 0; j < m_DummyColorTexture.Count(); j++)
+				{
+					if (shadow_res_in == m_DummyColorTexture[j]->GetActualWidth())
+					{
+						*dummy_result = m_DummyColorTexture[j];
+						break;
+					}
+				}
+
+				Assert(dummy_result != null);
+
+				if (dummy_result == null)
+					return false;
+
+				m_DepthTextureCacheLocks[i] = true;
+				return true;
+			}
+#endif
 		}
 	}
 

@@ -73,6 +73,7 @@ struct DetailObject_t
 };
 
 static CUtlVector<DetailObject_t>	s_DetailObjectDict;
+static CUtlVector<entity_t *> g_BlockerList;
 
 
 //-----------------------------------------------------------------------------
@@ -603,6 +604,27 @@ static void PlaceDetail( DetailModel_t const& model, const Vector& pt, const Vec
 
 	// FIXME: We may also want a purely random rotation too
 
+	// TERROR: Ported from CS:GO Engine Branch
+
+	if (g_BlockerList.Count() > 0)
+		Msg("Checking Detail Block Area...\n");
+
+	for( int i = 0; i < g_BlockerList.Count(); ++i )
+	{
+		entity_t *ent = g_BlockerList[i];
+		{
+			for ( int j = 0; j < ent->numbrushes; ++j )
+			{
+				int brushnum = ent->firstbrush + j;
+				mapbrush_t *brush = &g_MainMap->mapbrushes[ brushnum ];
+				if ( IsPointInBox( pt, brush->mins, brush->maxs ) )
+				{
+					return;
+				}
+			}
+		}
+	}
+
 	// Insert an element into the object dictionary if it aint there...
 	switch ( model.m_Type )
 	{
@@ -835,6 +857,19 @@ static void SetLumpData( )
 void EmitDetailModels()
 {
 	StartPacifier("Placing detail props : ");
+
+	// build detail blocker list
+	g_BlockerList.RemoveAll();
+	for( int i = 0; i < num_entities; ++i )
+	{
+		entity_t *ent = &entities[i];
+		char* classname = ValueForKey( ent, "classname" );
+		if ( !strcmp( classname, "func_detail_blocker" ) )
+		{
+			Msg("Checked Detail Blocker entity at '%f', '%f', '%f'\n", ent->origin.x, ent->origin.y, ent->origin.z);
+			g_BlockerList.AddToTail(ent);
+		}
+	}
 
 	// Place stuff on each face
 	dface_t* pFace = dfaces;
