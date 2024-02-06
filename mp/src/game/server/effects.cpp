@@ -1576,6 +1576,18 @@ void CPrecipitation::Spawn( void )
 }
 #endif
 
+//--------------------------------------------------------------------------------------------------------
+class CDetailBlocker : public CServerOnlyEntity
+{
+	DECLARE_CLASS( CDetailBlocker, CServerOnlyEntity );
+public:
+
+	CDetailBlocker() : CServerOnlyEntity() {}
+	virtual ~CDetailBlocker() {}
+};
+
+LINK_ENTITY_TO_CLASS( func_detail_blocker, CDetailBlocker );
+
 //-----------------------------------------------------------------------------
 // EnvWind - global wind info
 //-----------------------------------------------------------------------------
