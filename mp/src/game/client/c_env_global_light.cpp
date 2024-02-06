@@ -21,8 +21,6 @@
 
 #ifdef IV_SHADOWS_ADVANCED
 extern ConVar r_flashlightdepthres_glight;
-extern ConVar mat_slopescaledepthbias_shadowmap;
-extern ConVar mat_depthbias_shadowmap;
 #endif
 
 ConVar cl_globallight_freeze( "cl_globallight_freeze", "0" );
@@ -309,8 +307,8 @@ void C_GlobalLight::ClientThink()
 		//state.m_bDrawShadowFrustum = true; // Don't draw that huge debug thing
 		state.m_flShadowMapResolution = m_bHightResMode ? r_flashlightdepthres_glight.GetFloat() * 2 : r_flashlightdepthres_glight.GetFloat();
 		state.m_flShadowFilterSize = m_bHightResMode ? .7 : .5;
-		state.m_flShadowSlopeScaleDepthBias = mat_slopescaledepthbias_shadowmap.GetFloat();
-		state.m_flShadowDepthBias = mat_depthbias_shadowmap.GetFloat();
+		state.m_flShadowSlopeScaleDepthBias = ConVarRef("mat_slopescaledepthbias_shadowmap").GetFloat();
+		state.m_flShadowDepthBias = ConVarRef("mat_depthbias_shadowmap").GetFloat();
 		state.m_bEnableShadows = m_bEnableShadows;
 		state.m_pSpotlightTexture = m_SpotlightTexture;
 		state.m_nSpotlightTextureFrame = m_nSpotlightTextureFrame;
