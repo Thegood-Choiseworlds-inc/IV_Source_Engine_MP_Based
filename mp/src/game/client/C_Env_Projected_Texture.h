@@ -87,6 +87,9 @@ private:
 	CTextureReference m_SpotlightTexture;
 	int			m_nSpotlightTextureFrame;
 	int			m_nShadowQuality;
+#if IVBASE && IV_SHADOWS_ADVANCED
+	int			m_nShadowResMode;
+#endif
 #ifdef MAPBASE
 	float		m_flConstantAtten;
 	float		m_flLinearAtten;

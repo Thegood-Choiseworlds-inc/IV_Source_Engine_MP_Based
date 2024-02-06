@@ -100,6 +100,9 @@ private:
 	CNetworkVar( float, m_flNearZ );
 	CNetworkVar( float, m_flFarZ );
 	CNetworkVar( int, m_nShadowQuality );
+#if IVBASE && IV_SHADOWS_ADVANCED
+	CNetworkVar(int, m_nShadowResMode);
+#endif
 #ifdef MAPBASE
 	CNetworkVar( float, m_flConstantAtten );
 	CNetworkVar( float, m_flLinearAtten );
