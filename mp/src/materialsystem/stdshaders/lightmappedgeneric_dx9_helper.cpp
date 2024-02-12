@@ -921,6 +921,7 @@ void DrawLightmappedGeneric_DX9_Internal(CBaseVSShader *pShader, IMaterialVar** 
 			bool hasDiffuseBumpmap = hasBump && (params[info.m_nNoDiffuseBumpLighting]->GetIntValue() == 0);
 
 			bool hasEnvmap = params[info.m_nEnvmap]->IsTexture();
+			hasParallaxCorrection &= hasEnvmap;
 			bEnvmapAnisotropy = bEnvmapAnisotropy && hasEnvmap;
 			hasNormalMapAlphaEnvmapMask = hasNormalMapAlphaEnvmapMask && !bEnvmapAnisotropy;
 
@@ -1384,6 +1385,7 @@ void DrawLightmappedGeneric_DX9_Internal(CBaseVSShader *pShader, IMaterialVar** 
 			float envmapSaturation = params[info.m_nEnvmapSaturation]->GetFloatValue();
 			float fresnelReflection = params[info.m_nFresnelReflection]->GetFloatValue();
 			bool hasEnvmap = params[info.m_nEnvmap]->IsTexture();
+			hasParallaxCorrection &= hasEnvmap;
 			bEnvmapAnisotropy = bEnvmapAnisotropy && hasEnvmap;
 			int envmap_variant; //0 = no envmap, 1 = regular, 2 = darken in shadow mode
 			if( hasEnvmap )
