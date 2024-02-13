@@ -116,7 +116,7 @@ private:
 	virtual float			GetAmmoDamage( CBaseEntity *pAttacker, CBaseEntity *pVictim, int nAmmoType );
 
 	#ifndef SecobMod__Enable_Fixed_Multiplayer_AI
-	/SecobMod__MiscFixes Here we disable this as it's been moved to hl2mp_gamerules so that calls to darkness mode work.
+	//SecobMod__MiscFixes Here we disable this as it's been moved to hl2mp_gamerules so that calls to darkness mode work.
 	virtual bool			ShouldBurningPropsEmitLight();
 	#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 

@@ -36,7 +36,9 @@
 #include "ai_interactions.h"
 
 //SecobMod__MiscFixes: Here we include the hl2mp gamerules so that calls to darkness mode work.
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
 #include "hl2mp_gamerules.h"
+#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -637,7 +639,11 @@ bool CNPC_Zombine::AllowedToSprint( void )
 	if ( pPlayer )
 	{
 		//SecobMod
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
 		if ( HL2MPRules()->IsAlyxInDarknessMode() && pPlayer->FlashlightIsOn() == false )
+#else
+		if (HL2GameRules()->IsAlyxInDarknessMode() && pPlayer->FlashlightIsOn() == false)
+#endif
 		{
 			iChance = SPRINT_CHANCE_VALUE_DARKNESS;
 		}

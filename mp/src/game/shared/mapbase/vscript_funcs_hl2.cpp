@@ -8,7 +8,9 @@
 #include "cbase.h"
 
 #include "hl2_gamerules.h"
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
 #include "hl2mp_gamerules.h"
+#endif
 #ifndef CLIENT_DLL
 #include "eventqueue.h"
 #endif
@@ -46,7 +48,11 @@ HSCRIPT ScriptGameOver( const char *pszMessage, float flDelay, float flFadeTime,
 
 bool ScriptMegaPhyscannonActive()
 {
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
 	return HL2MPRules()->MegaPhyscannonActive();
+#else
+	return HL2GameRules()->MegaPhyscannonActive();
+#endif
 }
 #endif
 

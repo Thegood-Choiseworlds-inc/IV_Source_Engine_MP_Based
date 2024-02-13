@@ -1549,9 +1549,9 @@ void CLagCompensationManager::FinishLagCompensation( CBasePlayer *player )
 		{
 			pNPC->SetSimulationTime(restore->m_flSimulationTime);
 		}
-	#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 	}
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+
 	m_isCurrentlyDoingCompensation = false;
 }
-
 

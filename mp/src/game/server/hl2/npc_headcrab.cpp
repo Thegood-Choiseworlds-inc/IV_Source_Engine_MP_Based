@@ -34,7 +34,9 @@
 #include "decals.h"
 
 //SecobMod__MiscFixes: Here we include the hl2mp gamerules so that calls to darkness mode work.
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
 #include "hl2mp_gamerules.h"
+#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -1330,7 +1332,11 @@ void CBaseHeadcrab::DropFromCeiling( void )
 {
 #ifdef HL2_EPISODIC
 //SecobMod__MiscFixes HL2MPRules as opposed to singleplayer HL2GameRules.
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
 	if ( HL2MPRules()->IsAlyxInDarknessMode() )
+#else
+	if (HL2GameRules()->IsAlyxInDarknessMode())
+#endif
 	{
 		if ( IsHangingFromCeiling() )
 		{
@@ -1918,7 +1924,11 @@ int CBaseHeadcrab::SelectSchedule( void )
 		bool bIsAlyxInDarknessMode = false;
 #ifdef HL2_EPISODIC
 		//SecobMod
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
 		bIsAlyxInDarknessMode = HL2MPRules()->IsAlyxInDarknessMode();
+#else
+		bIsAlyxInDarknessMode = HL2GameRules()->IsAlyxInDarknessMode();
+#endif
 #endif // HL2_EPISODIC
 
 		if ( bIsAlyxInDarknessMode == false && ( HasCondition( COND_CAN_RANGE_ATTACK1 ) || HasCondition( COND_NEW_ENEMY ) ) )
@@ -2101,7 +2111,11 @@ void CBaseHeadcrab::Ignite( float flFlameLifetime, bool bNPCOnly, float flSize, 
 	{
 #ifdef HL2_EPISODIC
 		//SecobMod
+#if SecobMod__Enable_Fixed_Multiplayer_AI
 		if ( HL2MPRules()->IsAlyxInDarknessMode() == true )
+#else
+		if (HL2GameRules()->IsAlyxInDarknessMode() == true)
+#endif
 		{
 			GetEffectEntity()->AddEffects( EF_DIMLIGHT );
 		}
