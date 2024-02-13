@@ -2832,7 +2832,11 @@ void CTriggerSave::Touch( CBaseEntity *pOther )
 		if ( g_ServerGameDLL.m_fAutoSaveDangerousTime != 0.0f && g_ServerGameDLL.m_fAutoSaveDangerousTime >= gpGlobals->curtime )
 		{
 			// A previous dangerous auto save was waiting to become safe
-			CBasePlayer *pPlayer = UTIL_PlayerByIndex( 1 );
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin()); 
+#else
+CBasePlayer *pPlayer = UTIL_PlayerByIndex( 1 );
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 
 			if ( pPlayer->GetDeathTime() == 0.0f || pPlayer->GetDeathTime() > gpGlobals->curtime )
 			{
@@ -2852,7 +2856,12 @@ void CTriggerSave::Touch( CBaseEntity *pOther )
 	if ( m_fDangerousTimer != 0.0f )
 	{
 		// There's a dangerous timer. Save if we have enough hitpoints.
-		CBasePlayer *pPlayer = UTIL_PlayerByIndex( 1 );
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin()); 
+#else
+CBasePlayer *pPlayer = UTIL_PlayerByIndex( 1 );
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+
 
 		if (pPlayer && pPlayer->GetHealth() >= m_minHitPoints)
 		{
@@ -3972,7 +3981,9 @@ static void PlayCDTrack( int iTrack )
 	// manually find the single player. 
 	pClient = engine->PEntityOfEntIndex( 1 );
 
-	Assert(gpGlobals->maxClients == 1);
+#ifndef SecobMod__Enable_Fixed_Multiplayer_AI
+	Assert(gpGlobals->maxClients == 1); 
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 	
 	// Can't play if the client is not connected!
 	if ( !pClient )

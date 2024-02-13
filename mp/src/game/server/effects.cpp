@@ -1142,7 +1142,12 @@ Vector CBlood::BloodPosition( CBaseEntity *pActivator )
 		}
 		else
 		{
+		#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+			player = UTIL_GetNearestVisiblePlayer(this); 
+		#else
 			player = UTIL_GetLocalPlayer();
+		#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+
 		}
 
 		if ( player )

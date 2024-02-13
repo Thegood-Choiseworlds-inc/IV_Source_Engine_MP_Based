@@ -18,7 +18,9 @@
 class CNPC_CombineS : public CNPC_Combine
 {
 	DECLARE_CLASS( CNPC_CombineS, CNPC_Combine );
-#if HL2_EPISODIC
+
+//SecobMod__IFDEF_Fixes
+#ifdef HL2_EPISODIC
 	DECLARE_DATADESC();
 #endif
 
@@ -49,7 +51,8 @@ public:
 private:
 	bool		ShouldHitPlayer( const Vector &targetDir, float targetDist );
 
-#if HL2_EPISODIC
+//SecobMod
+#ifdef HL2_EPISODIC
 public:
 	Activity	NPC_TranslateActivity( Activity eNewActivity );
 

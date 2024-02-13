@@ -33,6 +33,9 @@
 #include "hl2_gamerules.h"
 #include "decals.h"
 
+//SecobMod__MiscFixes: Here we include the hl2mp gamerules so that calls to darkness mode work.
+#include "hl2mp_gamerules.h"
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -1326,7 +1329,8 @@ void CBaseHeadcrab::JumpFromCanister()
 void CBaseHeadcrab::DropFromCeiling( void )
 {
 #ifdef HL2_EPISODIC
-	if ( HL2GameRules()->IsAlyxInDarknessMode() )
+//SecobMod__MiscFixes HL2MPRules as opposed to singleplayer HL2GameRules.
+	if ( HL2MPRules()->IsAlyxInDarknessMode() )
 	{
 		if ( IsHangingFromCeiling() )
 		{
@@ -1342,7 +1346,11 @@ void CBaseHeadcrab::DropFromCeiling( void )
 				{
 					SetSchedule( SCHED_HEADCRAB_CEILING_DROP );
 
-					CBaseEntity *pPlayer = AI_GetSinglePlayer();
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+					CBaseEntity *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin()); 
+#else
+CBaseEntity *pPlayer = AI_GetSinglePlayer();
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 
 					if ( pPlayer )
 					{
@@ -1909,7 +1917,8 @@ int CBaseHeadcrab::SelectSchedule( void )
 	{
 		bool bIsAlyxInDarknessMode = false;
 #ifdef HL2_EPISODIC
-		bIsAlyxInDarknessMode = HL2GameRules()->IsAlyxInDarknessMode();
+		//SecobMod
+		bIsAlyxInDarknessMode = HL2MPRules()->IsAlyxInDarknessMode();
 #endif // HL2_EPISODIC
 
 		if ( bIsAlyxInDarknessMode == false && ( HasCondition( COND_CAN_RANGE_ATTACK1 ) || HasCondition( COND_NEW_ENEMY ) ) )
@@ -2091,7 +2100,8 @@ void CBaseHeadcrab::Ignite( float flFlameLifetime, bool bNPCOnly, float flSize, 
 	if( !bWasOnFire )
 	{
 #ifdef HL2_EPISODIC
-		if ( HL2GameRules()->IsAlyxInDarknessMode() == true )
+		//SecobMod
+		if ( HL2MPRules()->IsAlyxInDarknessMode() == true )
 		{
 			GetEffectEntity()->AddEffects( EF_DIMLIGHT );
 		}
@@ -3383,8 +3393,8 @@ void CBlackHeadcrab::Panic( float flDuration )
 	m_bPanicState = true;
 }
 
-
-#if HL2_EPISODIC
+//SecobMod
+#ifdef HL2_EPISODIC
 //-----------------------------------------------------------------------------
 // Purpose: Black headcrabs have 360-degree vision when they are in the ambush
 //			schedule. This is because they ignore sounds when in ambush, and

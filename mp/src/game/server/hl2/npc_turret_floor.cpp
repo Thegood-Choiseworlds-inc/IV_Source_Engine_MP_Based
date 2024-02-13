@@ -1942,7 +1942,12 @@ QAngle CNPC_FloorTurret::PreferredCarryAngles( void )
 	static QAngle g_prefAngles;
 
 	Vector vecUserForward;
-	CBasePlayer *pPlayer = AI_GetSinglePlayer();
+	#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin()); 
+	#else
+		CBasePlayer *pPlayer = AI_GetSinglePlayer();
+	#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+
 	pPlayer->EyeVectors( &vecUserForward );
 
 	// If we're looking up, then face directly forward

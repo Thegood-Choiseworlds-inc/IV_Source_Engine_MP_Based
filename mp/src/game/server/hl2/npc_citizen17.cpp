@@ -394,7 +394,8 @@ BEGIN_DATADESC( CNPC_Citizen )
 	DEFINE_INPUTFUNC( FIELD_VOID,	"SetAmmoResupplierOff",	InputSetAmmoResupplierOff ),
 	DEFINE_INPUTFUNC( FIELD_VOID,	"SpeakIdleResponse", InputSpeakIdleResponse ),
 
-#if HL2_EPISODIC
+//SecobMod.
+#ifdef HL2_EPISODIC
 	DEFINE_INPUTFUNC( FIELD_VOID,   "ThrowHealthKit", InputForceHealthKitToss ),
 #endif
 
@@ -1401,7 +1402,8 @@ int CNPC_Citizen::SelectSchedulePriorityAction()
 int CNPC_Citizen::SelectScheduleHeal()
 {
 	// episodic medics may toss the healthkits rather than poke you with them
-#if HL2_EPISODIC
+//SecobMod.
+#ifdef HL2_EPISODIC
 
 	if ( CanHeal() )
 	{
@@ -1788,7 +1790,8 @@ void CNPC_Citizen::StartTask( const Task_t *pTask )
 		break;
 		
 	case TASK_CIT_HEAL:
-#if HL2_EPISODIC
+//SecobMod.
+#ifdef HL2_EPISODIC
 	case TASK_CIT_HEAL_TOSS:
 #endif
 		if ( IsMedic() )
@@ -1920,7 +1923,8 @@ void CNPC_Citizen::RunTask( const Task_t *pTask )
 			break;
 
 
-#if HL2_EPISODIC
+//SecobMod.
+#ifdef HL2_EPISODIC
 		case TASK_CIT_HEAL_TOSS:
 			if ( IsSequenceFinished() )
 			{
@@ -4149,7 +4153,8 @@ void CNPC_Citizen::Heal()
 
 
 
-#if HL2_EPISODIC
+//SecobMod.
+#ifdef HL2_EPISODIC
 //-----------------------------------------------------------------------------
 // Like Heal(), but tosses a healthkit in front of the player rather than just juicing him up.
 //-----------------------------------------------------------------------------
@@ -4426,7 +4431,8 @@ AI_BEGIN_CUSTOM_NPC( npc_citizen, CNPC_Citizen )
 	DECLARE_TASK( TASK_CIT_SIT_ON_TRAIN )
 	DECLARE_TASK( TASK_CIT_LEAVE_TRAIN )
 	DECLARE_TASK( TASK_CIT_SPEAK_MOURNING )
-#if HL2_EPISODIC
+	//SecobMod.
+#ifdef HL2_EPISODIC
 	DECLARE_TASK( TASK_CIT_HEAL_TOSS )
 #endif
 
@@ -4464,7 +4470,8 @@ AI_BEGIN_CUSTOM_NPC( npc_citizen, CNPC_Citizen )
 		"	Interrupts"
 	)
 
-#if HL2_EPISODIC
+	//SecobMod.
+#ifdef HL2_EPISODIC
 	//=========================================================
 	// > SCHED_CITIZEN_HEAL_TOSS
 	// this is for the episodic behavior where the citizen hurls the medkit

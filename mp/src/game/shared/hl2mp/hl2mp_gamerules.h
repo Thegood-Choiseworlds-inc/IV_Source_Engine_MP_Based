@@ -23,6 +23,10 @@
 #include "hl2mp_player.h"
 #endif
 
+#ifdef MAPBASE_MP
+#define SecobMod__ALLOW_SUPER_GRAVITY_GUN 1
+#endif
+
 #define VEC_CROUCH_TRACE_MIN	HL2MPRules()->GetHL2MPViewVectors()->m_vCrouchTraceMin
 #define VEC_CROUCH_TRACE_MAX	HL2MPRules()->GetHL2MPViewVectors()->m_vCrouchTraceMax
 
@@ -84,6 +88,10 @@ class CHL2MPRules : public CTeamplayRules
 public:
 	DECLARE_CLASS( CHL2MPRules, CTeamplayRules );
 
+#ifdef SecobMod__ALLOW_SUPER_GRAVITY_GUN
+	bool	MegaPhyscannonActive( void ) { return m_bMegaPhysgun;	}
+#endif //SecobMod__ALLOW_SUPER_GRAVITY_GUN
+
 #ifdef CLIENT_DLL
 
 	DECLARE_CLIENTCLASS_NOBASE(); // This makes datatables able to access our private vars.
@@ -91,6 +99,12 @@ public:
 #else
 
 	DECLARE_SERVERCLASS_NOBASE(); // This makes datatables able to access our private vars.
+	
+	//SecobMod__MiscFixes: Here we add darkness mode so that it now works.
+	virtual bool IsAlyxInDarknessMode();
+	virtual bool ShouldBurningPropsEmitLight();
+			
+
 #endif
 	
 	CHL2MPRules();
@@ -134,6 +148,10 @@ public:
 	void    CheckChatForReadySignal( CHL2MP_Player *pPlayer, const char *chatmsg );
 	const char *GetChatFormat( bool bTeamOnly, CBasePlayer *pPlayer );
 
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	void InitDefaultAIRelationships( void );
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+
 #endif
 	virtual void ClientDisconnected( edict_t *pClient );
 
@@ -158,6 +176,12 @@ private:
 	bool m_bCompleteReset;
 	bool m_bAwaitingReadyRestart;
 	bool m_bHeardAllPlayersReady;
+
+	#ifdef SecobMod__ALLOW_SUPER_GRAVITY_GUN
+	//SecobMod__Information: Super grav gun stuff.
+	// Rules change for the mega physgun
+	CNetworkVar( bool, m_bMegaPhysgun );
+	#endif //SecobMod__ALLOW_SUPER_GRAVITY_GUN
 
 #ifndef CLIENT_DLL
 	bool m_bChangelevelDone;

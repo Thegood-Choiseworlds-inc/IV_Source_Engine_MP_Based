@@ -8,6 +8,7 @@
 #include "cbase.h"
 
 #include "hl2_gamerules.h"
+#include "hl2mp_gamerules.h"
 #ifndef CLIENT_DLL
 #include "eventqueue.h"
 #endif
@@ -45,7 +46,7 @@ HSCRIPT ScriptGameOver( const char *pszMessage, float flDelay, float flFadeTime,
 
 bool ScriptMegaPhyscannonActive()
 {
-	return HL2GameRules()->MegaPhyscannonActive();
+	return HL2MPRules()->MegaPhyscannonActive();
 }
 #endif
 

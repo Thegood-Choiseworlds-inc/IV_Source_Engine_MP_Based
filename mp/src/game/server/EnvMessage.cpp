@@ -268,12 +268,19 @@ void CCredits::RollOutroCredits()
 #endif
 	sv_unlockedchapters.SetValue( "15" );
 	
-	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
-
-	CSingleUserRecipientFilter user( pPlayer );
-	user.MakeReliable();
-
-	UserMessageBegin( user, "CreditsMsg" );
+	#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		CRecipientFilter filter; 
+		filter.AddAllPlayers(); 
+		filter.MakeReliable(); 
+		UserMessageBegin( filter, "CreditsMsg" ); 
+	#else
+		CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+	
+		CSingleUserRecipientFilter user( pPlayer );
+		user.MakeReliable();
+	
+		UserMessageBegin( user, "CreditsMsg" );
+	#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 		WRITE_BYTE( 3 );
 #ifdef MAPBASE
 		WRITE_STRING( STRING(m_iszCreditsFile) );
@@ -293,14 +300,29 @@ void CCredits::InputRollOutroCredits( inputdata_t &inputdata )
 
 void CCredits::InputShowLogo( inputdata_t &inputdata )
 {
-	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
-
-	CSingleUserRecipientFilter user( pPlayer );
-	user.MakeReliable();
+	#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		CRecipientFilter filter; 
+		filter.AddAllPlayers(); 
+		filter.MakeReliable(); 
+	
+		// Modification. Set to how old patched AI SDK had code. 
+		//CSingleUserRecipientFilter user( pPlayer ); 
+		//user.MakeReliable(); 
+	#else
+		CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+	
+		CSingleUserRecipientFilter user( pPlayer );
+		user.MakeReliable();
+	#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 
 	if ( m_flLogoLength )
 	{
+	#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		UserMessageBegin( filter, "LogoTimeMsg" ); 
+	#else
 		UserMessageBegin( user, "LogoTimeMsg" );
+	#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+
 			WRITE_FLOAT( m_flLogoLength );
 #ifdef MAPBASE
 			WRITE_STRING( STRING(m_iszCreditsFile) );
@@ -309,7 +331,12 @@ void CCredits::InputShowLogo( inputdata_t &inputdata )
 	}
 	else
 	{
+	#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		UserMessageBegin( filter, "CreditsMsg" ); 
+	#else
 		UserMessageBegin( user, "CreditsMsg" );
+	#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+
 			WRITE_BYTE( 1 );
 #ifdef MAPBASE
 			WRITE_STRING( STRING(m_iszCreditsFile) );
@@ -325,12 +352,20 @@ void CCredits::InputSetLogoLength( inputdata_t &inputdata )
 
 void CCredits::InputRollCredits( inputdata_t &inputdata )
 {
-	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
-
-	CSingleUserRecipientFilter user( pPlayer );
-	user.MakeReliable();
-
-	UserMessageBegin( user, "CreditsMsg" );
+	#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		CRecipientFilter filter; 
+		filter.AddAllPlayers(); 
+		filter.MakeReliable(); 
+	
+		UserMessageBegin( filter, "CreditsMsg" ); 
+	#else
+		CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+	
+		CSingleUserRecipientFilter user( pPlayer );
+		user.MakeReliable();
+	
+		UserMessageBegin( user, "CreditsMsg" );
+	#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 		WRITE_BYTE( 2 );
 #ifdef MAPBASE
 		WRITE_STRING( STRING(m_iszCreditsFile) );

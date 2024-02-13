@@ -615,42 +615,53 @@ void CHL2MP_Player::NoteWeaponFired( void )
 }
 
 extern ConVar sv_maxunlag;
+	#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	bool CHL2MP_Player::WantsLagCompensationOnEntity( const CBaseEntity *pEntity, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const 
+	{
+		// No need to lag compensate at all if we're not attacking in this command and
+		// we haven't attacked recently.
+		if ( !( pCmd->buttons & IN_ATTACK ) && (pCmd->command_number - m_iLastWeaponFireUsercmd > 5) )
+			return false;
 
-bool CHL2MP_Player::WantsLagCompensationOnEntity( const CBasePlayer *pPlayer, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const
-{
-	// No need to lag compensate at all if we're not attacking in this command and
-	// we haven't attacked recently.
-	if ( !( pCmd->buttons & IN_ATTACK ) && (pCmd->command_number - m_iLastWeaponFireUsercmd > 5) )
-		return false;
+		return BaseClass::WantsLagCompensationOnEntity( pEntity, pCmd, pEntityTransmitBits ); 
+	}
+	#else
+	bool CHL2MP_Player::WantsLagCompensationOnEntity( const CBasePlayer *pPlayer, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const
+	{
+		// No need to lag compensate at all if we're not attacking in this command and
+		// we haven't attacked recently.
+		if ( !( pCmd->buttons & IN_ATTACK ) && (pCmd->command_number - m_iLastWeaponFireUsercmd > 5) )
+			return false;
 
-	// If this entity hasn't been transmitted to us and acked, then don't bother lag compensating it.
-	if ( pEntityTransmitBits && !pEntityTransmitBits->Get( pPlayer->entindex() ) )
-		return false;
+		// If this entity hasn't been transmitted to us and acked, then don't bother lag compensating it.
+		if ( pEntityTransmitBits && !pEntityTransmitBits->Get( pPlayer->entindex() ) )
+			return false;
 
-	const Vector &vMyOrigin = GetAbsOrigin();
-	const Vector &vHisOrigin = pPlayer->GetAbsOrigin();
+		const Vector &vMyOrigin = GetAbsOrigin();
+		const Vector &vHisOrigin = pPlayer->GetAbsOrigin();
 
-	// get max distance player could have moved within max lag compensation time, 
-	// multiply by 1.5 to to avoid "dead zones"  (sqrt(2) would be the exact value)
-	float maxDistance = 1.5 * pPlayer->MaxSpeed() * sv_maxunlag.GetFloat();
+		// get max distance player could have moved within max lag compensation time, 
+		// multiply by 1.5 to to avoid "dead zones"  (sqrt(2) would be the exact value)
+		float maxDistance = 1.5 * pPlayer->MaxSpeed() * sv_maxunlag.GetFloat();
 
-	// If the player is within this distance, lag compensate them in case they're running past us.
-	if ( vHisOrigin.DistTo( vMyOrigin ) < maxDistance )
+		// If the player is within this distance, lag compensate them in case they're running past us.
+		if ( vHisOrigin.DistTo( vMyOrigin ) < maxDistance )
+			return true;
+
+		// If their origin is not within a 45 degree cone in front of us, no need to lag compensate.
+		Vector vForward;
+		AngleVectors( pCmd->viewangles, &vForward );
+		
+		Vector vDiff = vHisOrigin - vMyOrigin;
+		VectorNormalize( vDiff );
+
+		float flCosAngle = 0.707107f;	// 45 degree angle
+		if ( vForward.Dot( vDiff ) < flCosAngle )
+			return false;
+
 		return true;
-
-	// If their origin is not within a 45 degree cone in front of us, no need to lag compensate.
-	Vector vForward;
-	AngleVectors( pCmd->viewangles, &vForward );
-	
-	Vector vDiff = vHisOrigin - vMyOrigin;
-	VectorNormalize( vDiff );
-
-	float flCosAngle = 0.707107f;	// 45 degree angle
-	if ( vForward.Dot( vDiff ) < flCosAngle )
-		return false;
-
-	return true;
-}
+	}
+	#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 
 Activity CHL2MP_Player::TranslateTeamActivity( Activity ActToTranslate )
 {
@@ -1380,13 +1391,104 @@ CBaseEntity* CHL2MP_Player::EntSelectSpawnPoint( void )
 		goto ReturnSpot;
 	}
 
-	if ( !pSpot  )
-	{
-		pSpot = gEntList.FindEntityByClassname( pSpot, "info_player_start" );
+if ( !pSpot  )
+{
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	char szMapName[256];
+	Q_strncpy(szMapName, STRING(gpGlobals->mapname), sizeof(szMapName) );
+	Q_strlower(szMapName);
 
-		if ( pSpot )
-			goto ReturnSpot;
+	//SecobMod__Information: Although we don't support official maps for gaming, they are useful for testing and these maps for whatever reason spawn you in the wrong location. As such this
+	// code is here to force players to spawn at the beginning of the selected maps. Custom maps won't require this as they will have deathmatch/class based player starts.
+	if( !Q_strnicmp( szMapName, "d1_canals_01a", 13 )
+|| !Q_strnicmp( szMapName, "d1_canals_03", 12 )
+|| !Q_strnicmp( szMapName, "d1_canals_13", 12 )
+|| !Q_strnicmp( szMapName, "d1_town_01", 10 )
+|| !Q_strnicmp( szMapName, "d1_town_01a", 11 )
+|| !Q_strnicmp( szMapName, "d1_town_02", 10 )
+|| !Q_strnicmp( szMapName, "d1_town_02a", 11 )
+|| !Q_strnicmp( szMapName, "d1_town_03", 10 )
+|| !Q_strnicmp( szMapName, "d1_town_04", 10 )
+|| !Q_strnicmp( szMapName, "d1_town_05", 10 )
+|| !Q_strnicmp( szMapName, "d2_coast_03", 11)
+|| !Q_strnicmp( szMapName, "d2_coast_08", 11 )
+|| !Q_strnicmp( szMapName, "d2_coast_11", 11 )
+|| !Q_strnicmp( szMapName, "d2_prison_01", 12 )
+|| !Q_strnicmp( szMapName, "d2_prison_02", 12 )
+|| !Q_strnicmp( szMapName, "d2_prison_03", 12 )
+|| !Q_strnicmp( szMapName, "d2_prison_04", 12 )
+|| !Q_strnicmp( szMapName, "d2_prison_05", 12 )
+|| !Q_strnicmp( szMapName, "d2_prison_06", 12 )
+|| !Q_strnicmp( szMapName, "d2_prison_07", 12 )
+|| !Q_strnicmp( szMapName, "d2_prison_08", 12 )
+|| !Q_strnicmp( szMapName, "d3_c17_08", 9 )
+|| !Q_strnicmp( szMapName, "d3_citadel_01", 13 )
+|| !Q_strnicmp( szMapName, "d3_citadel_02", 13 )
+|| !Q_strnicmp( szMapName, "d3_citadel_03", 13 )
+|| !Q_strnicmp( szMapName, "d3_citadel_04", 13 )
+|| !Q_strnicmp( szMapName, "d3_citadel_05", 13 )
+|| !Q_strnicmp( szMapName, "d3_breen_01", 11 )
+|| !Q_strnicmp( szMapName, "ep1_c17_00", 10 )
+|| !Q_strnicmp( szMapName, "ep1_c17_00a", 11 )
+|| !Q_strnicmp( szMapName, "ep1_c17_02b", 11 )
+|| !Q_strnicmp( szMapName, "ep1_c17_05", 10 )
+|| !Q_strnicmp( szMapName, "ep2_outland_01a", 15 )
+|| !Q_strnicmp( szMapName, "ep2_outland_03", 14 )
+|| !Q_strnicmp( szMapName, "ep2_outland_08", 14 )
+|| !Q_strnicmp( szMapName, "ep2_outland_06", 14 )
+	)
+	{
+		CBaseEntity *pEntity = NULL;
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin());
+		Vector vecOrigin = pPlayer->GetAbsOrigin();
+		pEntity = gEntList.FindEntityByClassnameNearest( "item_suit", vecOrigin, 0);
+
+
+		if (pEntity != NULL)
+		{
+		vecOrigin = pEntity->GetAbsOrigin();
+		pEntity = gEntList.FindEntityByClassnameNearest( "info_player_start", vecOrigin, 0);
+		pSpot = pEntity;
+		pSpawnpointName = "info_player_start";
+		goto ReturnSpot;
+		}
+		else
+		{
+		pSpot = gEntList.FindEntityByClassname( pSpot, "info_player_start");
+		}
 	}
+	else if( !Q_strnicmp( szMapName, "d1_trainstation_05", 18 ) )
+	{
+		CBaseEntity *pEntity = NULL;
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin());
+		Vector vecOrigin = pPlayer->GetAbsOrigin();
+		pEntity = gEntList.FindEntityByClassnameNearest( "npc_alyx", vecOrigin, 0);
+		if (pEntity != NULL)
+		{
+		vecOrigin = pEntity->GetAbsOrigin();
+		pEntity = gEntList.FindEntityByClassnameNearest( "info_player_start", vecOrigin, 0);
+		pSpot = pEntity;
+		pSpawnpointName = "info_player_start";
+		goto ReturnSpot;
+		}
+		else
+		{
+		pSpot = gEntList.FindEntityByClassname( pSpot, "info_player_start");
+		}
+	}
+	else
+	{
+	pSpot = gEntList.FindEntityByClassname( pSpot, "info_player_start");
+	}
+#else
+pSpot = gEntList.FindEntityByClassname( pSpot, "info_player_start");
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+}
+
+if (pSpot)
+{
+goto ReturnSpot; //return pSpot;*/
+}
 
 ReturnSpot:
 
@@ -1449,7 +1551,6 @@ CON_COMMAND( timeleft, "prints the time remaining in the match" )
 		}
 	}	
 }
-
 
 void CHL2MP_Player::Reset()
 {	
@@ -1627,3 +1728,24 @@ bool CHL2MP_Player::CanHearAndReadChatFrom( CBasePlayer *pPlayer )
 
 	return true;
 }
+
+void CHL2MP_Player::SetArmorValue( int value )
+{
+BaseClass::SetArmorValue(value);
+	m_iArmor = value;
+}
+
+
+// Armour Settings.
+void CHL2MP_Player::SetMaxArmorValue( int MaxArmorValue )
+{
+	m_iMaxArmor = MaxArmorValue;
+}
+//-----------------------------------------------------------------------------
+void CHL2MP_Player::IncrementArmorValue( int nCount, int nMaxValue )
+{ 
+nMaxValue = m_iMaxArmor;
+BaseClass::IncrementArmorValue(nCount, nMaxValue );
+}	
+ 
+ 

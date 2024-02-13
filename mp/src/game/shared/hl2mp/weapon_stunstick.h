@@ -73,6 +73,9 @@ public:
 #ifndef CLIENT_DLL
 	void		Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator );
 	int			WeaponMeleeAttack1Condition( float flDot, float flDist );
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	bool		CanBePickedUpByNPCs( void ) { return false; }
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI	
 #endif
 	
 	float		GetDamageForActivity( Activity hitActivity );

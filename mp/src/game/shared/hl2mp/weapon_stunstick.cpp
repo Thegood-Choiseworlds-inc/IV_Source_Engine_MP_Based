@@ -82,8 +82,14 @@ acttable_t	CWeaponStunStick::m_acttable[] =
 	{ ACT_HL2MP_GESTURE_RELOAD,			ACT_HL2MP_GESTURE_RELOAD_MELEE,			false },
 	{ ACT_HL2MP_JUMP,					ACT_HL2MP_JUMP_MELEE,					false },
 #endif
-	{ ACT_MELEE_ATTACK1,				ACT_MELEE_ATTACK_SWING,	true },
-	{ ACT_IDLE_ANGRY,					ACT_IDLE_ANGRY_MELEE,	true },
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	{ ACT_MELEE_ATTACK1,	ACT_MELEE_ATTACK_SWING,	true }, 
+	{ ACT_IDLE_ANGRY,		ACT_IDLE_ANGRY_MELEE,	true }, 
+
+ 	{ ACT_RANGE_ATTACK1,				ACT_RANGE_ATTACK_SLAM, true },
+ 	{ ACT_HL2MP_IDLE,					ACT_HL2MP_IDLE_MELEE,					false },
+ 	{ ACT_HL2MP_RUN,					ACT_HL2MP_RUN_MELEE,					false },
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 #if EXPANDED_HL2_WEAPON_ACTIVITIES
 	{ ACT_IDLE,							ACT_IDLE_MELEE,		false },
 	{ ACT_RUN,							ACT_RUN_MELEE,		false },
@@ -308,11 +314,12 @@ void CWeaponStunStick::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseComba
 
 				CBasePlayer *pPlayer = ToBasePlayer( pHurt );
 
+				#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+				CNPC_MetroPolice *pCop = dynamic_cast<CNPC_MetroPolice *>(pOperator); 
+				#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 				bool bFlashed = false;
-
-#ifdef MAPBASE
-				CNPC_MetroPolice *pCop = dynamic_cast<CNPC_MetroPolice *>(pOperator);
-
+				
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
 				if ( pCop != NULL && pPlayer != NULL )
 				{
 					// See if we need to knock out this target
@@ -337,7 +344,7 @@ void CWeaponStunStick::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseComba
 						pCop->StunnedTarget( pHurt );
 					}
 				}
-#endif
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 				
 				// Punch angles
 				if ( pPlayer != NULL && !(pPlayer->GetFlags() & FL_GODMODE) )
@@ -453,20 +460,13 @@ void CWeaponStunStick::Drop( const Vector &vecVelocity )
 {
 	SetStunState( false );
 
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	BaseClass::Drop( vecVelocity ); 
+#else
 #ifndef CLIENT_DLL
-#ifdef MAPBASE
-#ifdef HL2MP
-	if (!GetOwner() || GetOwner()->IsNPC())
-		BaseClass::Drop(vecVelocity);
-	else
-		UTIL_Remove( this );
-#else
-	BaseClass::Drop(vecVelocity);
-#endif
-#else
 	UTIL_Remove( this );
 #endif
-#endif
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 
 }
 
