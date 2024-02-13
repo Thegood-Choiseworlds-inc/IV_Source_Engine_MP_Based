@@ -42,9 +42,6 @@ $Configuration "Debug"
 		// Mapbase base definitions
 		$PreprocessorDefinitions		"$BASE;MAPBASE"		[$MAPBASE]
 		$PreprocessorDefinitions		"$BASE;MAPBASE_MP"		[$MAPBASE_MP]
-		
-		// SecobMod
-		$PreprocessorDefinitions		"$BASE;SecobMod__Enable_Fixed_Multiplayer_AI;SecobMod__FIX_VEHICLE_PLAYER_CAMERA_JUDDER"		[$MAPBASE_MP]
 	}
 }
 
@@ -64,8 +61,5 @@ $Configuration "Release"
 		// Mapbase base definitions
 		$PreprocessorDefinitions		"$BASE;MAPBASE"		[$MAPBASE]
 		$PreprocessorDefinitions		"$BASE;MAPBASE_MP"		[$MAPBASE_MP]
-		
-		// SecobMod
-		$PreprocessorDefinitions		"$BASE;SecobMod__Enable_Fixed_Multiplayer_AI;SecobMod__FIX_VEHICLE_PLAYER_CAMERA_JUDDER"		[$MAPBASE_MP]
 	}
 }
