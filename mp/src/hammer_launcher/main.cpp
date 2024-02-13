@@ -23,6 +23,11 @@
 #include "tier0/icommandline.h"
 #include "p4lib/ip4.h"
 
+#pragma comment(linker,"/manifestdependency:\"type='win32' \
+	name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
+	processorArchitecture='*' publicKeyToken='6595b64144ccf1df' \
+	language='*'\"")
+
 //-----------------------------------------------------------------------------
 // Global systems
 //-----------------------------------------------------------------------------
