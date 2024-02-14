@@ -85,6 +85,8 @@ private:
 	float m_flOrthoSize;
 #ifdef IV_SHADOWS_ADVANCED
 	bool m_bHightResMode;
+	float m_flDepthBias;
+	float m_flSlopeScaleDepthBias;
 #endif
 #endif
 	bool m_bEnableShadows;
@@ -120,6 +122,8 @@ IMPLEMENT_CLIENTCLASS_DT(C_GlobalLight, DT_GlobalLight, CGlobalLight)
 	RecvPropFloat(RECVINFO(m_flOrthoSize)),
 #ifdef IV_SHADOWS_ADVANCED
 	RecvPropBool(RECVINFO(m_bHightResMode)),
+	RecvPropFloat(RECVINFO(m_flDepthBias)),
+	RecvPropFloat(RECVINFO(m_flSlopeScaleDepthBias)),
 #endif
 #endif
 	RecvPropBool(RECVINFO(m_bEnableShadows)),
@@ -307,8 +311,8 @@ void C_GlobalLight::ClientThink()
 		//state.m_bDrawShadowFrustum = true; // Don't draw that huge debug thing
 		state.m_flShadowMapResolution = m_bHightResMode ? r_flashlightdepthres_glight.GetFloat() * 2 : r_flashlightdepthres_glight.GetFloat();
 		state.m_flShadowFilterSize = m_bHightResMode ? .7 : .5;
-		state.m_flShadowSlopeScaleDepthBias = ConVarRef("mat_slopescaledepthbias_shadowmap").GetFloat();
-		state.m_flShadowDepthBias = ConVarRef("mat_depthbias_shadowmap").GetFloat();
+		state.m_flShadowSlopeScaleDepthBias = m_flSlopeScaleDepthBias;
+		state.m_flShadowDepthBias = m_flDepthBias;
 		state.m_bEnableShadows = m_bEnableShadows;
 		state.m_pSpotlightTexture = m_SpotlightTexture;
 		state.m_nSpotlightTextureFrame = m_nSpotlightTextureFrame;

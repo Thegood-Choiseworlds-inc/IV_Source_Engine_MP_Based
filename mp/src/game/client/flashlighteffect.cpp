@@ -372,10 +372,12 @@ void CFlashlightEffect::UpdateLightNew( const Vector &vecPos, const Vector &vecF
 	}
 	else
 	{
-#ifndef HL2_EPISODIC
-		state.m_fHorizontalFOVDegrees = r_flashlightfov.GetFloat();
-		state.m_fVerticalFOVDegrees = r_flashlightfov.GetFloat();
-#endif
+		if (bFlicker == false)
+		{
+			state.m_fHorizontalFOVDegrees = r_flashlightfov.GetFloat();
+			state.m_fVerticalFOVDegrees = r_flashlightfov.GetFloat();
+		}
+
 		state.m_Color[0] = 1.0f;
 		state.m_Color[1] = 1.0f;
 		state.m_Color[2] = 1.0f;

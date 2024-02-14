@@ -49,6 +49,11 @@ public:
 	void	InputSetNorthOffset( inputdata_t &inputdata ) { m_flNorthOffset = inputdata.value.Float(); }
 #endif
 
+#ifdef IV_SHADOWS_ADVANCED
+	void	InputSetDepthBias(inputdata_t &inputdata) { m_flDepthBias = inputdata.value.Float(); }
+	void	InputSetSlopeScaleDepthBias(inputdata_t &inputdata) { m_flSlopeScaleDepthBias = inputdata.value.Float(); }
+#endif
+
 	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
 
 	DECLARE_SERVERCLASS();
@@ -78,6 +83,8 @@ private:
 	CNetworkVar( float, m_flOrthoSize );
 #ifdef IV_SHADOWS_ADVANCED
 	CNetworkVar(bool, m_bHightResMode);
+	CNetworkVar(float, m_flDepthBias);
+	CNetworkVar(float, m_flSlopeScaleDepthBias);
 #endif
 #endif
 	CNetworkVar( bool, m_bEnableShadows );
@@ -102,6 +109,8 @@ BEGIN_DATADESC( CGlobalLight )
 	DEFINE_KEYFIELD( m_flOrthoSize,	FIELD_FLOAT, "orthosize" ),
 #ifdef IV_SHADOWS_ADVANCED
 	DEFINE_KEYFIELD(m_bHightResMode, FIELD_BOOLEAN, "hightresmodestate"),
+	DEFINE_KEYFIELD(m_flDepthBias, FIELD_FLOAT, "depthbias"),
+	DEFINE_KEYFIELD(m_flSlopeScaleDepthBias, FIELD_FLOAT, "slopescaledepthbias"),
 #endif
 #endif
 	DEFINE_KEYFIELD( m_bEnableShadows, FIELD_BOOLEAN, "enableshadows" ),
@@ -127,6 +136,11 @@ BEGIN_DATADESC( CGlobalLight )
 	DEFINE_INPUT( m_flFOV,				FIELD_FLOAT, "SetFOV" ),
 	DEFINE_INPUT( m_flNearZ,			FIELD_FLOAT, "SetNearZDistance" ),
 	DEFINE_INPUT( m_flNorthOffset,			FIELD_FLOAT, "SetNorthOffset" ),
+#endif
+
+#ifdef IV_SHADOWS_ADVANCED
+	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetDepthBias", InputSetDepthBias),
+	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetSlopeScaleDepthBias", InputSetSlopeScaleDepthBias),
 #endif
 
 	DEFINE_INPUTFUNC( FIELD_COLOR32, "LightColor", InputSetLightColor ),
@@ -166,6 +180,8 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE(CGlobalLight, DT_GlobalLight)
 	SendPropFloat(SENDINFO(m_flOrthoSize), 0, SPROP_NOSCALE ),
 #ifdef IV_SHADOWS_ADVANCED
 	SendPropBool(SENDINFO(m_bHightResMode)),
+	SendPropFloat(SENDINFO(m_flDepthBias), 0, SPROP_NOSCALE),
+	SendPropFloat(SENDINFO(m_flSlopeScaleDepthBias), 0, SPROP_NOSCALE),
 #endif
 #endif
 	SendPropBool( SENDINFO( m_bEnableShadows ) ),
@@ -194,6 +210,8 @@ CGlobalLight::CGlobalLight()
 	m_flOrthoSize = 1000.0f;
 #ifdef IV_SHADOWS_ADVANCED
 	m_bHightResMode = false;
+	m_flDepthBias = 0.00005;
+	m_flSlopeScaleDepthBias = 8;
 #endif
 #endif
 	m_bEnabled = true;
