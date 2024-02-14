@@ -3662,12 +3662,24 @@ int C_BaseAnimating::InternalDrawModel( int flags )
 }
 
 extern ConVar muzzleflash_light;
+extern ConVar muzzleflash_light_projected;
 
 void C_BaseAnimating::ProcessMuzzleFlashEvent()
 {
 	// If we have an attachment, then stick a light on it.
 	if ( muzzleflash_light.GetBool() )
 	{
+		if (IsViewModel() && muzzleflash_light_projected.GetBool())
+		{
+			C_BasePlayer *pPlayer = ToBasePlayer(dynamic_cast<C_BaseViewModel *>(this)->GetOwner());
+			if (pPlayer && pPlayer == C_BasePlayer::GetLocalPlayer())
+			{
+				pPlayer->DisplayMuzzleLight();
+			}
+
+			return;
+		}
+
 		//FIXME: We should really use a named attachment for this
 		if ( m_Attachments.Count() > 0 )
 		{
