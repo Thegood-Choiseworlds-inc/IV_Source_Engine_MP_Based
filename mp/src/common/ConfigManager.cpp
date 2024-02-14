@@ -135,6 +135,28 @@ defaultConfigInfo_t SourceTestInfo =
 	243730
 };
 
+// Episodic Remake
+defaultConfigInfo_t EpisodicRemakeInfo =
+{
+	"Episodic Remake",
+	"episodic_mod",
+	"halflife2.fgd",
+	"info_player_start",
+	"hl2.exe",
+	243750
+};
+
+// HL2MP Remake
+defaultConfigInfo_t HL2MPRemakeInfo =
+{
+	"HL2MP Remake",
+	"source_base_test",
+	"hl2mp.fgd",
+	"info_player_start",
+	"hl2.exe",
+	243750
+};
+
 
 //-----------------------------------------------------------------------------
 // Constructor
@@ -900,6 +922,10 @@ bool CGameConfigManager::GetDefaultGameBlock( KeyValues *pIn )
 	defaultConfigs.AddToTail( TF2Info );
 	defaultConfigs.AddToTail( DODInfo );
 	defaultConfigs.AddToTail( CStrikeInfo );
+
+	//IV Note: Company Games to list
+	defaultConfigs.AddToTail(EpisodicRemakeInfo);
+	defaultConfigs.AddToTail(HL2MPRemakeInfo);
 
 	if ( pIn == NULL )
 		return false;
