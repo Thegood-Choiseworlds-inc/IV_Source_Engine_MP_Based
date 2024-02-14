@@ -74,13 +74,20 @@ protected:
 	float					m_flDelayedFire;
 	bool					m_bShotDelayed;
 	int						m_nVentPose;
-	
-#ifndef CLIENT_DLL
 #ifdef MAPBASE
 public:
 #endif
 	DECLARE_ACTTABLE();
+	
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+#ifndef CLIENT_DLL
+	int CapabilitiesGet( void ) { return bits_CAP_WEAPON_RANGE_ATTACK1; }
+	void Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator );
+	void Operator_ForceNPCFire( CBaseCombatCharacter *pOperator, bool bSecondary );
+	void FireNPCSecondaryAttack( CBaseCombatCharacter *pOperator, bool bUseWeaponAngles );
+	void FireNPCPrimaryAttack( CBaseCombatCharacter *pOperator, bool bUseWeaponAngles );
 #endif
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 };
 
 

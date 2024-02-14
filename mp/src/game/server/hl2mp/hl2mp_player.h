@@ -64,7 +64,13 @@ public:
 	virtual bool BecomeRagdollOnClient( const Vector &force );
 	virtual void Event_Killed( const CTakeDamageInfo &info );
 	virtual int OnTakeDamage( const CTakeDamageInfo &inputInfo );
-	virtual bool WantsLagCompensationOnEntity( const CBasePlayer *pPlayer, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const;
+
+	#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		virtual bool WantsLagCompensationOnEntity( const CBaseEntity *pPlayer, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const; 
+	#else
+		virtual bool WantsLagCompensationOnEntity( const CBasePlayer *pPlayer, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const;
+	#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+
 	virtual void FireBullets ( const FireBulletsInfo_t &info );
 	virtual bool Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex = 0);
 	virtual bool BumpWeapon( CBaseCombatWeapon *pWeapon );
@@ -136,6 +142,13 @@ public:
 	CNetworkHandle( CBaseEntity, m_hRagdoll );	// networked entity handle 
 
 	virtual bool	CanHearAndReadChatFrom( CBasePlayer *pPlayer );
+
+	// Armor Ints.
+	int m_iArmor;
+	int m_iMaxArmor;
+	void	IncrementArmorValue( int nCount, int nMaxValue = -1 );
+	void	SetArmorValue( int value );
+	void	SetMaxArmorValue( int MaxArmorValue );
 
 		
 private:

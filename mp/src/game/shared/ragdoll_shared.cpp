@@ -782,7 +782,9 @@ bool ShouldRemoveThisRagdoll( CBaseAnimating *pRagdoll )
 	}
 
 #else
-	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+	#ifndef SecobMod__Enable_Fixed_Multiplayer_AI
+		CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+	#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 
 	if( !UTIL_FindClientInPVS( pRagdoll->edict() ) )
 	{
@@ -791,13 +793,15 @@ bool ShouldRemoveThisRagdoll( CBaseAnimating *pRagdoll )
 
 		return true;
 	}
-	else if( !pPlayer->FInViewCone( pRagdoll ) )
+#ifndef SecobMod__Enable_Fixed_Multiplayer_AI
+else if( !pPlayer->FInViewCone( pRagdoll ) )
 	{
 		if ( g_debug_ragdoll_removal.GetBool() )
 			 NDebugOverlay::Line( pRagdoll->GetAbsOrigin(), pRagdoll->GetAbsOrigin() + Vector( 0, 0, 64 ), 0, 0, 255, true, 5 );
 		
 		return true;
 	}
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 
 #endif
 

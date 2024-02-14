@@ -337,7 +337,8 @@ public:
 	void			InputSetReadinessMedium( inputdata_t &inputdata );
 	void			InputSetReadinessHigh( inputdata_t &inputdata );
 	void			InputLockReadiness( inputdata_t &inputdata );
-#if HL2_EPISODIC
+//SecobMod__IFDEF_Fixes
+#ifdef HL2_EPISODIC
 	void			InputClearAllOuputs( inputdata_t &inputdata ); ///< annihilate every output on this npc
 #endif
 

@@ -210,7 +210,11 @@ ConVar	player_use_visibility_cache( "player_use_visibility_cache", "0", FCVAR_NO
 
 void CC_GiveCurrentAmmo( void )
 {
-	CBasePlayer *pPlayer = UTIL_PlayerByIndex(1);
+	#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		CBasePlayer *pPlayer = UTIL_GetCommandClient(); 
+	#else
+		CBasePlayer *pPlayer = UTIL_PlayerByIndex(1);
+	#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 
 	if( pPlayer )
 	{
@@ -880,7 +884,35 @@ int CBasePlayer::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 	return BaseClass::ShouldTransmit( pInfo );
 }
 
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+bool CBasePlayer::WantsLagCompensationOnEntity( const CBaseEntity *pEntity, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const 
+{
+	//Tony; only check teams in teamplay
+	if ( gpGlobals->teamplay )
+	{
+		// Team members shouldn't be adjusted unless friendly fire is on.
+		if ( !friendlyfire.GetInt() && pEntity->GetTeamNumber() == GetTeamNumber() ) 
+			return false;
+	}
 
+	// If this entity hasn't been transmitted to us and acked, then don't bother lag compensating it.
+	if ( pEntityTransmitBits && !pEntityTransmitBits->Get( pEntity->entindex() ) ) 
+		return false;
+
+	const Vector &vMyOrigin = GetAbsOrigin();
+	const Vector &vHisOrigin = pEntity->GetAbsOrigin();
+
+	// get max distance player could have moved within max lag compensation time, 
+	// multiply by 1.5 to to avoid "dead zones"  (sqrt(2) would be the exact value)
+	//float maxDistance = 1.5 * pPlayer->MaxSpeed() * sv_maxunlag.GetFloat(); 
+	float maxspeed; 
+	CBasePlayer *pPlayer = ToBasePlayer((CBaseEntity*)pEntity); 
+	if ( pPlayer ) 
+		maxspeed = pPlayer->MaxSpeed(); 
+	else 
+		maxspeed = 600; 
+	float maxDistance = 1.5 * maxspeed * sv_maxunlag.GetFloat(); 
+#else
 bool CBasePlayer::WantsLagCompensationOnEntity( const CBasePlayer *pPlayer, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const
 {
 	//Tony; only check teams in teamplay
@@ -901,7 +933,8 @@ bool CBasePlayer::WantsLagCompensationOnEntity( const CBasePlayer *pPlayer, cons
 	// get max distance player could have moved within max lag compensation time, 
 	// multiply by 1.5 to to avoid "dead zones"  (sqrt(2) would be the exact value)
 	float maxDistance = 1.5 * pPlayer->MaxSpeed() * sv_maxunlag.GetFloat();
-
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI	
+	
 	// If the player is within this distance, lag compensate them in case they're running past us.
 	if ( vHisOrigin.DistTo( vMyOrigin ) < maxDistance )
 		return true;
@@ -8170,7 +8203,18 @@ void CStripWeapons::StripWeapons(inputdata_t &data, bool stripSuit)
 	}
 	else if ( !g_pGameRules->IsDeathmatch() )
 	{
-		pPlayer = UTIL_GetLocalPlayer();
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	for (int i = 1; i <= gpGlobals->maxClients; i++ ) 
+	{ 
+		CBasePlayer *pPlayer = UTIL_PlayerByIndex( i ); 
+		if ( pPlayer )
+		{
+		pPlayer->RemoveAllItems( stripSuit );
+		}
+	}
+#else
+pPlayer = UTIL_GetLocalPlayer();
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 	}
 
 	if ( pPlayer )
@@ -8265,8 +8309,26 @@ void CRevertSaved::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE 
 	UTIL_ScreenFadeAll( m_clrRender, Duration(), HoldTime(), FFADE_OUT );
 	SetNextThink( gpGlobals->curtime + LoadTime() );
 	SetThink( &CRevertSaved::LoadThink );
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	for (int i = 1; i <= gpGlobals->maxClients; i++ ) 
+	{ 
+		CBasePlayer *pPlayer = UTIL_PlayerByIndex( i ); 
+		if ( !pPlayer ) 
+			continue; 
+			
+			if ( pPlayer )
+			{		
+			//Adrian: Setting this flag so we can't move or save a game.
+			pPlayer->pl.deadflag = true;
+			pPlayer->AddFlag( (FL_NOTARGET|FL_FROZEN) );
 
-	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+			// clear any pending autosavedangerous
+			g_ServerGameDLL.m_fAutoSaveDangerousTime = 0.0f;
+			g_ServerGameDLL.m_fAutoSaveDangerousMinHealthToCommit = 0.0f;
+			}
+	}
+#else
+CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
 
 	if ( pPlayer )
 	{
@@ -8278,6 +8340,7 @@ void CRevertSaved::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE 
 		g_ServerGameDLL.m_fAutoSaveDangerousTime = 0.0f;
 		g_ServerGameDLL.m_fAutoSaveDangerousMinHealthToCommit = 0.0f;
 	}
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 }
 
 void CRevertSaved::InputReload( inputdata_t &inputdata )
@@ -8328,6 +8391,16 @@ void CRevertSaved::LoadThink( void )
 	{
 		engine->ServerCommand("reload\n");
 	}
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+//SecobMod__Information: Here we change level to the map we're already on if a vital ally such as Alyx is killed etc etc etc.
+	else
+	{
+	char *szDefaultMapName = new char[32];
+	Q_strncpy( szDefaultMapName, STRING(gpGlobals->mapname), 32 );
+	engine->ChangeLevel( szDefaultMapName, NULL );
+	return;
+	}
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI	
 }
 
 #define SF_SPEED_MOD_SUPPRESS_WEAPONS	(1<<0)	// Take away weapons
@@ -8434,7 +8507,11 @@ void CMovementSpeedMod::InputSpeedMod(inputdata_t &data)
 	}
 	else if ( !g_pGameRules->IsDeathmatch() )
 	{
-		pPlayer = UTIL_GetLocalPlayer();
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin()); 
+#else
+pPlayer = UTIL_GetLocalPlayer();
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 	}
 
 	if ( pPlayer )

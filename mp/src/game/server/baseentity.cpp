@@ -972,12 +972,21 @@ void CBaseEntity::DrawDebugGeometryOverlays(void)
 			NDebugOverlay::EntityBounds(this, 255, 255, 255, 0, 0 );
 		}
 	}
-	if ( m_debugOverlays & OVERLAY_AUTOAIM_BIT && (GetFlags()&FL_AIMTARGET) && AI_GetSinglePlayer() != NULL )
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI	
+	CBasePlayer *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin()); 
+	if ( m_debugOverlays & OVERLAY_AUTOAIM_BIT && (GetFlags()&FL_AIMTARGET) && pPlayer != NULL ) 
+#else
+	if ( m_debugOverlays & OVERLAY_AUTOAIM_BIT && (GetFlags()&FL_AIMTARGET) && AI_GetSinglePlayer() != NULL )	
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+	
 	{
 		// Crude, but it gets the point across.
 		Vector vecCenter = GetAutoAimCenter();
 		Vector vecRight, vecUp, vecDiag;
-		CBasePlayer *pPlayer = AI_GetSinglePlayer();
+#ifndef SecobMod__Enable_Fixed_Multiplayer_AI
+CBasePlayer *pPlayer = AI_GetSinglePlayer();
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+
 		float radius = GetAutoAimRadius();
 
 		QAngle angles = pPlayer->EyeAngles();
@@ -1704,27 +1713,42 @@ int CBaseEntity::VPhysicsTakeDamage( const CTakeDamageInfo &info )
 		unsigned short gameFlags = VPhysicsGetObject()->GetGameFlags();
 		if ( gameFlags & FVPHYSICS_PLAYER_HELD )
 		{
+			//SecobMod
 			// if the player is holding the object, use it's real mass (player holding reduced the mass)
 			CBasePlayer *pPlayer = NULL;
 
-			if ( AI_IsSinglePlayer() )
-			{
-				pPlayer = UTIL_GetLocalPlayer();
-			}
-			else
-			{
-				// See which MP player is holding the physics object and then use that player to get the real mass of the object.
-				// This is ugly but better than having linkage between an object and its "holding" player.
-				for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-				{
-					CBasePlayer *tempPlayer = UTIL_PlayerByIndex( i );
-					if ( tempPlayer && (tempPlayer->GetHeldObject() == this ) )
-					{
-						pPlayer = tempPlayer;
-						break;
-					}
-				}
-			}
+			#ifdef SecobMod__Enable_Fixed_Multiplayer_AI	
+						// See which MP player is holding the physics object and then use that player to get the real mass of the object.
+						// This is ugly but better than having linkage between an object and its "holding" player.
+						for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+						{
+							CBasePlayer *tempPlayer = UTIL_PlayerByIndex( i );
+							if ( tempPlayer && (tempPlayer->GetHeldObject() == this ) )
+							{
+							pPlayer = tempPlayer;
+								break;
+							}
+						}
+			#else
+						if ( AI_IsSinglePlayer() )
+						{
+							pPlayer = UTIL_GetLocalPlayer();
+						}
+						else
+						{
+							// See which MP player is holding the physics object and then use that player to get the real mass of the object.
+							// This is ugly but better than having linkage between an object and its "holding" player.
+							for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+							{
+								CBasePlayer *tempPlayer = UTIL_PlayerByIndex( i );
+								if ( tempPlayer && (tempPlayer->GetHeldObject() == this ) )
+								{
+									pPlayer = tempPlayer;
+									break;
+								}
+							}
+						}
+			#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 
 			if ( pPlayer )
 			{
@@ -9110,7 +9134,12 @@ void CBaseEntity::DispatchResponse( const char *conceptName )
 	ModifyOrAppendCriteria( set );
 
 	// Append local player criteria to set,too
-	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+	#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin()); 
+	#else
+		CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+	#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+
 	if( pPlayer )
 		pPlayer->ModifyOrAppendPlayerCriteria( set );
 
@@ -9287,7 +9316,12 @@ void CBaseEntity::DumpResponseCriteria( void )
 	ModifyOrAppendCriteria( set );
 
 	// Append local player criteria to set,too
-	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	CBasePlayer *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin()); 
+#else
+CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+
 	if ( pPlayer )
 	{
 		pPlayer->ModifyOrAppendPlayerCriteria( set );
@@ -9778,7 +9812,11 @@ bool CBaseEntity::SUB_AllowedToFade( void )
 
 	// on Xbox, allow these to fade out
 #ifndef _XBOX
-	CBasePlayer *pPlayer = ( AI_IsSinglePlayer() ) ? UTIL_GetLocalPlayer() : NULL;
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	CBasePlayer *pPlayer = UTIL_GetNearestVisiblePlayer(this); 
+#else
+CBasePlayer *pPlayer = ( AI_IsSinglePlayer() ) ? UTIL_GetLocalPlayer() : NULL;
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 
 	if ( pPlayer && pPlayer->FInViewCone( this ) )
 		return false;

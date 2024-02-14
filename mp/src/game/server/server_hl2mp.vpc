@@ -17,6 +17,9 @@ $Configuration
 	{
 		$AdditionalIncludeDirectories	"$BASE;$SRCDIR\game\shared\hl2,.\hl2,.\hl2mp,$SRCDIR\game\shared\hl2mp"
 		$PreprocessorDefinitions		"$BASE;HL2MP;HL2_DLL"
+		
+		// SecobMod
+		$PreprocessorDefinitions		"$BASE;SecobMod__Enable_Fixed_Multiplayer_AI;SecobMod__FIX_VEHICLE_PLAYER_CAMERA_JUDDER"		[$MAPBASE_MP]
 	}
 }
 

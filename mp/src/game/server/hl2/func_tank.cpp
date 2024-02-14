@@ -923,6 +923,13 @@ void CFuncTank::Spawn( void )
 		AddSolidFlags( FSOLID_NOT_SOLID );
 	}
 
+//SecobMod__Information: This is code added from DutchMegas' Collaborate source mod to fix func_tank for hl2mp usage.
+	CDynamicProp *pProp = dynamic_cast<CDynamicProp*>(GetParent());
+	if ( pProp )
+	{
+		pProp->SetClientSideAnimation( false );
+	}
+/**/
 	m_hControlVolume	= NULL;
 
 	if ( GetParent() && GetParent()->GetBaseAnimating() )
@@ -1221,6 +1228,11 @@ bool CFuncTank::StartControl( CBaseCombatCharacter *pController )
 		m_hController->GetActiveWeapon()->Holster();
 	}
 
+	//SecobMod__Information: Here we add code from DutchMegas' Collaborate source mod.
+	if ( pController->IsPlayer() )
+	pController->SetNextAttack( gpGlobals->curtime + 1.0f );
+	/**/
+
 	// Set the controller's position to be the use position.
 	m_vecControllerUsePos = m_hController->GetLocalOrigin();
 
@@ -1280,6 +1292,8 @@ void CFuncTank::StopControl()
 	{
 		CBasePlayer *pPlayer = static_cast<CBasePlayer*>( m_hController.Get() );
 		pPlayer->m_Local.m_iHideHUD &= ~HIDEHUD_WEAPONSELECTION;
+		
+		pPlayer->SwitchToNextBestWeapon(pPlayer->GetActiveWeapon());//SecobMod__Information: Restores to a weapon.
 	}
 
 	// Stop thinking.
@@ -1773,7 +1787,13 @@ void CFuncTank::Think( void )
 		}
 
 #ifdef FUNCTANK_AUTOUSE
+
+	#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin()); 
+	#else
 		CBasePlayer *pPlayer = UTIL_PlayerByIndex(1);
+	#endif //SecobMod__Enable_Fixed_Multiplayer_AI		
+
 		bool bThinkFast = false;
 
 		if( pPlayer )
@@ -2422,7 +2442,11 @@ void CFuncTank::DoMuzzleFlash( void )
 			CEffectData data;
 			data.m_nAttachmentIndex = m_nBarrelAttachment;
 			data.m_nEntIndex = pAnim->entindex();
-			
+
+			//SecobMod__Information: Here we add code from DutchMegas' Collaborate source mode.
+			pAnim->GetAttachment( m_nBarrelAttachment, data.m_vOrigin );
+			/**/
+
 			// FIXME: Create a custom entry here!
 			DispatchEffect( "ChopperMuzzleFlash", data );
 		}
@@ -2433,6 +2457,10 @@ void CFuncTank::DoMuzzleFlash( void )
 			data.m_nAttachmentIndex = m_nBarrelAttachment;
 			data.m_flScale = 1.0f;
 			data.m_fFlags = MUZZLEFLASH_COMBINE;
+
+			//SecobMod__Information: Here we add code from DutchMegas' Collaborate source mode.
+			pAnim->GetAttachment( m_nBarrelAttachment, data.m_vOrigin );
+			/**/
 
 			DispatchEffect( "MuzzleFlash", data );
 		}
@@ -2556,7 +2584,11 @@ void CFuncTank::Fire( int bulletCount, const Vector &barrelEnd, const Vector &fo
 	{
 		if ( IsX360() )
 		{
-			UTIL_PlayerByIndex(1)->RumbleEffect( RUMBLE_AR2, 0, RUMBLE_FLAG_RESTART | RUMBLE_FLAG_RANDOM_AMPLITUDE );
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+			UTIL_GetNearestPlayer(GetAbsOrigin())->RumbleEffect( RUMBLE_AR2, 0, RUMBLE_FLAG_RESTART | RUMBLE_FLAG_RANDOM_AMPLITUDE ); 
+#else
+UTIL_PlayerByIndex(1)->RumbleEffect( RUMBLE_AR2, 0, RUMBLE_FLAG_RESTART | RUMBLE_FLAG_RANDOM_AMPLITUDE );
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 		}
 		else
 		{
@@ -2902,6 +2934,10 @@ bool CFuncTankGun::KeyValue( const char *szKeyName, const char *szValue )
 //-----------------------------------------------------------------------------
 void CFuncTankGun::Fire( int bulletCount, const Vector &barrelEnd, const Vector &forward, CBaseEntity *pAttacker, bool bIgnoreSpread )
 {
+	//SecobMod__Information: This is required so that tracers show up for mounted guns.
+	IPredictionSystem::SuppressHostEvents( NULL );
+	/**/
+
 	int i;
 
 	FireBulletsInfo_t info;
@@ -3659,6 +3695,10 @@ void CFuncTankAirboatGun::DoMuzzleFlash( void )
 		data.m_nEntIndex = m_hAirboatGunModel->entindex();
 		data.m_nAttachmentIndex = m_nGunBarrelAttachment;
 		data.m_flScale = 1.0f;
+
+		//SecobMod__Information: Here we add code from DutchMegas' Collaborate source mode.
+        m_hAirboatGunModel->GetAttachment( m_nGunBarrelAttachment, data.m_vOrigin );
+		/**/
 		DispatchEffect( "AirboatMuzzleFlash", data );
 	}
 }
@@ -4252,7 +4292,12 @@ enum
 
 void UTIL_VisualizeCurve( int type, int steps, float bias )
 {
-	CBasePlayer *pPlayer = UTIL_PlayerByIndex( 1 );
+	#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+#else
+CBasePlayer *pPlayer = UTIL_PlayerByIndex( 1 );
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+
 	Vector vForward, vRight, vUp;
 	
 	pPlayer->EyeVectors( &vForward, &vRight, &vUp );
@@ -5047,7 +5092,19 @@ void CFuncTankCombineCannon::FuncTankPostThink()
 			AddSpawnFlags( SF_TANK_AIM_AT_POS );
 
 			Vector vecTargetPosition = GetTargetPosition();
-			CBasePlayer *pPlayer = AI_GetSinglePlayer();
+			#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+			CBasePlayer *pPlayer = UTIL_GetNearestVisiblePlayer(this); 
+#else
+CBasePlayer *pPlayer = AI_GetSinglePlayer();
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+
+            ////SecobMod__Information: Fixing null pointers on ep2_outland_09.
+			if (pPlayer == NULL)
+			{
+			CreateBeam();
+			return;
+			}
+
 			Vector vecToPlayer = pPlayer->WorldSpaceCenter() - GetAbsOrigin();
 			vecToPlayer.NormalizeInPlace();
 
@@ -5056,15 +5113,28 @@ void CFuncTankCombineCannon::FuncTankPostThink()
 
 			if( flDot >= 0.9f && m_bShouldHarrass )
 			{
+			    //SecobMod__Information: Harrassing doesn't appear to work for hl2mp, so we hack this to work. Basically we dont put any code here for harrass and instead place it in the else below.
+				// Original Code.
 				//Msg("%s Harrassing player\n", GetDebugName() );
 				vecTargetPosition = pPlayer->EyePosition();
-				bHarass = true;
+				//vecTargetPosition = pPlayer->EyePosition();
+				//bHarass = true;
 			}
 			else
 			{
+			//SecobMod__Information: We include our own form of harrassing the player here. Basically if a player isnt in sight, the code runs as normal shooting enemies. If a player comes in sight, then the guns start attacking them till they manage to hide.
+				// Original Code.
 				//Msg( "%s Bored\n", GetDebugName() );
 				// Just point off in the distance, more or less directly ahead of me.
-				vecTargetPosition = GetAbsOrigin() + m_vecTrueForward * 1900.0f;
+				//vecTargetPosition = GetAbsOrigin() + m_vecTrueForward * 1900.0f;
+				m_hBeam->SetColor( 0,0, 0 );
+				vecTargetPosition = pPlayer->EyePosition();
+				Vector vecForwardCurrent = vecToPlayer;
+				Vector vecBarrelCurrentEnd = WorldBarrelPosition();//SecobMod__MiscFixes Seco had added to the barrel position + 1.0f;
+				BaseClass::Fire( 1, vecBarrelCurrentEnd, vecForwardCurrent, pPlayer, false );
+				//m_flTimeBeamOn = gpGlobals->curtime + 0.2f;
+				//m_flTimeNextSweep = gpGlobals->curtime + random->RandomInt( 2.0f, 4.0f ); //When "harrassing" make sure we have a longer random wait time before the next shot. Otherwise things get quite hairy for players!
+				bHarass = true;
 			}
 
 			int i;
@@ -5208,9 +5278,20 @@ void CFuncTankCombineCannon::Fire( int bulletCount, const Vector &barrelEnd, con
 void CFuncTankCombineCannon::MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType )
 {
 	// If the shot passed near the player, shake the screen.
-	if( AI_IsSinglePlayer() )
-	{
+	//SecobMod__Information: Updated for multiplayer.
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	
+		CBasePlayer *pPlayer = UTIL_GetNearestVisiblePlayer(this);
+		if ( pPlayer == NULL)
+		{
+		return;
+		}
+		Vector vecPlayer = pPlayer->EyePosition();
+#else
+		if( AI_IsSinglePlayer() )
+		{
 		Vector vecPlayer = AI_GetSinglePlayer()->EyePosition();
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 
 		Vector vecNearestPoint = PointOnLineNearestPoint( vecTracerSrc, tr.endpos, vecPlayer );
 
@@ -5221,7 +5302,9 @@ void CFuncTankCombineCannon::MakeTracer( const Vector &vecTracerSrc, const trace
 			// Don't shake the screen if we're hit (within 10 inches), but do shake if a shot otherwise comes within 10 feet.
 			UTIL_ScreenShake( vecNearestPoint, 10, 60, 0.3, 120.0f, SHAKE_START, false );
 		}
+	#ifndef SecobMod__Enable_Fixed_Multiplayer_AI
 	}
+	#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 
 	// Send the railgun effect
 	DispatchParticleEffect( "Weapon_Combine_Ion_Cannon", vecTracerSrc, tr.endpos, vec3_angle, NULL );

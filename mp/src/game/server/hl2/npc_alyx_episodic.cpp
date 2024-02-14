@@ -972,7 +972,12 @@ void CNPC_Alyx::AnalyzeGunfireSound( CSound *pSound )
 //-----------------------------------------------------------------------------
 bool CNPC_Alyx::IsValidEnemy( CBaseEntity *pEnemy )
 {
-	if ( HL2GameRules()->IsAlyxInDarknessMode() )
+	//SecobMod
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	if ( HL2MPRules()->IsAlyxInDarknessMode() )
+#else
+	if (HL2GameRules()->IsAlyxInDarknessMode())
+#endif
 	{
 		if ( !CanSeeEntityInDarkness( pEnemy ) )
 			return false;
@@ -1281,7 +1286,12 @@ void CNPC_Alyx::DoCustomSpeechAI( void )
 
 	// Darkness mode speech
 	ClearCondition( COND_ALYX_IN_DARK );
- 	if ( HL2GameRules()->IsAlyxInDarknessMode() )
+	//SecobMod
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	if ( HL2MPRules()->IsAlyxInDarknessMode() )
+#else
+	if (HL2GameRules()->IsAlyxInDarknessMode())
+#endif
 	{
 		// Even though the darkness light system will take flares into account when Alyx
 		// says she's lost the player in the darkness, players still think she's silly
@@ -1463,7 +1473,12 @@ void CNPC_Alyx::DoCustomSpeechAI( void )
 	{
 		// If we've left darkness mode, or if the player has blinded me with 
 		// the flashlight, don't bother speaking the found player line.
-		if ( !m_bIsFlashlightBlind && HL2GameRules()->IsAlyxInDarknessMode() && m_bDarknessSpeechAllowed )
+		//SecobMod
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		if ( !m_bIsFlashlightBlind && HL2MPRules()->IsAlyxInDarknessMode() && m_bDarknessSpeechAllowed )
+#else
+		if (!m_bIsFlashlightBlind && HL2GameRules()->IsAlyxInDarknessMode() && m_bDarknessSpeechAllowed)
+#endif
 		{
 			if ( HasCondition(COND_SEE_PLAYER) && !HasCondition( COND_TALKER_PLAYER_DEAD ) )
 			{
@@ -1612,7 +1627,12 @@ bool CNPC_Alyx::FInViewCone( CBaseEntity *pEntity )
 	}
 
 	// Else, fall through...
- 	if ( HL2GameRules()->IsAlyxInDarknessMode() )
+	//SecobMod
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+ 	if ( HL2MPRules()->IsAlyxInDarknessMode() )
+#else
+	if (HL2GameRules()->IsAlyxInDarknessMode())
+#endif
 	{
 		if ( CanSeeEntityInDarkness( pEntity ) )
 			return true;
@@ -1651,7 +1671,12 @@ bool CNPC_Alyx::CanSeeEntityInDarkness( CBaseEntity *pEntity )
 //-----------------------------------------------------------------------------
 bool CNPC_Alyx::QuerySeeEntity( CBaseEntity *pEntity, bool bOnlyHateOrFearIfNPC)
 {
-	if ( HL2GameRules()->IsAlyxInDarknessMode() )
+	//SecobMod
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	if ( HL2MPRules()->IsAlyxInDarknessMode() )
+#else
+	if (HL2GameRules()->IsAlyxInDarknessMode())
+#endif
 	{
 		if ( !CanSeeEntityInDarkness( pEntity ) )
 			return false;
@@ -1854,7 +1879,12 @@ int CNPC_Alyx::SelectSchedule( void )
 {
     // If we're in darkness mode, and the player has the flashlight off, and we hear a zombie footstep,
 	// and the player isn't nearby, deliberately turn away from the zombie to let the zombie grab me.
-	if ( HL2GameRules()->IsAlyxInDarknessMode() && m_NPCState == NPC_STATE_ALERT )
+	//SecobMod
+#if SecobMod__Enable_Fixed_Multiplayer_AI
+	if ( HL2MPRules()->IsAlyxInDarknessMode() && m_NPCState == NPC_STATE_ALERT )
+#else
+	if (HL2GameRules()->IsAlyxInDarknessMode() && m_NPCState == NPC_STATE_ALERT)
+#endif
 	{
 		if ( HasCondition ( COND_HEAR_COMBAT ) && !HasCondition(COND_SEE_PLAYER) )
 		{
@@ -2034,7 +2064,12 @@ int CNPC_Alyx::TranslateSchedule( int scheduleType )
 
 	case SCHED_HIDE_AND_RELOAD:
 		{
-			if ( HL2GameRules()->IsAlyxInDarknessMode() )
+			//SecobMod
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+			if ( HL2MPRules()->IsAlyxInDarknessMode() )
+#else
+			if (HL2GameRules()->IsAlyxInDarknessMode())
+#endif
 				return SCHED_RELOAD;
 
 			// If I don't have a ranged attacker as an enemy, don't try to hide
@@ -2440,7 +2475,12 @@ int CNPC_Alyx::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 
 	int taken = BaseClass::OnTakeDamage_Alive(info);
 
-	if ( taken && HL2GameRules()->IsAlyxInDarknessMode() && !HasCondition( COND_TALKER_PLAYER_DEAD ) )
+	//SecobMod
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	if ( taken && HL2MPRules()->IsAlyxInDarknessMode() && !HasCondition( COND_TALKER_PLAYER_DEAD ) )
+#else
+	if (taken && HL2GameRules()->IsAlyxInDarknessMode() && !HasCondition(COND_TALKER_PLAYER_DEAD))
+#endif
 	{
 		if ( !HasCondition(COND_SEE_ENEMY) && (info.GetDamageType() & (DMG_SLASH | DMG_CLUB) ) )
 		{
@@ -2864,7 +2904,12 @@ bool CNPC_Alyx::PlayerFlashlightOnMyEyes( CBasePlayer *pPlayer )
 	float flDist = VectorNormalize( vecToEyes ); 
 
 	// We can be blinded in daylight, but only at close range
-	if ( HL2GameRules()->IsAlyxInDarknessMode() == false )
+	//SecobMod
+#if SecobMod__Enable_Fixed_Multiplayer_AI
+	if ( HL2MPRules()->IsAlyxInDarknessMode() == false )
+#else
+	if (HL2GameRules()->IsAlyxInDarknessMode() == false)
+#endif
 	{
 		if ( flDist > (8*12.0f) )
 			return false;

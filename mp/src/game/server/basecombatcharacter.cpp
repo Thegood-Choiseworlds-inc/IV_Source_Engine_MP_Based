@@ -48,6 +48,11 @@
 #include "hl2_gamerules.h"
 #endif
 
+//SecobMod.
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+#include "hl2mp_gamerules.h"
+#endif
+
 #ifdef PORTAL
 	#include "portal_util_shared.h"
 	#include "prop_portal_shared.h"
@@ -1688,7 +1693,12 @@ bool CBaseCombatCharacter::BecomeRagdoll( const CTakeDamageInfo &info, const Vec
 
 #ifdef HL2_EPISODIC
 	// Burning corpses are server-side in episodic, if we're in darkness mode
-	if ( IsOnFire() && HL2GameRules()->IsAlyxInDarknessMode() )
+	//SecobMod.
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	if (IsOnFire() && HL2MPRules()->IsAlyxInDarknessMode())
+#else
+	if (IsOnFire() && HL2GameRules()->IsAlyxInDarknessMode())
+#endif
 	{
 		CBaseEntity *pRagdoll = CreateServerRagdoll( this, m_nForceBone, newinfo, COLLISION_GROUP_DEBRIS );
 		FixupBurningServerRagdoll( pRagdoll );
@@ -1700,9 +1710,14 @@ bool CBaseCombatCharacter::BecomeRagdoll( const CTakeDamageInfo &info, const Vec
 #ifdef HL2_DLL	
 
 	bool bMegaPhyscannonActive = false;
-#if !defined( HL2MP )
+//SecobMod.
+//#if !defined( HL2MP )
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	bMegaPhyscannonActive = HL2MPRules()->MegaPhyscannonActive();
+#else
 	bMegaPhyscannonActive = HL2GameRules()->MegaPhyscannonActive();
-#endif // !HL2MP
+#endif
+//#endif // !HL2MP
 
 	// Mega physgun requires everything to be a server-side ragdoll
 	if ( m_bForceServerRagdoll == true || ( ( bMegaPhyscannonActive == true ) && !IsPlayer() && Classify() != CLASS_PLAYER_ALLY_VITAL && Classify() != CLASS_PLAYER_ALLY ) )
@@ -3913,12 +3928,17 @@ void CBaseCombatCharacter::VPhysicsShadowCollision( int index, gamevcollisioneve
 	// which can occur owing to ordering issues it appears.
 	float flOtherAttackerTime = 0.0f;
 
-#if defined( HL2_DLL ) && !defined( HL2MP )
-	if ( HL2GameRules()->MegaPhyscannonActive() == true )
+//SecobMod.
+//#if defined( HL2_DLL ) && !defined( HL2MP )
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	if ( HL2MPRules()->MegaPhyscannonActive() == true )
+#else
+	if (HL2GameRules()->MegaPhyscannonActive() == true)
+#endif
 	{
 		flOtherAttackerTime = 1.0f;
 	}
-#endif // HL2_DLL && !HL2MP
+//#endif // HL2_DLL && !HL2MP
 
 	if ( this == pOther->HasPhysicsAttacker( flOtherAttackerTime ) )
 		return;

@@ -47,7 +47,12 @@
 #include "weapon_physcannon.h"
 #include "ammodef.h"
 #include "vehicle_base.h"
- 
+
+//SecobMod__MiscFixes: Here we include the hl2mp gamerules so that calls to darkness mode work and also in the file change darkness mode HL2GameRules to HL2MPRules.
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+#include "hl2mp_gamerules.h"
+#endif
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -977,8 +982,13 @@ int CNPC_BaseZombie::OnTakeDamage_Alive( const CTakeDamageInfo &inputInfo )
 //-----------------------------------------------------------------------------
 void CNPC_BaseZombie::MakeAISpookySound( float volume, float duration )
 {
-#ifdef HL2_EPISODIC
-	if ( HL2GameRules()->IsAlyxInDarknessMode() )
+	//SecobMod
+	#ifdef HL2_EPISODIC
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+	if ( HL2MPRules()->IsAlyxInDarknessMode() )
+#else
+	if (HL2GameRules()->IsAlyxInDarknessMode())
+#endif
 	{
 		CSoundEnt::InsertSound( SOUND_COMBAT, EyePosition(), volume, duration, this, SOUNDENT_CHANNEL_SPOOKY_NOISE );
 	}
@@ -1084,7 +1094,12 @@ bool CNPC_BaseZombie::ShouldIgniteZombieGib( void )
 #ifdef HL2_EPISODIC
 	// If we're in darkness mode, don't ignite giblets, because we don't want to
 	// pay the perf cost of multiple dynamic lights per giblet.
-	return ( IsOnFire() && !HL2GameRules()->IsAlyxInDarknessMode() );
+	//SecobMod
+#if SecobMod__Enable_Fixed_Multiplayer_AI
+	return ( IsOnFire() && !HL2MPRules()->IsAlyxInDarknessMode() );
+#else
+	return (IsOnFire() && !HL2GameRules()->IsAlyxInDarknessMode());
+#endif
 #else
 	return IsOnFire();
 #endif 
@@ -1298,7 +1313,12 @@ void CNPC_BaseZombie::Ignite( float flFlameLifetime, bool bNPCOnly, float flSize
 	BaseClass::Ignite( flFlameLifetime, bNPCOnly, flSize, bCalledByLevelDesigner );
 
 #ifdef HL2_EPISODIC
-	if ( HL2GameRules()->IsAlyxInDarknessMode() == true && GetEffectEntity() != NULL )
+	//SecobMod
+#if SecobMod__Enable_Fixed_Multiplayer_AI
+	if ( HL2MPRules()->IsAlyxInDarknessMode() == true && GetEffectEntity() != NULL )
+#else
+	if (HL2GameRules()->IsAlyxInDarknessMode() == true && GetEffectEntity() != NULL)
+#endif
 	{
 		GetEffectEntity()->AddEffects( EF_DIMLIGHT );
 	}

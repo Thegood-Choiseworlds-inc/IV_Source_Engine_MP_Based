@@ -347,6 +347,7 @@ LINK_ENTITY_TO_CLASS( point_commentary_viewpoint, CCommentaryViewPosition );
 //-----------------------------------------------------------------------------
 CBasePlayer *GetCommentaryPlayer( void )
 {
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
 	CBasePlayer *pPlayer;
 
 	if ( gpGlobals->maxClients <= 1 )
@@ -360,6 +361,9 @@ CBasePlayer *GetCommentaryPlayer( void )
 	}
 
 	return pPlayer;
+#else
+	return UTIL_GetLocalPlayer(); 
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 }
 
 //===========================================================================================================

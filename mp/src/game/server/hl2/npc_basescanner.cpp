@@ -1317,7 +1317,12 @@ void CNPC_BaseScanner::DiveBombSoundThink()
 	pPhysicsObject->GetPosition( &vecPosition, NULL );
 	pPhysicsObject->GetVelocity( &vecVelocity, NULL );
 
-	CBasePlayer *pPlayer = AI_GetSinglePlayer();
+	#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin()); 
+	#else
+		CBasePlayer *pPlayer = AI_GetSinglePlayer();
+	#endif //SecobMod__Enable_Fixed_Multiplayer_AI	
+
 	if ( pPlayer )
 	{
 		Vector vecDelta;

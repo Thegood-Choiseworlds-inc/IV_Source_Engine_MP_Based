@@ -964,7 +964,12 @@ void CPropJeepEpisodic::UpdateRadar( bool forceUpdate )
 
 	//Msg("Server detected %d objects\n", m_iNumRadarContacts );
 
-	CBasePlayer *pPlayer = AI_GetSinglePlayer();
+		//SecobMod__Information: Fix pPlayer from sp to mp.
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin());
+#else
+		CBasePlayer *pPlayer = AI_GetSinglePlayer();
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 	CSingleUserRecipientFilter filter(pPlayer);
 	UserMessageBegin( filter, "UpdateJalopyRadar" );
 	WRITE_BYTE( 0 ); // end marker
@@ -1139,7 +1144,12 @@ CBaseEntity *CPropJeepEpisodic::OnFailedPhysGunPickup( Vector vPhysgunPos )
 	{
 		// Player's forward direction
 		Vector vecPlayerForward;
+		//SecobMod__Information: Fix pPlayer from sp to mp.
+#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayer(GetAbsOrigin()); 
+#else
 		CBasePlayer *pPlayer = AI_GetSinglePlayer();
+#endif //SecobMod__Enable_Fixed_Multiplayer_AI
 		if ( pPlayer == NULL )
 			return NULL;
 
@@ -1320,6 +1330,14 @@ static void KillBlockingEnemyNPCs( CBasePlayer *pPlayer, CBaseEntity *pVehicleEn
 
 			CTakeDamageInfo dmgInfo( pVehicleEntity, pVehicleEntity, damageForce, contactList[i], 200.0f, DMG_CRUSH|DMG_VEHICLE );
 			npcList[i]->TakeDamage( dmgInfo );
+
+			//SecobMod__Information Occasionally on hitting an AI the game would crash, so fix the null error here.
+			#ifdef SecobMod__Enable_Fixed_Multiplayer_AI
+			IPhysicsObject*physicsObj = npcList[i]->VPhysicsGetObject();
+			if (physicsObj == NULL)
+							return;
+			#endif //SecobMod__Enable_Fixed_Multiplayer_AI
+			
 			pVehiclePhysics->ApplyForceOffset( vehicleForce, contactList[i] );
 			PhysCollisionSound( pVehicleEntity, npcList[i]->VPhysicsGetObject(), CHAN_BODY, pVehiclePhysics->GetMaterialIndex(), npcList[i]->VPhysicsGetObject()->GetMaterialIndex(), gpGlobals->frametime, 200.0f );
 		}
@@ -1625,7 +1643,9 @@ int	CPropJeepEpisodic::DrawDebugTextOverlays( void )
 void CPropJeepEpisodic::InputOutsideTransition( inputdata_t &inputdata )
 {
 	// Teleport into the new map
-	CBasePlayer *pPlayer = AI_GetSinglePlayer();
+		//SecobMod__Information: Fix pPlayer from sp to mp.
+		CBasePlayer *pPlayer = UTIL_GetLocalPlayer();   
+		//CBasePlayer *pPlayer = AI_GetSinglePlayer();
 	Vector vecTeleportPos;
 	QAngle vecTeleportAngles;
 
