@@ -18,7 +18,8 @@ enum
 	CCChangeDir = 0x100,
 	CCCopyFile,
 	CCDelFile,
-	CCRenameFile
+	CCRenameFile,
+	//CCGenerateGridNav, //IV Note: In Hammer Navigation Generating not Supported Yet!!!
 };
 
 // command:
@@ -32,7 +33,7 @@ typedef struct
 	BOOL bLongFilenames;		// Obsolete, but kept here for file backwards compatibility
 	BOOL bEnsureCheck;
 	char szEnsureFn[MAX_PATH];
-	BOOL bUseProcessWnd;
+	BOOL bUseProcessWnd;		// Obsolete, but kept here for file backwards compatibility
 	BOOL bNoWait;
 
 } CCOMMAND, *PCCOMMAND;
@@ -41,7 +42,7 @@ typedef struct
 typedef CArray<CCOMMAND, CCOMMAND&> CCommandArray;
 
 // run a list of commands:
-bool RunCommands(CCommandArray& Commands, LPCTSTR pszDocName);
+bool RunCommands(CCommandArray& Commands, LPCTSTR pszDocName, bool bWaitForKeypress);
 void FixGameVars(char *pszSrc, char *pszDst, BOOL bUseQuotes = TRUE);
 bool IsRunningCommands();
 
