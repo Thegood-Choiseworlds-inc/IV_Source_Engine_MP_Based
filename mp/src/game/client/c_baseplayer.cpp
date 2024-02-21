@@ -118,7 +118,7 @@ ConVar	spec_freeze_distance_max( "spec_freeze_distance_max", "200", FCVAR_CHEAT,
 #endif
 
 ConVar	muzzleflash_light_projected( "muzzleflash_light_projected", "1", FCVAR_ARCHIVE, "Enables or disables the dynamic lighting based muzzleflash." );
-ConVar	muzzleflash_light_projected_time( "muzzleflash_light_projected_time", "0.04", FCVAR_REPLICATED|FCVAR_CHEAT, "Amount of time the dynamic lighting based muzzleflash stays visible.", true, 0.001, true, 0.1 ); //0.052
+ConVar	muzzleflash_light_projected_time( "muzzleflash_light_projected_time", "0.1", FCVAR_REPLICATED|FCVAR_CHEAT, "Amount of time the dynamic lighting based muzzleflash stays visible.", true, 0.001, true, 0.1 ); //0.052
 
 static ConVar	cl_first_person_uses_world_model ( "cl_first_person_uses_world_model", "0", FCVAR_ARCHIVE, "Causes the third person model to be drawn instead of the view model" );
 
