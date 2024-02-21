@@ -91,6 +91,7 @@ private:
 	int			m_nShadowResMode;
 #endif
 #ifdef MAPBASE
+	int			m_iStyle;
 	float		m_flConstantAtten;
 	float		m_flLinearAtten;
 	float		m_flQuadraticAtten;

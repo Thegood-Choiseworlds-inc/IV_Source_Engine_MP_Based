@@ -41,6 +41,8 @@ public:
 #ifdef MAPBASE
 	void InputSetVerFOV( inputdata_t &inputdata );
 	void InputSetHorFOV( inputdata_t &inputdata );
+	void InputSetLightStyle( inputdata_t &inputdata );
+	void InputSetPattern( inputdata_t &inputdata );
 #endif
 	void InputSetTarget( inputdata_t &inputdata );
 	void InputSetCameraSpace( inputdata_t &inputdata );
@@ -104,6 +106,11 @@ private:
 	CNetworkVar(int, m_nShadowResMode);
 #endif
 #ifdef MAPBASE
+	// Light style
+	CNetworkVar( int, m_iStyle );
+	int			m_iDefaultStyle;
+	string_t	m_iszPattern;
+
 	CNetworkVar( float, m_flConstantAtten );
 	CNetworkVar( float, m_flLinearAtten );
 	CNetworkVar( float, m_flQuadraticAtten );

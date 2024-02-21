@@ -71,6 +71,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_EnvProjectedTexture, DT_EnvProjectedTexture, CEnvPro
 	RecvPropFloat(	 RECVINFO( m_flShadowAtten ) ),
 	RecvPropFloat(   RECVINFO( m_flShadowFilter )  ),
 	RecvPropBool(	 RECVINFO( m_bAlwaysDraw )	),
+	RecvPropInt(	 RECVINFO( m_iStyle ) ),
 
 	// Not needed on the client right now, change when it actually is needed
 	//RecvPropBool(	 RECVINFO( m_bProjectedTextureVersion )	),
@@ -406,6 +407,9 @@ void C_EnvProjectedTexture::UpdateLight( void )
 		float flAlpha = m_flCurrentLinearFloatLightAlpha * ( 1.0f / 255.0f );
 
 #ifdef MAPBASE
+		// Get the current light style value to throttle the brightness by
+		flAlpha *= engine->LightStyleValue( m_iStyle );
+
 		state.m_fConstantAtten = m_flConstantAtten;
 		state.m_fLinearAtten = m_flLinearAtten;
 		state.m_fQuadraticAtten = m_flQuadraticAtten;

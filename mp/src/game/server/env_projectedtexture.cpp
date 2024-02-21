@@ -8,6 +8,7 @@
 #include "shareddefs.h"
 #ifdef ASW_PROJECTED_TEXTURES
 #include "env_projectedtexture.h"
+#include "world.h"
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -54,6 +55,9 @@ BEGIN_DATADESC( CEnvProjectedTexture )
 	DEFINE_FIELD( m_flQuadraticAtten, FIELD_FLOAT ),
 	DEFINE_KEYFIELD( m_flShadowAtten, FIELD_FLOAT, "shadowatten" ),
 	DEFINE_KEYFIELD( m_flShadowFilter, FIELD_FLOAT, "shadowfilter" ),
+	DEFINE_KEYFIELD( m_iStyle, FIELD_INTEGER, "style" ),
+	DEFINE_KEYFIELD( m_iDefaultStyle, FIELD_INTEGER, "defaultstyle" ),
+	DEFINE_KEYFIELD( m_iszPattern, FIELD_STRING, "pattern" ),
 #endif
 
 	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
@@ -74,6 +78,8 @@ BEGIN_DATADESC( CEnvProjectedTexture )
 	DEFINE_INPUTFUNC( FIELD_FLOAT, "Ambient", InputSetAmbient ),
 	DEFINE_INPUTFUNC( FIELD_STRING, "SpotlightTexture", InputSetSpotlightTexture ),
 #ifdef MAPBASE
+	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetLightStyle", InputSetLightStyle ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "SetPattern", InputSetPattern ),
 	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetSpotlightFrame", InputSetSpotlightFrame ),
 	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetBrightness", InputSetBrightness ),
 	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetColorTransitionTime", InputSetColorTransitionTime ),
@@ -120,6 +126,7 @@ IMPLEMENT_SERVERCLASS_ST( CEnvProjectedTexture, DT_EnvProjectedTexture )
 	SendPropInt(SENDINFO(m_nShadowResMode), 1, SPROP_UNSIGNED),
 #endif
 #ifdef MAPBASE
+	SendPropInt( SENDINFO( m_iStyle ) ),
 	SendPropFloat( SENDINFO( m_flConstantAtten ) ),
 	SendPropFloat( SENDINFO( m_flLinearAtten ) ),
 	SendPropFloat( SENDINFO( m_flQuadraticAtten ) ),
@@ -382,6 +389,17 @@ void CEnvProjectedTexture::InputSetSpotlightTexture( inputdata_t &inputdata )
 }
 
 #ifdef MAPBASE
+void CEnvProjectedTexture::InputSetLightStyle( inputdata_t &inputdata )
+{
+	m_iStyle = inputdata.value.Int();
+}
+
+void CEnvProjectedTexture::InputSetPattern( inputdata_t &inputdata )
+{
+	m_iszPattern = inputdata.value.StringID();
+	engine->LightStyle( m_iStyle, (char *) STRING( m_iszPattern ) );
+}
+
 void CEnvProjectedTexture::InputSetSpotlightFrame( inputdata_t &inputdata )
 {
 	m_nSpotlightTextureFrame = inputdata.value.Int();
@@ -419,6 +437,22 @@ void CEnvProjectedTexture::Spawn( void )
 
 	m_bState = ( ( GetSpawnFlags() & ENV_PROJECTEDTEXTURE_STARTON ) != 0 );
 	m_bAlwaysUpdate = ( ( GetSpawnFlags() & ENV_PROJECTEDTEXTURE_ALWAYSUPDATE ) != 0 );
+
+	// Update light styles
+	if ( m_iStyle >= 32 )
+	{
+		if ( m_iszPattern == NULL_STRING && m_iDefaultStyle > 0 )
+		{
+			m_iszPattern = MAKE_STRING( GetDefaultLightstyleString( m_iDefaultStyle ) );
+		}
+
+		if ( m_bState == false )
+			engine->LightStyle( m_iStyle, "a" );
+		else if ( m_iszPattern != NULL_STRING )
+			engine->LightStyle( m_iStyle, (char *) STRING( m_iszPattern ) );
+		else
+			engine->LightStyle( m_iStyle, "m" );
+	}
 
 	BaseClass::Spawn();
 }
