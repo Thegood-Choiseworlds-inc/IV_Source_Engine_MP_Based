@@ -24,6 +24,9 @@ CLIENTEFFECT_REGISTER_BEGIN( SmokeStackMaterials )
 	CLIENTEFFECT_MATERIAL( "particle/SmokeStack" )
 CLIENTEFFECT_REGISTER_END()
 
+extern ConVar r_light_use_dlight_on_muzzleflash_events;
+extern ConVar r_muzzleflash_light_debug;
+
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -382,9 +385,9 @@ void C_EntityFlame::Simulate( void )
 	if ( gpGlobals->frametime <= 0.0f )
 		return;
 
-#ifdef HL2_EPISODIC 
+//#ifdef HL2_EPISODIC
 
-	if ( IsEffectActive(EF_BRIGHTLIGHT) || IsEffectActive(EF_DIMLIGHT) )
+	if (IsEffectActive(EF_BRIGHTLIGHT) || IsEffectActive(EF_DIMLIGHT) || r_light_use_dlight_on_muzzleflash_events.GetBool())
 	{
 		dlight_t *dl = effects->CL_AllocDlight ( index );
 		dl->origin = GetAbsOrigin();
@@ -394,9 +397,15 @@ void C_EntityFlame::Simulate( void )
 		dl->color.b = 10;
 		dl->radius = random->RandomFloat(400,431);
 		dl->die = gpGlobals->curtime + 0.001;
+
+		if (r_muzzleflash_light_debug.GetInt() > 1)
+		{
+			Warning("[DEBUG Light Info] Used Dlight with color '%i %i %i %i'; pos '%f %f %f' on ent Name '%s'; classname '%s'\n", dl->color.r, dl->color.g, dl->color.b, dl->color.exponent,
+				dl->origin.x, dl->origin.y, dl->origin.z, this->GetEntityName(), this->GetClassname());
+		}
 	}
 
-#endif // HL2_EPISODIC 
+//#endif // HL2_EPISODIC 
 }
 
 //-----------------------------------------------------------------------------

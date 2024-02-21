@@ -16,6 +16,8 @@
 #include "view.h"
 #include "view_scene.h"
 #include "beamdraw.h"
+#include "dlight.h"
+#include "iefx.h"
 
 // Precache our effects
 CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectCombineBall )
@@ -34,6 +36,10 @@ IMPLEMENT_CLIENTCLASS_DT( C_PropCombineBall, DT_PropCombineBall, CPropCombineBal
 	RecvPropBool( RECVINFO( m_bHeld ) ),
 	RecvPropBool( RECVINFO( m_bLaunched ) ),
 END_RECV_TABLE()
+
+extern ConVar r_light_use_dlight_on_muzzleflash_events;
+extern ConVar r_muzzleflash_light_debug;
+ConVar r_muzzleflash_light_combine_ball_addive("r_muzzleflash_light_combine_ball_addive", "6", FCVAR_CHEAT, "Combine Ball Dlight Addive Brightness");
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -274,6 +280,35 @@ int C_PropCombineBall::DrawModel( int flags )
 		CMatRenderContextPtr pRenderContext( materials );
 		pRenderContext->Bind( m_pBodyMaterial, (C_BaseEntity*) this );
 		DrawHaloOriented( GetAbsOrigin(), m_flRadius + sinOffs, color, roll );
+
+		if (r_light_use_dlight_on_muzzleflash_events.GetBool())
+		{
+			dlight_t *dl = effects->CL_AllocDlight(index);
+			dl->origin = GetAbsOrigin();
+
+			// Original color values
+			int originalR = 215;
+			int originalG = 215;
+			int originalB = 255;
+
+			dl->color.r = originalR;
+			dl->color.g = originalG;
+			dl->color.b = originalB;
+			dl->color.exponent = r_muzzleflash_light_combine_ball_addive.GetInt();
+
+			// Randomize the die value by +/- 0.01
+			dl->die = gpGlobals->curtime + 0.05f + random->RandomFloat(-0.01f, 0.01f);
+			dl->radius = random->RandomFloat(245.0f, 256.0f);
+
+			// Randomize the decay value
+			dl->decay = random->RandomFloat(400.0f, 600.0f);
+
+			if (r_muzzleflash_light_debug.GetInt() > 1)
+			{
+				Warning("[DEBUG Light Info] Used Dlight with color '%i %i %i %i'; pos '%f %f %f' on ent Name '%s'; classname '%s'\n", dl->color.r, dl->color.g, dl->color.b, dl->color.exponent,
+					dl->origin.x, dl->origin.y, dl->origin.z, this->GetEntityName(), this->GetClassname());
+			}
+		}
 	}
 	
 	m_vecLastOrigin = GetAbsOrigin();
@@ -321,6 +356,35 @@ void CombineBallImpactCallback( const CEffectData &data )
 
 	// Throw sparks
 	FX_ElectricSpark( data.m_vOrigin, 2, 1, &data.m_vNormal );
+
+	if (r_light_use_dlight_on_muzzleflash_events.GetBool())
+	{
+		dlight_t *dl = effects->CL_AllocDlight(data.entindex());
+		dl->origin = data.m_vOrigin;
+
+		// Original color values
+		int originalR = 215;
+		int originalG = 215;
+		int originalB = 255;
+
+		dl->color.r = originalR;
+		dl->color.g = originalG;
+		dl->color.b = originalB;
+		dl->color.exponent = r_muzzleflash_light_combine_ball_addive.GetInt();
+
+		// Randomize the die value by +/- 0.01
+		dl->die = gpGlobals->curtime + 0.3;
+		dl->radius = random->RandomFloat(310.0f, 350.0f);
+
+		// Randomize the decay value
+		dl->decay = random->RandomFloat(400.0f, 600.0f);
+
+		if (r_muzzleflash_light_debug.GetBool())
+		{
+			Warning("[DEBUG Light Info] Used Dlight with color '%i %i %i %i'; pos '%f %f %f' on ent Name '%s'; classname '%s'\n", dl->color.r, dl->color.g, dl->color.b, dl->color.exponent,
+				dl->origin.x, dl->origin.y, dl->origin.z, data.GetEntity()->GetEntityName(), data.GetEntity()->GetClassname());
+		}
+	}
 }
 
 DECLARE_CLIENT_EFFECT( "cball_bounce", CombineBallImpactCallback );

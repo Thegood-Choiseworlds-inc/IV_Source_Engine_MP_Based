@@ -17,6 +17,8 @@
 #include "toolframework_client.h"
 #include "view.h"
 #include "clienteffectprecachesystem.h"
+#include "dlight.h"
+#include "iefx.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -138,6 +140,10 @@ IMPLEMENT_CLIENTCLASS_DT(C_SmokeTrail, DT_SmokeTrail, SmokeTrail)
 	RecvPropInt(RECVINFO(m_nAttachment)),	
 	RecvPropFloat(RECVINFO(m_Opacity)),
 END_RECV_TABLE()
+
+extern ConVar r_light_use_dlight_on_muzzleflash_events;
+extern ConVar r_muzzleflash_light_debug;
+ConVar r_muzzleflash_light_rocket_trail_addive("r_muzzleflash_light_rocket_trail_addive", "5", FCVAR_CHEAT, "Rocket Trail Dlight Addive Brightness");
 
 // ------------------------------------------------------------------------- //
 // ParticleMovieExplosion
@@ -765,6 +771,35 @@ void C_RocketTrail::Update( float fTimeDelta )
 				
 				pParticle->m_flRoll			= random->RandomInt( 0, 360 );
 				pParticle->m_flRollDelta	= random->RandomFloat( -8.0f, 8.0f );
+
+				if (r_light_use_dlight_on_muzzleflash_events.GetBool())
+				{
+					dlight_t *dl = effects->CL_AllocDlight(index);
+					dl->origin = pParticle->m_Pos;
+
+					// Original color values
+					int originalR = 255;
+					int originalG = 150;
+					int originalB = 30;
+
+					dl->color.r = originalR;
+					dl->color.g = originalG;
+					dl->color.b = originalB;
+					dl->color.exponent = r_muzzleflash_light_rocket_trail_addive.GetInt();
+
+					// Randomize the die value by +/- 0.01
+					dl->die = gpGlobals->curtime + 0.05f + random->RandomFloat(-0.01f, 0.01f);
+					dl->radius = random->RandomFloat(245.0f, 256.0f);
+
+					// Randomize the decay value
+					dl->decay = random->RandomFloat(400.0f, 600.0f);
+
+					if (r_muzzleflash_light_debug.GetInt() > 1)
+					{
+						Warning("[DEBUG Light Info] Used Dlight with color '%i %i %i %i'; pos '%f %f %f' on ent Name '%s'; classname '%s'\n", dl->color.r, dl->color.g, dl->color.b, dl->color.exponent,
+							dl->origin.x, dl->origin.y, dl->origin.z, this->GetEntityName(), this->GetClassname());
+					}
+				}
 			}
 		}
 	}

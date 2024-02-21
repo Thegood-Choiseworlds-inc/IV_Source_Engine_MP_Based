@@ -36,6 +36,9 @@ CLIENTEFFECT_MATERIAL( "effects/splash3" )
 CLIENTEFFECT_MATERIAL( "effects/splashwake1" )
 CLIENTEFFECT_REGISTER_END()
 
+extern ConVar r_light_use_dlight_on_muzzleflash_events;
+extern ConVar r_muzzleflash_light_debug;
+
 //
 // CExplosionParticle
 //
@@ -190,7 +193,10 @@ void C_BaseExplosionEffect::Create( const Vector &position, float force, float s
 	}
 
 	CreateDebris();
-	//FIXME: CreateDynamicLight();
+
+	if (r_light_use_dlight_on_muzzleflash_events.GetBool())
+		CreateDynamicLight();
+
 	CreateMisc();
 }
 
@@ -704,12 +710,19 @@ void C_BaseExplosionEffect::CreateDynamicLight( void )
 	
 	VectorCopy (m_vecOrigin, dl->origin);
 	
-	dl->decay	= 200;
-	dl->radius	= 255;
+	dl->decay = random->RandomFloat(400.0f, 600.0f);
+	dl->radius = random->RandomFloat(310.0f, 350.0f);
 	dl->color.r = 255;
 	dl->color.g = 220;
 	dl->color.b = 128;
+	dl->color.exponent = 8;
 	dl->die		= gpGlobals->curtime + 0.1f;
+
+	if (r_muzzleflash_light_debug.GetBool())
+	{
+		Warning("[DEBUG Light Info] Used Dlight with color '%i %i %i %i'; pos '%f %f %f' classname '%s'\n", dl->color.r, dl->color.g, dl->color.b, dl->color.exponent,
+			dl->origin.x, dl->origin.y, dl->origin.z, "C_BaseExplosionEffect");
+	}
 }
 
 //-----------------------------------------------------------------------------

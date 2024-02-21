@@ -3664,6 +3664,13 @@ int C_BaseAnimating::InternalDrawModel( int flags )
 extern ConVar muzzleflash_light;
 extern ConVar muzzleflash_light_projected;
 
+ConVar r_light_use_dlight_on_muzzleflash_events("r_light_use_dlight_on_muzzleflash_events", "1", FCVAR_ARCHIVE, "Use Dynamic light on muzzleflash effects inset of Elight");
+ConVar r_muzzleflash_light_color_r("r_muzzleflash_light_color_r", "255", FCVAR_CHEAT, "Muzzleflash Light Color R");
+ConVar r_muzzleflash_light_color_g("r_muzzleflash_light_color_g", "192", FCVAR_CHEAT, "Muzzleflash Light Color G");
+ConVar r_muzzleflash_light_color_b("r_muzzleflash_light_color_b", "64", FCVAR_CHEAT, "Muzzleflash Light Color B");
+ConVar r_muzzleflash_light_color_a("r_muzzleflash_light_color_a", "4", FCVAR_CHEAT, "Muzzleflash Light Color A");
+ConVar r_muzzleflash_light_debug("r_muzzleflash_light_debug", "0", FCVAR_CHEAT, "Debug muzzleflash light state on Ents");
+
 void C_BaseAnimating::ProcessMuzzleFlashEvent()
 {
 	// If we have an attachment, then stick a light on it.
@@ -3683,20 +3690,73 @@ void C_BaseAnimating::ProcessMuzzleFlashEvent()
 		//FIXME: We should really use a named attachment for this
 		if ( m_Attachments.Count() > 0 )
 		{
-			Vector vAttachment;
-			QAngle dummyAngles;
-			GetAttachment( 1, vAttachment, dummyAngles );
+			//IV Note: Old Elight Method
+			if (!r_light_use_dlight_on_muzzleflash_events.GetBool())
+			{
+				Vector vAttachment;
+				QAngle dummyAngles;
+				GetAttachment(1, vAttachment, dummyAngles);
 
-			// Make an elight
-			dlight_t *el = effects->CL_AllocElight( LIGHT_INDEX_MUZZLEFLASH + index );
-			el->origin = vAttachment;
-			el->radius = random->RandomInt( 32, 64 ); 
-			el->decay = el->radius / 0.05f;
-			el->die = gpGlobals->curtime + 0.05f;
-			el->color.r = 255;
-			el->color.g = 192;
-			el->color.b = 64;
-			el->color.exponent = 5;
+				Color cvar_color(r_muzzleflash_light_color_r.GetInt(), r_muzzleflash_light_color_g.GetInt(), r_muzzleflash_light_color_b.GetInt(), r_muzzleflash_light_color_a.GetInt());
+
+				// Make an elight
+				dlight_t *el = effects->CL_AllocElight(LIGHT_INDEX_MUZZLEFLASH + index);
+				el->origin = vAttachment;
+				el->radius = random->RandomInt(32, 64);
+				el->decay = el->radius / 0.05f;
+				el->die = gpGlobals->curtime + 0.05f;
+				el->color.r = cvar_color.r();
+				el->color.g = cvar_color.g();
+				el->color.b = cvar_color.b();
+				el->color.exponent = cvar_color.a();
+			}
+			else
+			{
+				Vector vAttachment, vAng;
+				QAngle angles;
+//#ifdef HL2_EPISODIC
+				GetAttachment(1, vAttachment, angles); // set 1 instead of "attachment"
+//#else
+				//GetAttachment(attachment, vAttachment, angles);
+//#endif
+				AngleVectors(angles, &vAng);
+				vAttachment += vAng * 2;
+
+				dlight_t *dl = effects->CL_AllocDlight(index);
+				dl->origin = vAttachment;
+
+				Color cvar_color(r_muzzleflash_light_color_r.GetInt(), r_muzzleflash_light_color_g.GetInt(), r_muzzleflash_light_color_b.GetInt(), r_muzzleflash_light_color_a.GetInt());
+
+				// Original color values
+				int originalR = cvar_color.r();
+				int originalG = cvar_color.g();
+				int originalB = cvar_color.b();
+
+				// Randomize color components within the range of +/- 20
+				if ((dl->color.r + 20) <= 255 && (dl->color.r - 20) >= 0)
+					dl->color.r = originalR + random->RandomInt(-20, 20);
+				else
+					dl->color.r = originalR;
+				if ((dl->color.g + 20) <= 255 && (dl->color.g - 20) >= 0)
+					dl->color.g = originalG + random->RandomInt(-20, 20);
+				else
+					dl->color.g = originalG;
+				dl->color.b = originalB;
+				dl->color.exponent = cvar_color.a();
+
+				// Randomize the die value by +/- 0.01
+				dl->die = gpGlobals->curtime + 0.05f + random->RandomFloat(-0.01f, 0.01f);
+				dl->radius = random->RandomFloat(245.0f, 256.0f);
+
+				// Randomize the decay value
+				dl->decay = random->RandomFloat(400.0f, 600.0f);
+
+				if (r_muzzleflash_light_debug.GetBool())
+				{
+					Warning("[DEBUG Light Info] Used Dlight with color '%i %i %i %i'; pos '%f %f %f' on ent Name '%s'; classname '%s'\n", dl->color.r, dl->color.g, dl->color.b, dl->color.exponent,
+						dl->origin.x, dl->origin.y, dl->origin.z, this->GetEntityName(), this->GetClassname());
+				}
+			}
 		}
 	}
 }

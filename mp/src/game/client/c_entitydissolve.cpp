@@ -20,6 +20,8 @@
 #include "c_entitydissolve.h"
 #include "movevars_shared.h"
 #include "clienteffectprecachesystem.h"
+#include "dlight.h"
+#include "iefx.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -29,6 +31,10 @@ CLIENTEFFECT_MATERIAL( "effects/tesla_glow_noz" )
 CLIENTEFFECT_MATERIAL( "effects/spark" )
 CLIENTEFFECT_MATERIAL( "effects/combinemuzzle2" )
 CLIENTEFFECT_REGISTER_END()
+
+extern ConVar r_light_use_dlight_on_muzzleflash_events;
+extern ConVar r_muzzleflash_light_debug;
+extern ConVar r_muzzleflash_light_combine_ball_addive;
 
 //-----------------------------------------------------------------------------
 // Networking
@@ -788,6 +794,35 @@ int C_EntityDissolve::DrawModel( int flags )
 					sParticle->m_flDieTime		= 0.5f;
 				}
 			}
+		}
+	}
+
+	if (r_light_use_dlight_on_muzzleflash_events.GetBool())
+	{
+		dlight_t *dl = effects->CL_AllocDlight(index);
+		dl->origin = GetAbsOrigin();
+
+		// Original color values
+		int originalR = 215;
+		int originalG = 215;
+		int originalB = 255;
+
+		dl->color.r = originalR;
+		dl->color.g = originalG;
+		dl->color.b = originalB;
+		dl->color.exponent = r_muzzleflash_light_combine_ball_addive.GetInt();
+
+		// Randomize the die value by +/- 0.01
+		dl->die = gpGlobals->curtime + 0.05f + random->RandomFloat(-0.01f, 0.01f);
+		dl->radius = random->RandomFloat(245.0f, 256.0f);
+
+		// Randomize the decay value
+		dl->decay = random->RandomFloat(400.0f, 600.0f);
+
+		if (r_muzzleflash_light_debug.GetInt() > 1)
+		{
+			Warning("[DEBUG Light Info] Used Dlight with color '%i %i %i %i'; pos '%f %f %f' on ent Name '%s'; classname '%s'\n", dl->color.r, dl->color.g, dl->color.b, dl->color.exponent,
+				dl->origin.x, dl->origin.y, dl->origin.z, this->GetEntityName(), this->GetClassname());
 		}
 	}
 
