@@ -1478,8 +1478,8 @@ bool CClientShadowMgr::Init()
 	mat_slopescaledepthbias_shadowmap = ConVarRef( "mat_slopescaledepthbias_shadowmap" );
 	mat_depthbias_shadowmap = ConVarRef( "mat_depthbias_shadowmap" );
 #if IVBASE
-	mat_slopescaledepthbias_shadowmap.SetValue("4");
-	mat_depthbias_shadowmap.SetValue("0.00005");
+	mat_slopescaledepthbias_shadowmap.SetValue("3");
+	mat_depthbias_shadowmap.SetValue("0.000025");
 #else
 	mat_slopescaledepthbias_shadowmap.SetValue( "16" ); // Would do something like 2 here, but it causes citizens to look weird under flashlights
 	mat_depthbias_shadowmap.SetValue( "0.00005" );
