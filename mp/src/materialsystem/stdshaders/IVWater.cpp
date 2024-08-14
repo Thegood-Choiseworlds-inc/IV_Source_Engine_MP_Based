@@ -26,7 +26,7 @@
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
-ConVar iv_shader_ivwater_enable("", "1", FCVAR_ARCHIVE, "");
+ConVar iv_shader_ivwater_enable("iv_shader_ivwater_enable", "1", FCVAR_ARCHIVE, "IVWater Shader Support ConVar");
 ConVar iv_shader_ivwater_enable_flashlight("iv_shader_ivwater_enable_flashlight", "1", FCVAR_ARCHIVE, "IVWater Flashlight Effect State");
 ConVar iv_shader_ivwater_enable_flashlight_shadows("iv_shader_ivwater_enable_flashlight_shadows", "1", FCVAR_ARCHIVE, "Enable/Disable IVWater Shader Shadows");
 
