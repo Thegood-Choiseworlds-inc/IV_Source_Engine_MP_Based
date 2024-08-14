@@ -6,20 +6,13 @@
 // STATIC: "REFRACT"						"0..1"
 // STATIC: "ABOVEWATER"						"0..1"
 // STATIC: "FLOWMAP"						"0..1"  [ps20b] [ps30]
-// STATIC: "FLOWMAP"						"0..0"  [ps20] [ = 0; ]
 // STATIC: "FLOW_DEBUG"						"0..2"
 // STATIC: "FLASHLIGHT"                     "0..1"	[ps20b] [ps30]
-// STATIC: "FLASHLIGHT"                     "0..0"  [ps20] [ = 0; ]
 // STATIC: "LIGHTMAPWATERFOG"               "0..1"  [ps20b] [ps30]
-// STATIC: "LIGHTMAPWATERFOG"               "0..0"  [ps20] [ = 0; ]
 // STATIC: "FORCEFRESNEL"					"0..1"
 // STATIC: "SIMPLEOVERLAY"					"0..1"
 
-//IV Note: Flashlight Optimization Combos
-// STATIC: "IVMULTIPLEDEPTHLIGHTS"					"0..1" [ps30]
-
 // DYNAMIC: "PIXELFOGTYPE"				"0..1"
-
 // DYNAMIC: "FLASHLIGHTSHADOWS"             "0..1"  [ps20b] [ps30]
 // DYNAMIC: "FLASHLIGHTSHADOWS"             "0..0"  [ps20] [ = 0; ]
 // DYNAMIC_NOT_CHECK: "BUILDWORLDIMPOSTER"			"0..1" [ = r_buildingmapforworld.GetBool() ? 1 : 0 ] 
@@ -630,26 +623,12 @@ float4 main( PS_INPUT i ) : COLOR
 		#else
 		{
 			vResult = vRefractColor + ( fFresnel * vReflectColor );
-			
-			#if ( FLASHLIGHT )
-			{
-				float3 vLight = vDiffuseLight.rgb - vLightmapColor.rgb;
-				vResult.xyz += vLight * g_WaterFogColor.rgb;
-			}
-			#endif
 		}
 		#endif
 	}
 	#elif ( REFRACT )
 	{
 		vResult = vRefractColor + ( fFresnel * vReflectColor );
-		
-		#if ( FLASHLIGHT )
-		{
-			float3 vLight = vDiffuseLight.rgb - vLightmapColor.rgb;
-			vResult.xyz += vLight * g_WaterFogColor.rgb;
-		}
-		#endif
 	}
 	#else
 	{
@@ -672,24 +651,10 @@ float4 main( PS_INPUT i ) : COLOR
 		#elif ( BASETEXTURE )
 		{
 			vResult = float4( diffuseComponent, 1.0f ) + vReflectColor * fFresnel * baseSample.a;
-			
-			#if ( FLASHLIGHT )
-			{
-				float3 vLight = vDiffuseLight.rgb - vLightmapColor.rgb;
-				vResult.xyz += vLight * g_WaterFogColor.rgb;
-			}
-			#endif
 		}
 		#else
 		{
 			vResult = lerp( vLightmappedWaterFogColor, vReflectColor, fFresnel );
-			
-			#if ( FLASHLIGHT )
-			{
-				float3 vLight = vDiffuseLight.rgb - vLightmapColor.rgb;
-				vResult.xyz += vLight * g_WaterFogColor.rgb;
-			}
-			#endif
 		}
 		#endif
 	}
@@ -735,13 +700,9 @@ float4 main( PS_INPUT i ) : COLOR
 		flWaterBlendAlpha = saturate( saturate( g_DepthEdgeFeatheringParams.x * flWaterBlendAlpha ) + g_DepthEdgeFeatheringParams.y );
 	}				
 	#endif
-
-#if ( IVMULTIPLEDEPTHLIGHTS )
-	float4 vOutput = FinalOutput( float4( vResult.rgb, g_flWaterBlendFactor * flWaterBlendAlpha ), flFogFactor, PIXELFOGTYPE, TONEMAP_SCALE_NONE, true, i.vProjPos.w );
-#else
+	
 	float4 vOutput = FinalOutput( float4( vResult.rgb, g_flWaterBlendFactor * flWaterBlendAlpha ), flFogFactor, PIXELFOGTYPE, TONEMAP_SCALE_NONE );
-#endif
-
+	
 	#if ( defined( _X360 ) )
 	{
 		vOutput.rgb += ScreenSpaceOrderedDither( i.vScreenPos );
