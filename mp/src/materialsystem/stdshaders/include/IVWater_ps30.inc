@@ -42,7 +42,6 @@ class IVWater_ps30_Static_Index
 	unsigned int m_nLIGHTMAPWATERFOG : 2;
 	unsigned int m_nFORCEFRESNEL : 2;
 	unsigned int m_nSIMPLEOVERLAY : 2;
-	unsigned int m_nIVMULTIPLEDEPTHLIGHTS : 2;
 #ifdef _DEBUG
 	bool m_bBASETEXTURE : 1;
 	bool m_bMULTITEXTURE : 1;
@@ -55,7 +54,6 @@ class IVWater_ps30_Static_Index
 	bool m_bLIGHTMAPWATERFOG : 1;
 	bool m_bFORCEFRESNEL : 1;
 	bool m_bSIMPLEOVERLAY : 1;
-	bool m_bIVMULTIPLEDEPTHLIGHTS : 1;
 #endif	// _DEBUG
 public:
 	void SetBASETEXTURE( int i )
@@ -157,15 +155,6 @@ public:
 #endif	// _DEBUG
 	}
 
-	void SetIVMULTIPLEDEPTHLIGHTS( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nIVMULTIPLEDEPTHLIGHTS = i;
-#ifdef _DEBUG
-		m_bIVMULTIPLEDEPTHLIGHTS = true;
-#endif	// _DEBUG
-	}
-
 	IVWater_ps30_Static_Index( IShaderShadow* pShaderShadow, IMaterialVar** params )
 	{
 		m_nBASETEXTURE = 0;
@@ -179,7 +168,6 @@ public:
 		m_nLIGHTMAPWATERFOG = 0;
 		m_nFORCEFRESNEL = 0;
 		m_nSIMPLEOVERLAY = 0;
-		m_nIVMULTIPLEDEPTHLIGHTS = 0;
 #ifdef _DEBUG
 		m_bBASETEXTURE = false;
 		m_bMULTITEXTURE = false;
@@ -192,23 +180,22 @@ public:
 		m_bLIGHTMAPWATERFOG = false;
 		m_bFORCEFRESNEL = false;
 		m_bSIMPLEOVERLAY = false;
-		m_bIVMULTIPLEDEPTHLIGHTS = false;
 #endif	// _DEBUG
 	}
 
 	int GetIndex() const
 	{
-		Assert( m_bBASETEXTURE && m_bMULTITEXTURE && m_bREFLECT && m_bREFRACT && m_bABOVEWATER && m_bFLOWMAP && m_bFLOW_DEBUG && m_bFLASHLIGHT && m_bLIGHTMAPWATERFOG && m_bFORCEFRESNEL && m_bSIMPLEOVERLAY && m_bIVMULTIPLEDEPTHLIGHTS );
+		Assert( m_bBASETEXTURE && m_bMULTITEXTURE && m_bREFLECT && m_bREFRACT && m_bABOVEWATER && m_bFLOWMAP && m_bFLOW_DEBUG && m_bFLASHLIGHT && m_bLIGHTMAPWATERFOG && m_bFORCEFRESNEL && m_bSIMPLEOVERLAY );
 		AssertMsg( !( m_nMULTITEXTURE && m_nBASETEXTURE ), "Invalid combo combination ( MULTITEXTURE && BASETEXTURE )" );
 		AssertMsg( !( m_nSIMPLEOVERLAY && m_nBASETEXTURE ), "Invalid combo combination ( SIMPLEOVERLAY && BASETEXTURE )" );
 		AssertMsg( !( m_nSIMPLEOVERLAY && !m_nFLOWMAP ), "Invalid combo combination ( SIMPLEOVERLAY && !FLOWMAP )" );
 		AssertMsg( !( m_nFLOWMAP && m_nMULTITEXTURE ), "Invalid combo combination ( FLOWMAP && MULTITEXTURE )" );
 		AssertMsg( !( ( m_nFLASHLIGHT || m_nLIGHTMAPWATERFOG ) && ( ( m_nBASETEXTURE && !m_nFLOWMAP ) || m_nMULTITEXTURE ) ), "Invalid combo combination ( ( FLASHLIGHT || LIGHTMAPWATERFOG ) && ( ( BASETEXTURE && !FLOWMAP ) || MULTITEXTURE ) )" );
-		return ( 4 * m_nBASETEXTURE ) + ( 8 * m_nMULTITEXTURE ) + ( 16 * m_nREFLECT ) + ( 32 * m_nREFRACT ) + ( 64 * m_nABOVEWATER ) + ( 128 * m_nFLOWMAP ) + ( 256 * m_nFLOW_DEBUG ) + ( 768 * m_nFLASHLIGHT ) + ( 1536 * m_nLIGHTMAPWATERFOG ) + ( 3072 * m_nFORCEFRESNEL ) + ( 6144 * m_nSIMPLEOVERLAY ) + ( 12288 * m_nIVMULTIPLEDEPTHLIGHTS ) + 0;
+		return ( 4 * m_nBASETEXTURE ) + ( 8 * m_nMULTITEXTURE ) + ( 16 * m_nREFLECT ) + ( 32 * m_nREFRACT ) + ( 64 * m_nABOVEWATER ) + ( 128 * m_nFLOWMAP ) + ( 256 * m_nFLOW_DEBUG ) + ( 768 * m_nFLASHLIGHT ) + ( 1536 * m_nLIGHTMAPWATERFOG ) + ( 3072 * m_nFORCEFRESNEL ) + ( 6144 * m_nSIMPLEOVERLAY ) + 0;
 	}
 };
 
-#define shaderStaticTest_IVWater_ps30 psh_forgot_to_set_static_BASETEXTURE + psh_forgot_to_set_static_MULTITEXTURE + psh_forgot_to_set_static_REFLECT + psh_forgot_to_set_static_REFRACT + psh_forgot_to_set_static_ABOVEWATER + psh_forgot_to_set_static_FLOWMAP + psh_forgot_to_set_static_FLOW_DEBUG + psh_forgot_to_set_static_FLASHLIGHT + psh_forgot_to_set_static_LIGHTMAPWATERFOG + psh_forgot_to_set_static_FORCEFRESNEL + psh_forgot_to_set_static_SIMPLEOVERLAY + psh_forgot_to_set_static_IVMULTIPLEDEPTHLIGHTS
+#define shaderStaticTest_IVWater_ps30 psh_forgot_to_set_static_BASETEXTURE + psh_forgot_to_set_static_MULTITEXTURE + psh_forgot_to_set_static_REFLECT + psh_forgot_to_set_static_REFRACT + psh_forgot_to_set_static_ABOVEWATER + psh_forgot_to_set_static_FLOWMAP + psh_forgot_to_set_static_FLOW_DEBUG + psh_forgot_to_set_static_FLASHLIGHT + psh_forgot_to_set_static_LIGHTMAPWATERFOG + psh_forgot_to_set_static_FORCEFRESNEL + psh_forgot_to_set_static_SIMPLEOVERLAY
 
 
 class IVWater_ps30_Dynamic_Index
