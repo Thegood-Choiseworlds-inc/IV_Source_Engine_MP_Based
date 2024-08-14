@@ -28,11 +28,6 @@
 
 ConVar iv_shader_ivwater_enable_flashlight("iv_shader_ivwater_enable_flashlight", "1", FCVAR_ARCHIVE, "IVWater Flashlight Effect State");
 ConVar iv_shader_ivwater_enable_flashlight_shadows("iv_shader_ivwater_enable_flashlight_shadows", "1", FCVAR_ARCHIVE, "Enable/Disable IVWater Shader Shadows");
-ConVar iv_shader_ivwater_enable_depth_optimization("iv_shader_ivwater_enable_depth_optimization", "1", FCVAR_DEVELOPMENTONLY, "Enable/Disable Write to Depth Alpha on IVWater Shader");
-ConVar iv_shader_ivwater_force_fog_mode("iv_shader_ivwater_force_fog_mode", "-1", FCVAR_DEVELOPMENTONLY, "FOG_MODE State Toggler");
-
-#define IV_CHECK_WATER_DEPTH_APLPTHA_STATE iv_shader_ivwater_enable_depth_optimization.GetBool()
-#define IV_FOG_MODE_CHECK_STATE iv_shader_ivwater_force_fog_mode.GetInt() >= 0 ? iv_shader_ivwater_force_fog_mode.GetInt() : pShaderAPI->GetPixelFogCombo()
 
 DEFINE_FALLBACK_SHADER( IVWater, IVWater_DX9_HDR )
 
@@ -421,7 +416,6 @@ BEGIN_VS_SHADER( IVWater_DX90,
 				SET_STATIC_PIXEL_SHADER_COMBO(LIGHTMAPWATERFOG, bLightmapWaterFog);
 				SET_STATIC_PIXEL_SHADER_COMBO(FORCEFRESNEL, bForceFresnel);
 				SET_STATIC_PIXEL_SHADER_COMBO(SIMPLEOVERLAY, bHasSimpleOverlay);
-				SET_STATIC_PIXEL_SHADER_COMBO(IVMULTIPLEDEPTHLIGHTS, IV_CHECK_WATER_DEPTH_APLPTHA_STATE);
 				SET_STATIC_PIXEL_SHADER(IVWater_ps30);
 			}
 			else if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
@@ -833,14 +827,14 @@ BEGIN_VS_SHADER( IVWater_DX90,
 			{
 				DECLARE_DYNAMIC_PIXEL_SHADER(IVWater_ps30);
 				SET_DYNAMIC_PIXEL_SHADER_COMBO(FLASHLIGHTSHADOWS, bFlashlightShadows);
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, IV_FOG_MODE_CHECK_STATE);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
 				SET_DYNAMIC_PIXEL_SHADER(IVWater_ps30);
 			}
 			else if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
 				DECLARE_DYNAMIC_PIXEL_SHADER( IVWater_ps20b );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, IV_FOG_MODE_CHECK_STATE);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
 				SET_DYNAMIC_PIXEL_SHADER( IVWater_ps20b );
 			}
 			/*else
@@ -1025,7 +1019,7 @@ BEGIN_VS_SHADER( IVWater_DX90,
 			if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
 				DECLARE_DYNAMIC_PIXEL_SHADER( IVWaterCheap_ps20b );
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, IV_FOG_MODE_CHECK_STATE);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( HDRENABLED,  IsHDREnabled() );
 				SET_DYNAMIC_PIXEL_SHADER( IVWaterCheap_ps20b );
 			}
