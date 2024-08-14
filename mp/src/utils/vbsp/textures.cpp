@@ -256,7 +256,7 @@ int	FindMiptex (const char *name)
 			textureref[i].contents |= CONTENTS_WATER;
 
 			if (is_ivwater_shader)
-				textureref[i].flags |= SURF_WARP | SURF_NODECALS;
+				textureref[i].flags |= SURF_NODECALS;
 			else
 				textureref[i].flags |= SURF_WARP | SURF_NOSHADOWS | SURF_NODECALS;
 
