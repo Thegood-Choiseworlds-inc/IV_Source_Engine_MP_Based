@@ -26,6 +26,7 @@
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
+ConVar iv_shader_ivwater_enable("", "1", FCVAR_ARCHIVE, "");
 ConVar iv_shader_ivwater_enable_flashlight("iv_shader_ivwater_enable_flashlight", "1", FCVAR_ARCHIVE, "IVWater Flashlight Effect State");
 ConVar iv_shader_ivwater_enable_flashlight_shadows("iv_shader_ivwater_enable_flashlight_shadows", "1", FCVAR_ARCHIVE, "Enable/Disable IVWater Shader Shadows");
 
@@ -239,8 +240,10 @@ BEGIN_VS_SHADER( IVWater_DX90,
 		{
 			LoadTexture( SIMPLEOVERLAY, TEXTUREFLAGS_SRGB );
 		}
-
-		LoadTexture(FLASHLIGHTTEXTURE, TEXTUREFLAGS_SRGB);
+		if (params[FLASHLIGHTTEXTURE]->IsDefined())
+		{
+			LoadTexture(FLASHLIGHTTEXTURE, TEXTUREFLAGS_SRGB);
+		}
 	}
 
 	inline void GetVecParam( int constantVar, float *val )
@@ -266,7 +269,6 @@ BEGIN_VS_SHADER( IVWater_DX90,
 		bool bHasFlowmap = params[FLOWMAP]->IsTexture();
 		bool bHasBaseTexture = params[BASETEXTURE]->IsTexture();
 		bool bHasMultiTexture = fabs( Scroll1.x ) > 0.0f;
-		//IV Note: FIXME!!!
 		bool hasFlashlight = !bHasMultiTexture && (HasFlashlight && iv_shader_ivwater_enable_flashlight.GetBool());
 		bool bLightmapWaterFog = ( params[LIGHTMAPWATERFOG]->GetIntValue() != 0 );
 		bool bHasSimpleOverlay = params[SIMPLEOVERLAY]->IsTexture();
@@ -277,11 +279,11 @@ BEGIN_VS_SHADER( IVWater_DX90,
 			bHasMultiTexture = false;
 		}
 
-		if ( bHasBaseTexture || bHasMultiTexture )
+		/*if ( bHasBaseTexture || bHasMultiTexture )
 		{
-			//hasFlashlight = false;
-			//bLightmapWaterFog = false;
-		}
+			hasFlashlight = false;
+			bLightmapWaterFog = false;
+		}*/
 
 		// LIGHTMAP - needed either with basetexture or lightmapwaterfog.  Not sure where the bReflection restriction comes in.
 		bool bUsingLightmap = bLightmapWaterFog || ( bReflection && bHasBaseTexture );
@@ -1087,11 +1089,12 @@ BEGIN_INHERITED_SHADER( IVWater_DX9_HDR, IVWater_DX90,
 
 	SHADER_FALLBACK
 	{
-		if( g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE )
+		if (!iv_shader_ivwater_enable.GetBool())
+		return "SDK_Water";
+		else if( g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE )
 		{
 			return "IVWATER_DX90";
 		}
 		return 0;
 	}
 END_INHERITED_SHADER
-
