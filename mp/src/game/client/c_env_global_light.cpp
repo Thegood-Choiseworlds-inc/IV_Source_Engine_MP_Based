@@ -39,6 +39,13 @@ ConVar cl_globallight_xoffset( "cl_globallight_xoffset", "-800" );
 ConVar cl_globallight_yoffset( "cl_globallight_yoffset", "1600" );
 #endif
 
+//global light distance
+static ConVar ivdev_globallight_default_distance("ivdev_globallight_default_distance", "1000", FCVAR_DEVELOPMENTONLY, "Default Z distance.");
+
+//farz and nearz
+ConVar ivdev_globallight_near_z("ivdev_globallight_near_z", "90000", FCVAR_CHEAT);
+ConVar ivdev_globallight_far_z("ivdev_globallight_far_z", "200000", FCVAR_CHEAT);
+
 ConVar cl_globallight_affect_to_local_light_shadows("cl_globallight_affect_to_local_light_shadows", "0", FCVAR_CHEAT, "Enable/Disable Affecting to Local Light Rended To Texture Shadows");
 
 //------------------------------------------------------------------------------
@@ -241,6 +248,8 @@ void C_GlobalLight::ClientThink()
 		if ( !C_BasePlayer::GetLocalPlayer() )
 			return;
 
+		float bibigon = ivdev_globallight_default_distance.GetFloat() / m_flFOV;
+
 		Vector vPos;
 		QAngle EyeAngles;
 		float flZNear, flZFar, flFov;
@@ -262,8 +271,10 @@ void C_GlobalLight::ClientThink()
 		Vector vForward, vRight, vUp;
 		AngleVectors( angAngles, &vForward, &vRight, &vUp );
 
-		state.m_fHorizontalFOVDegrees = m_flFOV;
-		state.m_fVerticalFOVDegrees = m_flFOV;
+		float light_fov = m_flFOV * bibigon;
+
+		state.m_fHorizontalFOVDegrees = light_fov;
+		state.m_fVerticalFOVDegrees = light_fov;
 
 		state.m_vecLightOrigin = vPos;
 		BasisToQuaternion( vForward, vRight, vUp, state.m_quatOrientation );
@@ -283,8 +294,8 @@ void C_GlobalLight::ClientThink()
 		state.m_Color[2] = m_CurrentLinearFloatLightColor.z * ( 1.0f / 255.0f ) * m_flCurrentLinearFloatLightAlpha;
 #endif
 		state.m_Color[3] = 0.0f; // fixme: need to make ambient work m_flAmbient;
-		state.m_NearZ = 4.0f;
-		state.m_FarZ = m_flSunDistance * 2.0f;
+		state.m_NearZ = ivdev_globallight_near_z.GetFloat();
+		state.m_FarZ = ivdev_globallight_far_z.GetFloat();
 		state.m_fBrightnessScale = 2.0f;
 		state.m_bGlobalLight = true;
 
