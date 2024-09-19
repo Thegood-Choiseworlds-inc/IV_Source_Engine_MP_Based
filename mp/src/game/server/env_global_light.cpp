@@ -50,6 +50,7 @@ public:
 #endif
 
 #ifdef IV_SHADOWS_ADVANCED
+	void	InputSetCustomBiasEnable(inputdata_t &inputdata) { m_bCustomBiasEnable = inputdata.value.Bool(); }
 	void	InputSetDepthBias(inputdata_t &inputdata) { m_flDepthBias = inputdata.value.Float(); }
 	void	InputSetSlopeScaleDepthBias(inputdata_t &inputdata) { m_flSlopeScaleDepthBias = inputdata.value.Float(); }
 #endif
@@ -76,6 +77,7 @@ private:
 	CNetworkVar( float, m_flSunDistance );
 	CNetworkVar( float, m_flFOV );
 	CNetworkVar( float, m_flNearZ );
+	CNetworkVar( float, m_flFarZ );
 	CNetworkVar( float, m_flNorthOffset );
 #ifdef MAPBASE
 	CNetworkVar( float, m_flEastOffset ); // xoffset
@@ -83,6 +85,7 @@ private:
 	CNetworkVar( float, m_flOrthoSize );
 #ifdef IV_SHADOWS_ADVANCED
 	CNetworkVar(bool, m_bHightResMode);
+	CNetworkVar(bool, m_bCustomBiasEnable);
 	CNetworkVar(float, m_flDepthBias);
 	CNetworkVar(float, m_flSlopeScaleDepthBias);
 #endif
@@ -102,6 +105,7 @@ BEGIN_DATADESC( CGlobalLight )
 	DEFINE_KEYFIELD( m_flSunDistance,	FIELD_FLOAT, "distance" ),
 	DEFINE_KEYFIELD( m_flFOV,	FIELD_FLOAT, "fov" ),
 	DEFINE_KEYFIELD( m_flNearZ,	FIELD_FLOAT, "nearz" ),
+	DEFINE_KEYFIELD( m_flFarZ, FIELD_FLOAT, "farz" ),
 	DEFINE_KEYFIELD( m_flNorthOffset,	FIELD_FLOAT, "northoffset" ),
 #ifdef MAPBASE
 	DEFINE_KEYFIELD( m_flEastOffset,	FIELD_FLOAT, "eastoffset" ),
@@ -109,6 +113,7 @@ BEGIN_DATADESC( CGlobalLight )
 	DEFINE_KEYFIELD( m_flOrthoSize,	FIELD_FLOAT, "orthosize" ),
 #ifdef IV_SHADOWS_ADVANCED
 	DEFINE_KEYFIELD(m_bHightResMode, FIELD_BOOLEAN, "hightresmodestate"),
+	DEFINE_KEYFIELD(m_bCustomBiasEnable, FIELD_BOOLEAN, "custombiasenable"),
 	DEFINE_KEYFIELD(m_flDepthBias, FIELD_FLOAT, "depthbias"),
 	DEFINE_KEYFIELD(m_flSlopeScaleDepthBias, FIELD_FLOAT, "slopescaledepthbias"),
 #endif
@@ -139,6 +144,7 @@ BEGIN_DATADESC( CGlobalLight )
 #endif
 
 #ifdef IV_SHADOWS_ADVANCED
+	DEFINE_INPUTFUNC(FIELD_BOOLEAN, "SetCustomBiasEnable", InputSetCustomBiasEnable),
 	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetDepthBias", InputSetDepthBias),
 	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetSlopeScaleDepthBias", InputSetSlopeScaleDepthBias),
 #endif
@@ -173,6 +179,7 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE(CGlobalLight, DT_GlobalLight)
 	SendPropFloat(SENDINFO(m_flSunDistance), 0, SPROP_NOSCALE ),
 	SendPropFloat(SENDINFO(m_flFOV), 0, SPROP_NOSCALE ),
 	SendPropFloat(SENDINFO(m_flNearZ), 0, SPROP_NOSCALE ),
+	SendPropFloat(SENDINFO(m_flFarZ), 0, SPROP_NOSCALE ),
 	SendPropFloat(SENDINFO(m_flNorthOffset), 0, SPROP_NOSCALE ),
 #ifdef MAPBASE
 	SendPropFloat(SENDINFO(m_flEastOffset), 0, SPROP_NOSCALE ),
@@ -180,6 +187,7 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE(CGlobalLight, DT_GlobalLight)
 	SendPropFloat(SENDINFO(m_flOrthoSize), 0, SPROP_NOSCALE ),
 #ifdef IV_SHADOWS_ADVANCED
 	SendPropBool(SENDINFO(m_bHightResMode)),
+	SendPropBool(SENDINFO(m_bCustomBiasEnable)),
 	SendPropFloat(SENDINFO(m_flDepthBias), 0, SPROP_NOSCALE),
 	SendPropFloat(SENDINFO(m_flSlopeScaleDepthBias), 0, SPROP_NOSCALE),
 #endif
