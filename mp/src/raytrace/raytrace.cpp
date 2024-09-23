@@ -257,6 +257,49 @@ int CacheOptimizedTriangle::ClassifyAgainstAxisSplit(int split_plane, float spli
 	return PLANECHECK_STRADDLING;
 }
 
+static Vector ProjectOntoPlaneFromAxis( const Vector &v, const Vector &vNormal, float flDist, int nAxis )
+{
+	float flAxisDist = DotProduct( v, vNormal ) - flDist;
+	flAxisDist /= vNormal[nAxis];
+	Vector vOut = v;
+	vOut[nAxis] -= flAxisDist;
+
+	return vOut;
+}
+
+void CacheOptimizedTriangle::ExtractVerticesFromIntersectionFormat( Vector &v0, Vector &v1, Vector &v2 ) const
+{
+	const TriIntersectData_t &data = m_Data.m_IntersectData;
+	const float *pPlane0 = data.m_ProjectedEdgeEquations;
+	const float *pPlane1 = data.m_ProjectedEdgeEquations + 3;
+
+	Vector vNormal;
+	vNormal.Init( data.m_flNx, data.m_flNy, data.m_flNz );
+	int n0 = data.m_nCoordSelect0;
+	int n1 = data.m_nCoordSelect1;
+	int n2 = (n1+1)%3;
+	float flOffset = -1.0f;
+	float flOOscale = 1.0f / (pPlane0[0] * pPlane1[1] - pPlane1[0] * pPlane0[1]);
+	// vert0 is at the intersection of the two edges with edge1's plane offset by 1
+	v0[n0] = (pPlane0[1] * (pPlane1[2]+flOffset) - pPlane1[1] * pPlane0[2]) * flOOscale;
+	v0[n1] = (pPlane1[0] * pPlane0[2] - pPlane0[0] * (pPlane1[2]+flOffset)) * flOOscale;
+	v0[n2] = 0;
+
+	// vert1 is at the intersection of the two edges with neither offset
+	v1[n0] = (pPlane0[1] * pPlane1[2] - pPlane1[1] * pPlane0[2]) * flOOscale;
+	v1[n1] = (pPlane1[0] * pPlane0[2] - pPlane0[0] * pPlane1[2]) * flOOscale;
+	v1[n2] = 0;
+
+	// vert2 is at the intersection of the two edges with edge0's plane offset by 1
+	v2[n0] = (pPlane0[1] * pPlane1[2] - pPlane1[1] * (pPlane0[2]+flOffset)) * flOOscale;
+	v2[n1] = (pPlane1[0] * (pPlane0[2]+flOffset) - pPlane0[0] * pPlane1[2]) * flOOscale;
+	v2[n2] = 0;
+	v0 = ProjectOntoPlaneFromAxis( v0, vNormal, data.m_flD, n2 );
+	v1 = ProjectOntoPlaneFromAxis( v1, vNormal, data.m_flD, n2 );
+	v2 = ProjectOntoPlaneFromAxis( v2, vNormal, data.m_flD, n2 );
+}
+
+
 #define MAILBOX_HASH_SIZE 256
 #define MAX_TREE_DEPTH 21
 #define MAX_NODE_STACK_LEN (40*MAX_TREE_DEPTH)
@@ -280,11 +323,12 @@ static float BoxSurfaceArea(Vector const &boxmin, Vector const &boxmax)
 
 void RayTracingEnvironment::Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 TMax,
 									   RayTracingResult *rslt_out,
-									   int32 skip_id, ITransparentTriangleCallback *pCallback)
+									   int32 skip_id, ITransparentTriangleCallback *pCallback,
+										RTECullMode_t cullMode )
 {
 	int msk=rays.CalculateDirectionSignMask();
 	if (msk!=-1)
-		Trace4Rays(rays,TMin,TMax,msk,rslt_out,skip_id, pCallback);
+		Trace4Rays(rays,TMin,TMax,msk,rslt_out,skip_id, pCallback, cullMode );
 	else
 	{
 		// sucky case - can't trace 4 rays at once. in the worst case, need to trace all 4
@@ -327,7 +371,7 @@ void RayTracingEnvironment::Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 T
 				RayTracingResult tmpresults;
 				msk=tmprays.CalculateDirectionSignMask();
 				assert(msk!=-1);
-				Trace4Rays(tmprays,TMin,TMax,msk,&tmpresults,skip_id, pCallback);
+				Trace4Rays(tmprays,TMin,TMax,msk,&tmpresults,skip_id, pCallback, cullMode );
 				// now, move results to proper place
 				for(int i=0;i<4;i++)
 					if (need_trace[i]==2)
@@ -339,13 +383,50 @@ void RayTracingEnvironment::Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 T
 						rslt_out->surface_normal.Y(i) = tmpresults.surface_normal.Y(i);
 						rslt_out->surface_normal.Z(i) = tmpresults.surface_normal.Z(i);
 					}
-				
 			}
 		}
 	}
 }
 
+template< RTECullMode_t cullMode >
+bi32x4 DidHit( fltx4 DDotN, bi32x4 epsilon_hit )
+{
+	if ( cullMode == RTE_CULL_FRONT )
+	{
+		bi32x4 did_hit_back = CmpGtSIMD( DDotN, Four_Zeros );
+		return AndSIMD( epsilon_hit, did_hit_back );
+	}
+	else if ( cullMode == RTE_CULL_BACK )
+	{
+		bi32x4 did_hit_front = CmpLtSIMD( DDotN, Four_Zeros );
+		return AndSIMD( epsilon_hit, did_hit_front );
+	}
+	else
+	{
+		return epsilon_hit;
+	}
+}
 
+// wrapper for the low level trace4 rays routine
+void RayTracingEnvironment::Trace4Rays( const FourRays &rays, fltx4 TMin, fltx4 TMax,int DirectionSignMask,
+										RayTracingResult *rslt_out,
+										int32 skip_id, ITransparentTriangleCallback *pCallback, RTECullMode_t cullMode )
+{
+	switch ( cullMode )
+	{
+	case RTE_CULL_FRONT:
+		Trace4Rays<RTE_CULL_FRONT>( rays, TMin, TMax, DirectionSignMask, rslt_out, skip_id, pCallback );
+		break;
+	case RTE_CULL_BACK:
+		Trace4Rays<RTE_CULL_BACK>( rays, TMin, TMax, DirectionSignMask, rslt_out, skip_id, pCallback );
+		break;
+	default:
+		Trace4Rays<RTE_CULL_NONE>( rays, TMin, TMax, DirectionSignMask, rslt_out, skip_id, pCallback );
+		break;
+	}
+}
+
+template <RTECullMode_t cullMode>
 void RayTracingEnvironment::Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 TMax,
 									   int DirectionSignMask, RayTracingResult *rslt_out,
 									   int32 skip_id, ITransparentTriangleCallback *pCallback)
@@ -494,6 +575,8 @@ void RayTracingEnvironment::Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 T
 					// mask off zero or near zero (ray parallel to surface)
 					fltx4 did_hit = OrSIMD( CmpGtSIMD( DDotN,FourEpsilons ),
 											CmpLtSIMD( DDotN, FourNegativeEpsilons ) );
+
+					did_hit = DidHit<cullMode>( DDotN, did_hit );
 
 					fltx4 numerator=SubSIMD( ReplicateX4( tri->m_flD ), rays.origin * N );
 
@@ -902,4 +985,172 @@ void RayTracingEnvironment::AddInfinitePointLight(Vector position, Vector intens
 	
 }
 
+#define RTENV_SERIALIZATION_VERSION 1
 
+struct RayTracingSerializationHeader
+{
+	uint32 m_nVersionNumber;
+	uint32 m_nSerializationFlags;
+	uint32 m_nNumKDNodes;
+	uint32 m_nNumTriangles;
+	uint32 m_nNumTriangleIndices;
+	uint32 m_nNumColors;
+	Vector m_vMinBound;
+	Vector m_vMaxBound;
+
+	RayTracingSerializationHeader( void )
+	{
+		m_nVersionNumber = RTENV_SERIALIZATION_VERSION;
+	}
+
+	void Put( CUtlBuffer &outbuf )
+	{
+		outbuf.PutInt( m_nVersionNumber );
+		outbuf.PutInt( m_nSerializationFlags );
+		outbuf.PutInt( m_nNumKDNodes );
+		outbuf.PutInt( m_nNumTriangles );
+		outbuf.PutInt( m_nNumTriangleIndices );
+		outbuf.PutInt( m_nNumColors );
+		outbuf.PutFloat( m_vMinBound.x );
+		outbuf.PutFloat( m_vMinBound.y );
+		outbuf.PutFloat( m_vMinBound.z );
+		outbuf.PutFloat( m_vMaxBound.x );
+		outbuf.PutFloat( m_vMaxBound.y );
+		outbuf.PutFloat( m_vMaxBound.z );
+	}
+
+	void Get( CUtlBuffer &inbuf )
+	{
+		m_nVersionNumber = inbuf.GetInt();
+		m_nSerializationFlags = inbuf.GetInt();
+		m_nNumKDNodes = inbuf.GetInt();
+		m_nNumTriangles = inbuf.GetInt();
+		m_nNumTriangleIndices = inbuf.GetInt();
+		m_nNumColors = inbuf.GetInt();
+		m_vMinBound.x = inbuf.GetFloat();
+		m_vMinBound.y = inbuf.GetFloat();
+		m_vMinBound.z = inbuf.GetFloat();
+		m_vMaxBound.x = inbuf.GetFloat();
+		m_vMaxBound.y = inbuf.GetFloat();
+		m_vMaxBound.z = inbuf.GetFloat();
+	}
+};
+
+size_t RayTracingEnvironment::GetSerializationNumBytes( uint32 nSerializationFlags ) const
+{
+	size_t nRet = sizeof( RayTracingSerializationHeader );
+	nRet += sizeof( CacheOptimizedKDNode ) * OptimizedKDTree.Count();
+	nRet += sizeof( CacheOptimizedTriangle ) * OptimizedTriangleList.Count();
+	nRet += sizeof( int32 ) * TriangleIndexList.Count();
+
+	if ( nSerializationFlags & RT_ENV_SERIALIZE_COLORS )
+		nRet += sizeof( Vector ) * TriangleColors.Count();
+	return nRet;
+}
+
+
+void RayTracingEnvironment::Serialize( CUtlBuffer &outbuf, uint32 nSerializationFlags ) const
+{
+	outbuf.ActivateByteSwappingIfBigEndian();
+	RayTracingSerializationHeader hdr;
+	hdr.m_nSerializationFlags = nSerializationFlags;
+	hdr.m_nNumKDNodes = OptimizedKDTree.Count();
+	hdr.m_nNumTriangles = OptimizedTriangleList.Count();
+	hdr.m_nNumTriangleIndices = TriangleIndexList.Count();
+	hdr.m_nNumColors = ( nSerializationFlags & RT_ENV_SERIALIZE_COLORS ) ? TriangleColors.Count() : 0;
+	hdr.m_vMinBound = m_MinBound;
+	hdr.m_vMaxBound = m_MaxBound;
+	hdr.Put( outbuf );
+	for( int i = 0 ; i < OptimizedKDTree.Count(); i++ )
+	{
+		CacheOptimizedKDNode const * pNode = &OptimizedKDTree[i];
+		outbuf.PutInt( pNode->Children );
+		if ( pNode->NodeType() == KDNODE_STATE_LEAF )
+			outbuf.PutInt( * ( reinterpret_cast < int32 const *> ( &pNode->SplittingPlaneValue ) ) );
+		else
+			outbuf.PutFloat( pNode->SplittingPlaneValue );
+	}
+	for( int i = 0; i < OptimizedTriangleList.Count() ; i++ )
+	{
+		TriIntersectData_t const * pTri = &( OptimizedTriangleList[i].m_Data.m_IntersectData );
+		outbuf.PutFloat( pTri->m_flNx );
+		outbuf.PutFloat( pTri->m_flNy );
+		outbuf.PutFloat( pTri->m_flNz );
+		outbuf.PutFloat( pTri->m_flD );
+		outbuf.PutFloat( pTri->m_nTriangleID );
+		for( int j = 0; j < ARRAYSIZE( pTri->m_ProjectedEdgeEquations ); j++ )
+			outbuf.PutFloat( pTri->m_ProjectedEdgeEquations[j] );
+		outbuf.PutUnsignedChar( pTri->m_nCoordSelect0 );
+		outbuf.PutUnsignedChar( pTri->m_nCoordSelect1 );
+		outbuf.PutUnsignedChar( pTri->m_nFlags );
+		outbuf.PutUnsignedChar( 0 );						// for unused.
+	}
+	for( int i = 0; i < TriangleIndexList.Count(); i++ )
+		outbuf.PutInt( TriangleIndexList[i] );
+	if ( nSerializationFlags & RT_ENV_SERIALIZE_COLORS )
+		for( int i = 0 ; i < TriangleColors.Count() ; i++ )
+		{
+			Vector const &v = TriangleColors[i];
+			outbuf.PutFloat( v.x );
+			outbuf.PutFloat( v.y );
+			outbuf.PutFloat( v.z );
+		}
+}
+
+
+
+
+void RayTracingEnvironment::UnSerialize( CUtlBuffer &inbuf )
+{
+	inbuf.ActivateByteSwappingIfBigEndian();
+	RayTracingSerializationHeader hdr;
+	hdr.Get( inbuf );
+	m_MinBound = hdr.m_vMinBound;
+	m_MaxBound = hdr.m_vMaxBound;
+	OptimizedKDTree.SetCount( hdr.m_nNumKDNodes );
+	for( int i = 0; i < hdr.m_nNumKDNodes; i++ )
+	{
+		CacheOptimizedKDNode *pNode = &OptimizedKDTree[i];
+		pNode->Children = inbuf.GetInt();
+		if ( pNode->NodeType() == KDNODE_STATE_LEAF )
+		{
+			*( ( int32 * ) &pNode->SplittingPlaneValue ) = inbuf.GetInt();
+		}
+		else
+		{
+			pNode->SplittingPlaneValue = inbuf.GetFloat();
+		}
+	}
+	// now, read the triangles
+	OptimizedTriangleList.SetCount( hdr.m_nNumTriangles );
+	for( int i = 0; i < OptimizedTriangleList.Count() ; i++ )
+	{
+		TriIntersectData_t * pTri = &( OptimizedTriangleList[i].m_Data.m_IntersectData );
+		pTri->m_flNx = inbuf.GetFloat();
+		pTri->m_flNy = inbuf.GetFloat();
+		pTri->m_flNz = inbuf.GetFloat();
+		pTri->m_flD = inbuf.GetFloat();
+		pTri->m_nTriangleID = inbuf.GetFloat();
+		for( int j = 0; j < ARRAYSIZE( pTri->m_ProjectedEdgeEquations ); j++ )
+		{
+			pTri->m_ProjectedEdgeEquations[j] = inbuf.GetFloat();
+		}
+		pTri->m_nCoordSelect0 = inbuf.GetUnsignedChar();
+		pTri->m_nCoordSelect1 = inbuf.GetUnsignedChar();
+		pTri->m_nFlags = inbuf.GetUnsignedChar();
+		inbuf.GetUnsignedChar();						// for unused.
+	}
+	TriangleIndexList.SetCount( hdr.m_nNumTriangleIndices );
+	for( int i = 0; i < TriangleIndexList.Count(); i++ )
+	{
+		TriangleIndexList[i] = inbuf.GetInt();
+	}
+	TriangleColors.SetCount( hdr.m_nNumColors );
+	for( int i = 0 ; i < TriangleColors.Count() ; i++ )
+	{
+		Vector &v = TriangleColors[i];
+		v.x = inbuf.GetFloat();
+		v.y = inbuf.GetFloat();
+		v.z = inbuf.GetFloat();
+	}
+}
