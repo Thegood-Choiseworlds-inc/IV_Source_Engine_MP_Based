@@ -2608,7 +2608,7 @@ int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 		}
 		else if (!Q_stricmp(argv[i],"-final"))
 		{
-			g_flSkySampleScale = 16.0;
+			g_flSkySampleScale = 32.0f;
 			g_bStaticPropLighting = true;
 			g_bStaticPropPolys = true;
 			g_bTextureShadows = true;
@@ -2617,7 +2617,7 @@ int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 
 			g_bStaticPropBounce = true;
 			g_bDumpBumpStaticProps = true;
-			g_flStaticPropSampleScale = 16.0;
+			g_flStaticPropSampleScale = 32.0f;
 			extern int g_numVradStaticPropsLightingStreams;
 			g_numVradStaticPropsLightingStreams = 3;
 
