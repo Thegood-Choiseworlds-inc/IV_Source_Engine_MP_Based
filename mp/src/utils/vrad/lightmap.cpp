@@ -3692,6 +3692,67 @@ void BuildPatchLights( int facenum )
 #endif
 }
 
+template <typename T>
+void Swap(T &a, T &b)
+{
+	T temp = a;
+	a = b;
+	b = temp;
+}
+
+void BuildStaticPropPatchlights( int iThread, int nPatch )
+{
+	if ( g_Patches[ nPatch ].faceNumber >= 0 )
+	{
+		// Not a static prop patch
+		return;
+	}
+	CPatch &patch = g_Patches[ nPatch ];
+
+	// Random sample locations
+	Vector vecOrigin = patch.winding->p[ 0 ];
+	Vector vecU = patch.winding->p[ 2 ] - patch.winding->p[ 0 ];
+	Vector vecV = patch.winding->p[ 1 ] - patch.winding->p[ 0 ];
+	int nSampleCount = Max( 1, int( patch.area / 16.0f ) );
+	float flSampleArea = patch.area / float( nSampleCount );
+	float flSampleFrac = 1.0f / float( nSampleCount );
+	sample_t *pSamples = new sample_t[ nSampleCount ];
+	memset( pSamples, 0, sizeof( sample_t )*nSampleCount );
+	for ( int i = 0; i < nSampleCount; i++ )
+	{
+		// Shitty. Should be jittered instead or some other better distribution over the triangle.
+		float flU = RandomFloat();
+		float flV = RandomFloat();
+		if ( flU + flV > 1.0f )
+		{
+			flU = 1.0f - flU;
+			flV = 1.0f - flV;
+			Swap( flU, flV );
+		}
+		pSamples[ i ].pos = vecOrigin + flU * vecU + flV * vecV;
+		pSamples[ i ].normal = patch.normal;
+		pSamples[ i ].area = flSampleArea;
+	}
+
+	Vector directColor( 0.0f, 0.0f, 0.0f );
+	float flSunAmount = 0.0f;
+
+	// sample the lights at each sample location
+	for ( int i = 0; i < nSampleCount; i++ )
+	{
+		sample_t *sample = pSamples + i;
+
+		directColor.Init( 0.0f, 0.0f, 0.0f );
+		flSunAmount = 0.0f;
+		ComputeDirectLightingAtPoint( sample->pos, &sample->normal, &directColor, &flSunAmount, 1, false, iThread, -1, 0 );
+		directColor *= g_flStaticPropBounceBoost;
+		patch.totallight.light[ 0 ] += directColor * flSampleFrac;
+		patch.directlight += directColor * flSampleFrac;
+	}
+
+	delete[] pSamples;
+}
+
 /*
   =============
   PrecompLightmapOffsets

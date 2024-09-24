@@ -406,6 +406,8 @@ struct dheader_t
 // level feature flags
 #define LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_NONHDR 0x00000001	// was processed by vrad with -staticproplighting, no hdr data
 #define LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_HDR    0x00000002   // was processed by vrad with -staticproplighting, in hdr
+#define LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_3      0x00000008   // was processed by vrad with -staticproplighting3
+#define LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_3_NO_SUN  0x00000020 // indicates that vertexlitgeneric static prop lighting does not contain direct sunlight in lighting vertex stream
 
 struct dflagslump_t
 {

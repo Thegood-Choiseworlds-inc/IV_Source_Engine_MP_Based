@@ -243,6 +243,7 @@ struct CPatch
 //	struct		patch_s		*nextparent;		    // next in face
 //	struct		patch_s		*nextclusterchild;		// next terminal child in cluster
 
+	int			staticPropIdx;				// Static prop this patch is from.
 	int			numtransfers;
 	transfer_t	*transfers;
 
@@ -291,6 +292,7 @@ extern IIncremental *g_pIncremental;	// null if not doing incremental lighting
 extern bool			g_bDumpPropLightmaps;
 
 extern float g_flSkySampleScale;								// extra sampling factor for indirect light
+extern float g_flStaticPropSampleScale;							// extra sampling factor for indirect light (for static props)
 
 extern bool g_bLargeDispSampleRadius;
 extern bool g_bStaticPropPolys;
@@ -298,17 +300,29 @@ extern bool g_bTextureShadows;
 extern bool g_bShowStaticPropNormals;
 extern bool g_bDisablePropSelfShadowing;
 extern bool g_bFiniteFalloffModel;							// whether to use 1/xxx or not
+extern bool g_bFastStaticProps;
+extern bool	g_bDumpBumpStaticProps;
+extern bool	g_bDisableStaticPropVertexInSolidTest;
+extern bool g_bStaticPropBounce;
+extern float g_flStaticPropBounceBoost;
 
 extern CUtlVector<char const *> g_NonShadowCastingMaterialStrings;
 extern void ForceTextureShadowsOnModel( const char *pModelName );
 extern bool IsModelTextureShadowsForced( const char *pModelName );
+extern int LoadShadowTexture( const char *pMaterialName );
+extern int AddShadowTextureTriangle( int shadowTextureIndex, const Vector2D &t0, const Vector2D &t1, const Vector2D &t2 );
+extern float ComputeCoverageForTriangle( int shadowTextureIndex, const Vector2D &t0, const Vector2D &t1, const Vector2D &t2 );
+extern void GetShadowTextureMapping( int shadowTextureIndex, int *pWidth, int *pHeight );
 
 // Raytracing
 
 #define TRACE_ID_SKY           0x01000000  // sky face ray blocker
 #define TRACE_ID_OPAQUE        0x02000000  // everyday light blocking face
 #define TRACE_ID_STATICPROP    0x04000000  // static prop - lower bits are prop ID
+#define TRACE_ID_PATCH		   0x08000000  // patch - lower bits are patch ID
 extern RayTracingEnvironment g_RtEnv;
+extern RayTracingEnvironment g_RtEnv_LightBlockers;
+extern RayTracingEnvironment g_RtEnv_RadiosityPatches;	// Contains patches for final gather of indirect light for static prop lighting.
 
 #include "mpivrad.h"
 
@@ -319,6 +333,7 @@ void MakeShadowSplits (void);
 void BuildVisMatrix (void);
 void BuildClusterTable( void );
 void AddDispsToClusterTable( void );
+void AddStaticPropPatchesToClusterTable();
 void FreeVisMatrix (void);
 // qboolean CheckVisBit (unsigned int p1, unsigned int p2);
 void TouchVMFFile (void);
@@ -369,6 +384,7 @@ qboolean IsIncremental(char *filename);
 int SaveIncremental(char *filename);
 int PartialHead (void);
 void BuildFacelights (int facenum, int threadnum);
+void BuildStaticPropPatchlights( int iThread, int nPatch );
 void PrecompLightmapOffsets();
 void FinalLightFace (int threadnum, int facenum);
 void PvsForOrigin (Vector& org, byte *pvs);
@@ -395,6 +411,7 @@ inline byte PVSCheck( const byte *pvs, int iCluster )
 void TestLine( FourVectors const& start, FourVectors const& stop, fltx4 *pFractionVisible, int static_prop_index_to_ignore=-1);
 
 void TestLine_IgnoreSky( FourVectors const& start, FourVectors const& stop, fltx4 *pFractionVisible, int static_prop_index_to_ignore=-1);
+void TestLine_LightBlockers( const FourVectors& start, const FourVectors& stop, fltx4 *pFractionVisible );
 
 // returns 1 if the ray sees the sky, 0 if it doesn't, and in-between values for partial coverage
 void TestLine_DoesHitSky( FourVectors const& start, FourVectors const& stop,
@@ -486,6 +503,9 @@ void GatherSampleLightSSE( SSE_sampleLightOutput_t &out, directlight_t *dl, int 
 //						  int nLFlags = 0,					// GATHERLFLAGS_xxx
 //						  int static_prop_to_skip=-1,
 //						  float flEpsilon = 0.0 );
+
+void ComputeDirectLightingAtPoint( Vector &position, Vector *normals, Vector *outColors, float *outSunAmount, int numNormals, bool bSkipSkyLight, int iThread,
+								   int static_prop_id_to_skip = -1, int nLFlags = 0 );
 
 //-----------------------------------------------------------------------------
 // VRad Displacements
@@ -595,7 +615,9 @@ extern int patchSamplesAdded;
 
 void ComputeDetailPropLighting( int iThread );
 void ComputeIndirectLightingAtPoint( Vector &position, Vector &normal, Vector &outColor, 
-									 int iThread, bool force_fast = false, bool bIgnoreNormals = false );
+									 int iThread, bool force_fast = false, bool bIgnoreNormals = false, int nStaticPropToSkip = -1 );
+void ComputeIndirectLightingAtPoint( Vector &position, Vector *normals, Vector *outColors, int numNormals, 
+									 int iThread, bool force_fast = false, bool bIgnoreNormals = false, int nStaticPropToSkip = -1 );
 
 //-----------------------------------------------------------------------------
 // VRad static props
@@ -616,6 +638,7 @@ public:
 	virtual void Shutdown() = 0;
 	virtual void ComputeLighting( int iThread ) = 0;
 	virtual void AddPolysForRayTrace() = 0;
+	virtual void MakePatches() = 0;
 };
 
 //extern PropTested_t s_PropTested[MAX_TOOL_THREADS+1];

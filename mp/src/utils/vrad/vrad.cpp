@@ -19,6 +19,7 @@
 #include "tools_minidump.h"
 #include "loadcmdline.h"
 #include "byteswap.h"
+#include "iscratchpad3d.h"
 
 #define ALLOWDEBUGOPTIONS (0 || _DEBUG)
 
@@ -90,12 +91,14 @@ bool		g_bInterrupt = false;	// Wsed with background lighting in WC. Tells VRAD
 float g_SunAngularExtent=0.0;
 
 float g_flSkySampleScale = 1.0;
+float g_flStaticPropSampleScale = 4.0;
 
 bool g_bLargeDispSampleRadius = false;
 
 bool g_bOnlyStaticProps = false;
 bool g_bShowStaticPropNormals = false;
-
+bool g_bStaticPropBounce = false;
+float g_flStaticPropBounceBoost = 1.0f;
 
 float		gamma_value = 0.5;
 float		indirect_sun = 1.0;
@@ -122,11 +125,15 @@ bool		g_bStaticPropLighting = false;
 bool        g_bStaticPropPolys = false;
 bool        g_bTextureShadows = false;
 bool        g_bDisablePropSelfShadowing = false;
-
+bool		g_bFastStaticProps = false;
+bool		g_bDumpBumpStaticProps = false;
+bool		g_bDisableStaticPropVertexInSolidTest = false;
 
 CUtlVector<byte> g_FacesVisibleToLights;
 
 RayTracingEnvironment g_RtEnv;
+RayTracingEnvironment g_RtEnv_LightBlockers; // ray tracing environment consisting solely of light blockers - used in conjunction with bsp to solve indirect lighting for static props (as opposed to using the full RTE).
+RayTracingEnvironment g_RtEnv_RadiosityPatches;
 
 dface_t *g_pFaces=0;
 
@@ -545,6 +552,7 @@ void MakePatchForFace (int fn, winding_t *w)
 	patch->child2 = g_Patches.InvalidIndex();
 	patch->parent = g_Patches.InvalidIndex();
 	patch->needsBumpmap = tx->flags & SURF_BUMPLIGHT ? true : false;
+	patch->staticPropIdx = -1;
 
 	// link and save patch data
 	patch->ndxNext = g_FacePatches.Element( fn );
@@ -736,6 +744,11 @@ void MakePatches (void)
 
 	// make the displacement surface patches
 	StaticDispMgr()->MakePatches();
+	
+	if ( g_bStaticPropBounce )
+	{
+		StaticPropMgr()->MakePatches();
+	}
 }
 
 /*
@@ -752,6 +765,12 @@ SUBDIVIDE
 //-----------------------------------------------------------------------------
 bool PreventSubdivision( CPatch *patch )
 {
+	if ( patch->faceNumber < 0 )
+	{
+		// static prop patch
+		return true;
+	}
+
 	dface_t *f = g_pFaces + patch->faceNumber;
 	texinfo_t *tx = &texinfo[f->texinfo];
 
@@ -941,6 +960,12 @@ void SubdividePatches (void)
 		CPatch *pCur = &g_Patches.Element( i );
 		pCur->planeDist = pCur->plane->dist;
 
+		if ( pCur->faceNumber < 0 )
+		{
+			// This and all following patches are "fake" staticprop patches. Set up parent data structure for them.
+			break;
+		}
+
 		pCur->ndxNextParent = faceParents.Element( pCur->faceNumber );
 		faceParents[pCur->faceNumber] = pCur - g_Patches.Base();
 	}
@@ -975,6 +1000,12 @@ void SubdividePatches (void)
 	for (i = 0; i < uiPatchCount; i++)
 	{
 		CPatch *pCur = &g_Patches.Element( i );
+		if ( pCur->faceNumber < 0)
+		{
+			// Static prop patches don't have an associated face
+			continue;
+		}
+
 		pCur->ndxNext = g_FacePatches.Element( pCur->faceNumber );
 		g_FacePatches[pCur->faceNumber] = pCur - g_Patches.Base();
 
@@ -1560,7 +1591,7 @@ void GatherLight (int threadnum, void *pUserData)
 			Vector normals[NUM_BUMP_VECTS+1];
 
 			// Disps
-			bool bDisp = ( g_pFaces[patch->faceNumber].dispinfo != -1 ); 
+			bool bDisp = ( patch->faceNumber >= 0 ) && ( g_pFaces[ patch->faceNumber ].dispinfo != -1 );
 			if ( bDisp )
 			{
 				normals[0] = patch->normal;
@@ -1825,6 +1856,11 @@ void RadWorld_Start()
 	// add displacement faces to cluster table
 	AddDispsToClusterTable();
 
+	if ( g_bStaticPropBounce )
+	{
+		AddStaticPropPatchesToClusterTable();
+	}
+
 	// create directlights out of patches and lights
 	CreateDirectLights ();
 
@@ -1937,6 +1973,21 @@ void MakeAllScales (void)
 
 	qprintf ("transfer lists: %5.1f megs\n"
 		, (float)total_transfer * sizeof(transfer_t) / (1024*1024));
+
+	if ( g_bStaticPropBounce )
+	{
+		int nTransfers = 0;
+		for ( int i = 0; i < g_Patches.Count(); i++ )
+		{
+			CPatch *pCur = &g_Patches.Element( i );
+			if ( pCur->faceNumber >= 0 )
+			{
+				continue;
+			}
+			nTransfers += pCur->numtransfers;
+		}
+		Msg( "static prop patch transfers %d\n", nTransfers );
+	}
 }
 
 
@@ -2030,10 +2081,44 @@ bool RadWorld_Go()
 	{
 		// RunThreadsOnIndividual (numfaces, true, BuildFacelights);
 		RunMPIBuildFacelights();
+		if ( g_bStaticPropBounce )
+		{
+			RunThreadsOnIndividual( g_Patches.Count(), true, BuildStaticPropPatchlights );
+		}
 	}
 	else 
 	{
 		RunThreadsOnIndividual (numfaces, true, BuildFacelights);
+		if ( g_bStaticPropBounce )
+		{
+			RunThreadsOnIndividual( g_Patches.Count(), true, BuildStaticPropPatchlights );
+		}
+#if 0
+		IScratchPad3D *pPad = ScratchPad3D_Create();
+		pPad->SetAutoFlush( false );
+		float flMax = 0.0f;
+		for ( int i = 0; i < g_Patches.Count(); i++ )
+		{
+			if ( g_Patches[ i ].child1 != g_Patches.InvalidIndex() || g_Patches[ i ].child2 != g_Patches.InvalidIndex() )
+				continue;
+			Vector vLight = g_Patches[ i ].directlight;
+			flMax = Max( flMax, vLight.x );
+			flMax = Max( flMax, vLight.y );
+			flMax = Max( flMax, vLight.z );
+		}
+		for ( int i = 0; i < g_Patches.Count(); i++ )
+		{
+			if ( g_Patches[ i ].child1 != g_Patches.InvalidIndex() || g_Patches[ i ].child2 != g_Patches.InvalidIndex() )
+				continue;
+			Vector vLight = g_Patches[ i ].directlight * g_Patches[i].reflectivity;
+			vLight /= flMax;
+			vLight.x = SrgbLinearToGamma( vLight.x );
+			vLight.y = SrgbLinearToGamma( vLight.y );
+			vLight.z = SrgbLinearToGamma( vLight.z );
+			pPad->DrawPolygon( CSPVertList( g_Patches[ i ].winding->p, g_Patches[ i ].winding->numpoints, CSPColor( vLight ) ) );
+		}
+		pPad->Release();
+#endif
 	}
 
 	// Was the process interrupted?
@@ -2212,6 +2297,13 @@ void VRAD_LoadBSP( char const *pFilename )
 		g_LevelFlags &= ~( LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_HDR | LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_NONHDR );
 	}
 
+	extern int g_numVradStaticPropsLightingStreams;
+	if ( g_numVradStaticPropsLightingStreams == 3 )
+	{
+		g_LevelFlags |= LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_3;
+		g_LevelFlags |= LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_3_NO_SUN;
+	}
+
 	// now, we need to set our face ptr depending upon hdr, and if hdr, init it
 	if (g_bHDR)
 	{
@@ -2278,6 +2370,7 @@ void VRAD_LoadBSP( char const *pFilename )
 	printf ( "Setting up ray-trace acceleration structure... ");
 	float start = Plat_FloatTime();
 	g_RtEnv.SetupAccelerationStructure();
+	g_RtEnv_LightBlockers.SetupAccelerationStructure();
 	float end = Plat_FloatTime();
 	printf ( "Done (%.2f seconds)\n", end-start );
 
@@ -2515,12 +2608,18 @@ int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 		}
 		else if (!Q_stricmp(argv[i],"-final"))
 		{
-			g_flSkySampleScale = 32.0;
+			g_flSkySampleScale = 16.0;
 			g_bStaticPropLighting = true;
 			g_bStaticPropPolys = true;
 			g_bTextureShadows = true;
 			g_bNoAO = false;
 			g_bNoSoften = false;
+
+			g_bStaticPropBounce = true;
+			g_bDumpBumpStaticProps = true;
+			g_flStaticPropSampleScale = 16.0;
+			extern int g_numVradStaticPropsLightingStreams;
+			g_numVradStaticPropsLightingStreams = 3;
 
 			Warning("Checked Final State!!! Perfomance Loss!!!\n");
 		}
