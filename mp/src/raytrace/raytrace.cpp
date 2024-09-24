@@ -389,16 +389,16 @@ void RayTracingEnvironment::Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 T
 }
 
 template< RTECullMode_t cullMode >
-bi32x4 DidHit( fltx4 DDotN, bi32x4 epsilon_hit )
+fltx4 DidHit(fltx4 DDotN, fltx4 epsilon_hit)
 {
 	if ( cullMode == RTE_CULL_FRONT )
 	{
-		bi32x4 did_hit_back = CmpGtSIMD( DDotN, Four_Zeros );
+		fltx4 did_hit_back = CmpGtSIMD(DDotN, Four_Zeros);
 		return AndSIMD( epsilon_hit, did_hit_back );
 	}
 	else if ( cullMode == RTE_CULL_BACK )
 	{
-		bi32x4 did_hit_front = CmpLtSIMD( DDotN, Four_Zeros );
+		fltx4 did_hit_front = CmpLtSIMD(DDotN, Four_Zeros);
 		return AndSIMD( epsilon_hit, did_hit_front );
 	}
 	else
