@@ -2827,7 +2827,7 @@ void CVradStaticPropMgr::MakePatches()
 						w->p[ i ] = verts[ i ];
 					}
 					w->numpoints = 3;
-					MakePatchForTriangle( w, Vector(0), nProp );
+					MakePatchForTriangle( w, Vector(1), nProp );
 					//pPad->DrawPolygon( CSPVertList( verts, 3 ) );
 					//pPad->DrawLine( CSPVert( g_Patches.Tail().origin ), CSPVert( g_Patches.Tail().origin + 5.0f * g_Patches.Tail().normal) );
 					g_RtEnv_RadiosityPatches.AddTriangle( TRACE_ID_PATCH | (g_Patches.Count() - 1), verts[ 0 ], verts[ 1 ], verts[ 2 ], Vector( 1.0f, 1.0f, 1.0f ) );
