@@ -884,6 +884,9 @@ private:
 		EHANDLE					m_hTargetEntity;
 	};
 
+	// Kicks off rendering of volumetrics for the flashlights
+	void DrawVolumetrics_Internal(FlashlightState_t &flashlightState, ClientShadowHandle_t handle);
+
 private:
 	// Shadow update functions
 	void UpdateStudioShadow( IClientRenderable *pRenderable, ClientShadowHandle_t handle );
@@ -4576,6 +4579,197 @@ void CClientShadowMgr::GetFrustumExtents( ClientShadowHandle_t handle, Vector &v
 	AddPointToExtentsHelper( flashlightToWorld, Vector( 1.0f, 1.0f, 1.0f ), vecMin, vecMax );
 }
 #endif
+
+ConVar r_flashlightvolumetrics("r_flashlightvolumetrics", "1", FCVAR_ARCHIVE, "Draw volumetrics for shadowed flashlights");
+
+void CClientShadowMgr::DrawVolumetrics_Internal(FlashlightState_t &flashlightState, ClientShadowHandle_t handle)
+{
+	VPROF_BUDGET("CClientShadowMgr::DrawVolumetrics_Internal", VPROF_BUDGETGROUP_SHADOW_RENDERING);
+
+	CMatRenderContextPtr pRenderContext(materials);
+
+	{
+		// If this flashlight isn't volumetric, bail out here
+		if (!flashlightState.m_bVolumetric || (flashlightState.m_flVolumetricIntensity <= 0.0f))
+			return;
+
+		ClientShadow_t shadow = m_Shadows[handle];
+
+		bool foundVar;
+		IMaterial *pMaterial = materials->FindMaterial("engine/ivdev_lightshaft", TEXTURE_GROUP_OTHER, true);
+		IMaterialVar *pCookieTextureVar = pMaterial->FindVar("$COOKIETEXTURE", &foundVar, false);
+		IMaterialVar *pNoiseTextureVar = pMaterial->FindVar("$NOISETEXTURE", &foundVar, false);
+		IMaterialVar *pCookieFrameNumVar = pMaterial->FindVar("$COOKIEFRAMENUM", &foundVar, false);
+		IMaterialVar *pShadowDepthTextureVar = pMaterial->FindVar("$SHADOWDEPTHTEXTURE", &foundVar, false);
+		IMaterialVar *pWorldToTextureVar = pMaterial->FindVar("$WORLDTOTEXTURE", &foundVar, false);
+		IMaterialVar *pFlashlightColorVar = pMaterial->FindVar("$FLASHLIGHTCOLOR", &foundVar, false);
+		IMaterialVar *pAttenFactorsVar = pMaterial->FindVar("$ATTENFACTORS", &foundVar, false);
+		IMaterialVar *pOriginFarZVar = pMaterial->FindVar("$ORIGINFARZ", &foundVar, false);
+		IMaterialVar *pQuatOrientation = pMaterial->FindVar("$QUATORIENTATION", &foundVar, false);
+		IMaterialVar *pShadowFilterSizeVar = pMaterial->FindVar("$SHADOWFILTERSIZE", &foundVar, false);
+		IMaterialVar *pShadowAttenVar = pMaterial->FindVar("$SHADOWATTEN", &foundVar, false);
+		IMaterialVar *pShadowJitterSeedVar = pMaterial->FindVar("$SHADOWJITTERSEED", &foundVar, false);
+		IMaterialVar *pEnableShadowsVar = pMaterial->FindVar("$ENABLESHADOWS", &foundVar, false);
+		IMaterialVar *pNoiseStrengthVar = pMaterial->FindVar("$NOISESTRENGTH", &foundVar, false);
+		IMaterialVar *pFlashlighTimeVar = pMaterial->FindVar("$FLASHLIGHTTIME", &foundVar, false);
+		IMaterialVar *pNumPlanesVar = pMaterial->FindVar("$NUMPLANES", &foundVar, false);
+		IMaterialVar *pVolumetricIntensityVar = pMaterial->FindVar("$VOLUMETRICINTENSITY", &foundVar, false);
+
+		if (shadow.m_ShadowDepthTexture && pShadowDepthTextureVar)
+		{
+			pShadowDepthTextureVar->SetTextureValue(shadow.m_ShadowDepthTexture);
+		}
+
+		if (flashlightState.m_pSpotlightTexture && pCookieTextureVar)
+		{
+			pCookieTextureVar->SetTextureValue(flashlightState.m_pSpotlightTexture);
+		}
+
+		if (pNoiseTextureVar)
+		{
+			pNoiseTextureVar->SetTextureValue(materials->FindTexture("effects/noise_rg", TEXTURE_GROUP_OTHER, true));
+		}
+
+		if (pCookieFrameNumVar)
+		{
+			pCookieFrameNumVar->SetIntValue(flashlightState.m_nSpotlightTextureFrame);
+		}
+
+		if (pWorldToTextureVar)
+		{
+			pWorldToTextureVar->SetMatrixValue(shadow.m_WorldToShadow);
+		}
+
+		if (pFlashlightColorVar)
+		{
+			pFlashlightColorVar->SetVecValue(&(flashlightState.m_Color[0]), 4);
+		}
+
+		if (pAttenFactorsVar)
+		{
+			pAttenFactorsVar->SetVecValue(flashlightState.m_fConstantAtten, flashlightState.m_fLinearAtten, flashlightState.m_fQuadraticAtten, flashlightState.m_FarZAtten);
+		}
+
+		if (pOriginFarZVar)
+		{
+			pOriginFarZVar->SetVecValue(flashlightState.m_vecLightOrigin[0], flashlightState.m_vecLightOrigin[1], flashlightState.m_vecLightOrigin[2], flashlightState.m_FarZ);
+		}
+
+		if (pQuatOrientation)
+		{
+			pQuatOrientation->SetVecValue(flashlightState.m_quatOrientation.Base(), 4);
+		}
+
+		if (pShadowFilterSizeVar)
+		{
+			pShadowFilterSizeVar->SetFloatValue(flashlightState.m_flShadowFilterSize);
+		}
+
+		if (pShadowAttenVar)
+		{
+			pShadowAttenVar->SetFloatValue(flashlightState.m_flShadowAtten);
+		}
+
+		if (pShadowJitterSeedVar)
+		{
+			pShadowJitterSeedVar->SetFloatValue(flashlightState.m_flShadowJitterSeed);
+		}
+
+		if (pEnableShadowsVar)
+		{
+			pEnableShadowsVar->SetIntValue(flashlightState.m_bEnableShadows ? 1 : 0);
+		}
+
+		if (pNoiseStrengthVar)
+		{
+			pNoiseStrengthVar->SetFloatValue(flashlightState.m_flNoiseStrength);
+		}
+
+		if (pFlashlighTimeVar)
+		{
+			pFlashlighTimeVar->SetFloatValue(flashlightState.m_flFlashlightTime);
+		}
+
+		if (pNumPlanesVar)
+		{
+			pNumPlanesVar->SetIntValue(flashlightState.m_nNumPlanes);
+		}
+
+		if (pVolumetricIntensityVar)
+		{
+			pVolumetricIntensityVar->SetFloatValue(flashlightState.m_flVolumetricIntensity);
+		}
+
+		pRenderContext->Bind(pMaterial);
+
+		// Set up user clip planes to clip to this flashlight's frustum
+		Frustum_t shadow_frustrum = shadowmgr->GetFlashlightFrustum(shadow.m_ShadowHandle);
+
+		for (int i = 0; i < 6; i++)
+		{
+			pRenderContext->PushCustomClipPlane(shadow_frustrum.GetPlane(i)->normal.Base());
+		}
+
+		// Flashlight space to world space, then view space
+		VMatrix matWorldToView, matViewToWorld, matFlashlightToView, matViewToFlashlight;
+		pRenderContext->GetMatrix(MATERIAL_VIEW, &matWorldToView);
+		MatrixInverseGeneral(matWorldToView, matViewToWorld);
+		MatrixMultiply(shadow.m_WorldToShadow, matViewToWorld, matViewToFlashlight);
+		MatrixInverseGeneral(matViewToFlashlight, matFlashlightToView);
+
+		// View space AABB
+		Vector vView, vWorld, vViewMins, vViewMaxs;
+		CalculateAABBFromProjectionMatrixInverse(matFlashlightToView, &vViewMins, &vViewMaxs);
+
+		// Distance between planes
+		float zIncrement = (vViewMaxs.z - vViewMins.z) / (float)flashlightState.m_nNumPlanes;
+
+		// Base offset for this set of planes (progressive refinement sets this in SFM)
+		vViewMins.z += zIncrement * flashlightState.m_flPlaneOffset;
+
+		IMesh* pMesh = pRenderContext->GetDynamicMesh(true);
+
+		pRenderContext->MatrixMode(MATERIAL_MODEL);
+		pRenderContext->PushMatrix();
+		pRenderContext->LoadIdentity();
+
+		CMeshBuilder meshBuilder;
+		meshBuilder.Begin(pMesh, MATERIAL_QUADS, flashlightState.m_nNumPlanes);
+
+		for (int i = 0; i < flashlightState.m_nNumPlanes; i++)
+		{
+			vView = Vector(vViewMins.x, vViewMins.y, vViewMins.z + (float)i * zIncrement);// View space
+			Vector3DMultiplyPosition(matViewToWorld, vView, vWorld);						// Transform to world space
+			meshBuilder.Position3fv(vWorld.Base());
+			meshBuilder.AdvanceVertexF<VTX_HAVEPOS, 0>();
+
+			vView = Vector(vViewMins.x, vViewMaxs.y, vViewMins.z + (float)i * zIncrement);// View space
+			Vector3DMultiplyPosition(matViewToWorld, vView, vWorld);						// Transform to world space
+			meshBuilder.Position3fv(vWorld.Base());
+			meshBuilder.AdvanceVertexF<VTX_HAVEPOS, 0>();
+
+			vView = Vector(vViewMaxs.x, vViewMaxs.y, vViewMins.z + (float)i * zIncrement);// View space
+			Vector3DMultiplyPosition(matViewToWorld, vView, vWorld);						// Transform to world space
+			meshBuilder.Position3fv(vWorld.Base());
+			meshBuilder.AdvanceVertexF<VTX_HAVEPOS, 0>();
+
+			vView = Vector(vViewMaxs.x, vViewMins.y, vViewMins.z + (float)i * zIncrement);// View space
+			Vector3DMultiplyPosition(matViewToWorld, vView, vWorld);						// Transform to world space
+			meshBuilder.Position3fv(vWorld.Base());
+			meshBuilder.AdvanceVertexF<VTX_HAVEPOS, 0>();
+		}
+
+		meshBuilder.End(false, true);
+
+		pRenderContext->PopMatrix();
+
+		// Pop the custom clip planes
+		for (int i = 0; i<6; i++)
+		{
+			pRenderContext->PopCustomClipPlane();
+		}
+	}
+}
 
 //-----------------------------------------------------------------------------
 // Re-render shadow depth textures that lie in the leaf list

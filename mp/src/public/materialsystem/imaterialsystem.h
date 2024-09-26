@@ -456,6 +456,13 @@ struct FlashlightState_t
 
 		m_fBrightnessScale = 1.0f;
 		m_pSpotlightTexture = NULL;
+
+		m_bVolumetric = false;
+		m_flNoiseStrength = 0.8f;
+		m_flFlashlightTime = 0.0f;
+		m_nNumPlanes = 64;
+		m_flPlaneOffset = 0.0f;
+		m_flVolumetricIntensity = 1.0f;
 #endif
 	}
 
@@ -493,6 +500,13 @@ struct FlashlightState_t
 	float m_FarZAtten;
 	float m_fBrightnessScale;
 	bool m_bGlobalLight;
+
+	bool m_bVolumetric;
+	float m_flNoiseStrength;
+	float m_flFlashlightTime;
+	int m_nNumPlanes;
+	float m_flPlaneOffset;
+	float m_flVolumetricIntensity;
 #endif
 
 #ifdef MAPBASE

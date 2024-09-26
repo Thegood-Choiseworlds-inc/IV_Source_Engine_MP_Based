@@ -110,6 +110,8 @@ public:
 
 	virtual void ComputeShadowDepthTextures( const CViewSetup &pView ) = 0;
 
+	// Kicks off rendering of volumetrics for the flashlights
+	virtual void DrawVolumetrics_Internal(FlashlightState_t &flashlightState, ClientShadowHandle_t handle) = 0;
 };
 
 

@@ -68,6 +68,12 @@ public:
 	void InputStartFollowingTarget( inputdata_t &inputdata ) { m_bDontFollowTarget = false; }
 	void InputSetFilter( inputdata_t &inputdata );
 
+	void InputSetVolumetricState(inputdata_t &inputdata) { m_bVolumetric = inputdata.value.Bool(); };
+	void InputSetVolumetricNoiseStrenght(inputdata_t &inputdata) { m_flNoiseStrength = inputdata.value.Float(); };
+	void InputSetVolumetricNumPlanes(inputdata_t &inputdata) { m_nNumPlanes = inputdata.value.Int(); };
+	void InputSetVolumetricPlaneOffset(inputdata_t &inputdata) { m_flPlaneOffset = inputdata.value.Float(); };
+	void InputSetVolumetricIntensity(inputdata_t &inputdata) { m_flVolumetricIntensity = inputdata.value.Float(); };
+
 	// Corrects keyvalue/input attenuation for internal FlashlightEffect_t attenuation.
 	float CorrectConstantAtten( float fl ) { return fl * 0.5f; }
 	float CorrectLinearAtten( float fl ) { return fl * 100.0f; }
@@ -117,6 +123,12 @@ private:
 	CNetworkVar( float, m_flShadowAtten );
 
 	CNetworkVar( float, m_flShadowFilter );
+
+	CNetworkVar(bool, m_bVolumetric);
+	CNetworkVar(float, m_flNoiseStrength);
+	CNetworkVar(int, m_nNumPlanes);
+	CNetworkVar(float, m_flPlaneOffset);
+	CNetworkVar(float, m_flVolumetricIntensity);
 
 	CNetworkVar( bool, m_bAlwaysDraw );
 

@@ -98,6 +98,12 @@ private:
 	float		m_flShadowAtten;
 	float		m_flShadowFilter;
 
+	bool m_bVolumetric;
+	float m_flNoiseStrength;
+	int m_nNumPlanes;
+	float m_flPlaneOffset;
+	float m_flVolumetricIntensity;
+
 	bool		m_bAlwaysDraw;
 	//bool		m_bProjectedTextureVersion;
 #endif

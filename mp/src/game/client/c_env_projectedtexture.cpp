@@ -28,6 +28,8 @@
 extern ConVarRef mat_slopescaledepthbias_shadowmap;
 extern ConVarRef mat_depthbias_shadowmap;
 
+extern ConVar r_flashlightvolumetrics;
+
 #if IVBASE && IV_SHADOWS_ADVANCED
 extern ConVar r_flashlightdepthres;
 extern ConVar r_flashlightdepthres_hight;
@@ -73,6 +75,12 @@ IMPLEMENT_CLIENTCLASS_DT( C_EnvProjectedTexture, DT_EnvProjectedTexture, CEnvPro
 	RecvPropBool(	 RECVINFO( m_bAlwaysDraw )	),
 	RecvPropInt(	 RECVINFO( m_iStyle ) ),
 
+	RecvPropBool(RECVINFO(m_bVolumetric)),
+	RecvPropFloat(RECVINFO(m_flNoiseStrength)),
+	RecvPropInt(RECVINFO(m_nNumPlanes)),
+	RecvPropFloat(RECVINFO(m_flPlaneOffset)),
+	RecvPropFloat(RECVINFO(m_flVolumetricIntensity)),
+
 	// Not needed on the client right now, change when it actually is needed
 	//RecvPropBool(	 RECVINFO( m_bProjectedTextureVersion )	),
 #endif
@@ -112,6 +120,13 @@ C_EnvProjectedTexture *C_EnvProjectedTexture::Create( )
 	pEnt->m_flQuadraticAtten = 0.0f;
 	pEnt->m_flShadowAtten = 0.0f;
 	pEnt->m_flShadowFilter = 0.5f;
+
+	pEnt->m_bVolumetric = false;
+	pEnt->m_flNoiseStrength = 0.8f;
+	pEnt->m_nNumPlanes = 64;
+	pEnt->m_flPlaneOffset = 0.0f;
+	pEnt->m_flVolumetricIntensity = 1.0f;
+
 	//pEnt->m_bProjectedTextureVersion = 1;
 #endif
 
@@ -468,6 +483,9 @@ void C_EnvProjectedTexture::UpdateLight( void )
 
 		m_vecExtentsMin = m_vecExtentsMin - GetAbsOrigin();
 		m_vecExtentsMax = m_vecExtentsMax - GetAbsOrigin();
+
+		if (r_flashlightvolumetrics.GetBool())
+			g_pClientShadowMgr->DrawVolumetrics_Internal(state, m_LightHandle);
 	}
 
 	if( m_bLightOnlyTarget )

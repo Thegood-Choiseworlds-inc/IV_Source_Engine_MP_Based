@@ -58,6 +58,12 @@ BEGIN_DATADESC( CEnvProjectedTexture )
 	DEFINE_KEYFIELD( m_iStyle, FIELD_INTEGER, "style" ),
 	DEFINE_KEYFIELD( m_iDefaultStyle, FIELD_INTEGER, "defaultstyle" ),
 	DEFINE_KEYFIELD( m_iszPattern, FIELD_STRING, "pattern" ),
+
+	DEFINE_KEYFIELD(m_bVolumetric, FIELD_BOOLEAN, "volumetric"),
+	DEFINE_KEYFIELD(m_flNoiseStrength, FIELD_FLOAT, "volumetricnoisestrenght"),
+	DEFINE_KEYFIELD(m_nNumPlanes, FIELD_INTEGER, "volumetricnumplanes"),
+	DEFINE_KEYFIELD(m_flPlaneOffset, FIELD_FLOAT, "volumetricplaneoffset"),
+	DEFINE_KEYFIELD(m_flVolumetricIntensity, FIELD_FLOAT, "volumetricintensity"),
 #endif
 
 	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn", InputTurnOn ),
@@ -94,6 +100,12 @@ BEGIN_DATADESC( CEnvProjectedTexture )
 	DEFINE_INPUTFUNC( FIELD_VOID, "AlwaysDrawOff", InputAlwaysDrawOff ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "StopFollowingTarget", InputStopFollowingTarget ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "StartFollowingTarget", InputStartFollowingTarget ),
+
+	DEFINE_INPUTFUNC(FIELD_BOOLEAN, "SetVolumetricState", InputSetVolumetricState),
+	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetVolumetricNoiseStrenght", InputSetVolumetricNoiseStrenght),
+	DEFINE_INPUTFUNC(FIELD_INTEGER, "SetVolumetricNumPlanes", InputSetVolumetricNumPlanes),
+	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetVolumetricPlaneOffset", InputSetVolumetricPlaneOffset),
+	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetVolumetricIntensity", InputSetVolumetricIntensity),
 #endif
 	DEFINE_THINKFUNC( InitialThink ),
 END_DATADESC()
@@ -133,6 +145,12 @@ IMPLEMENT_SERVERCLASS_ST( CEnvProjectedTexture, DT_EnvProjectedTexture )
 	SendPropFloat( SENDINFO( m_flShadowAtten ) ),
 	SendPropFloat( SENDINFO( m_flShadowFilter ) ),
 	SendPropBool( SENDINFO( m_bAlwaysDraw ) ),
+
+	SendPropBool(SENDINFO(m_bVolumetric)),
+	SendPropFloat(SENDINFO(m_flNoiseStrength)),
+	SendPropInt(SENDINFO(m_nNumPlanes)),
+	SendPropFloat(SENDINFO(m_flPlaneOffset)),
+	SendPropFloat(SENDINFO(m_flVolumetricIntensity)),
 
 	// Not needed on the client right now, change when it actually is needed
 	//SendPropBool( SENDINFO( m_bProjectedTextureVersion ) ),
@@ -178,6 +196,12 @@ CEnvProjectedTexture::CEnvProjectedTexture( void )
 	m_flConstantAtten = 0.0f;
 	m_flShadowAtten = 0.0f;
 	m_flShadowFilter = 0.5f;
+
+	m_bVolumetric = false;
+	m_flNoiseStrength = 0.8f;
+	m_nNumPlanes = 64;
+	m_flPlaneOffset = 0.0f;
+	m_flVolumetricIntensity = 1.0f;
 #endif
 }
 
