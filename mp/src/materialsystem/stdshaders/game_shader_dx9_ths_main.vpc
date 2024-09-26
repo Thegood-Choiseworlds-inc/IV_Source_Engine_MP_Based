@@ -12,6 +12,13 @@ $Project "Shaders (THS Main)"
 {
 	$Folder	"Source Files"
 	{
+		$Folder "Headers"
+		{
+			$File	"ivdev_lightshafts_helper.h"
+		}
+
 		$File	"IVWater.cpp"
+		$File	"ivdev_lightshafts.cpp"
+		$File	"ivdev_lightshafts_helper.cpp"
 	}
 }

@@ -49,3 +49,6 @@ IVWater_ps2x.fxc
 IVWater_vs20.fxc
 IVWaterCheap_ps2x.fxc
 IVWaterCheap_vs20.fxc
+
+ivdev_lightshafts_ps30.fxc
+ivdev_lightshafts_vs30.fxc
