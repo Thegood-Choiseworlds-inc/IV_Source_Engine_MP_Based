@@ -461,6 +461,12 @@ void C_EnvProjectedTexture::UpdateLight( void )
 		state.m_nShadowQuality = m_nShadowQuality; // Allow entity to affect shadow quality
 
 #ifdef MAPBASE
+		state.m_bVolumetric = m_bVolumetric;
+		state.m_flNoiseStrength = m_flNoiseStrength;
+		state.m_nNumPlanes = m_nNumPlanes;
+		state.m_flPlaneOffset = m_flPlaneOffset;
+		state.m_flVolumetricIntensity = m_flVolumetricIntensity;
+
 		state.m_bAlwaysDraw = m_bAlwaysDraw;
 #endif
 
