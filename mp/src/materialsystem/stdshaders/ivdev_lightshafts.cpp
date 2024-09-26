@@ -1,7 +1,7 @@
 //========= Copyright © 1996-2008, Valve Corporation, All rights reserved. ============//
 
 #include "BaseVSShader.h"
-#include "lightshafts_helper.h"
+#include "ivdev_lightshafts_helper.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -22,14 +22,8 @@ BEGIN_VS_SHADER( LightShafts_dx9, "LightShafts" )
 		SHADER_PARAM( SHADOWFILTERSIZE, SHADER_PARAM_TYPE_FLOAT, "3", "Shadow filter size" )
 		SHADER_PARAM( SHADOWATTEN, SHADER_PARAM_TYPE_FLOAT, "1", "Shadow Attenuation" )
 		SHADER_PARAM( SHADOWJITTERSEED, SHADER_PARAM_TYPE_FLOAT, "1", "Shadow jitter seed" )
-		SHADER_PARAM( UBERLIGHT, SHADER_PARAM_TYPE_INTEGER, "1", "Is this an uberlight?" )
 		SHADER_PARAM( ENABLESHADOWS, SHADER_PARAM_TYPE_INTEGER, "1", "Are shadows enabled?" )
 		SHADER_PARAM( NOISESTRENGTH, SHADER_PARAM_TYPE_FLOAT, "1", "Strength of noise in volumetrics" )
-
-		// Uberlight parameters
-		SHADER_PARAM( UBERNEARFAR, SHADER_PARAM_TYPE_VEC4, "1", "Packed uberlight near and far parameters" )
-		SHADER_PARAM( UBERHEIGHTWIDTH, SHADER_PARAM_TYPE_VEC4, "1", "Packed uberlight height and width parameters" )
-		SHADER_PARAM( UBERROUNDNESS, SHADER_PARAM_TYPE_FLOAT, "1", "Uberlight roundness" )
 
 		SHADER_PARAM( FLASHLIGHTTIME, SHADER_PARAM_TYPE_FLOAT, "0", "Typically driven by SFM, similar to jitter seed" )
 		SHADER_PARAM( NUMPLANES, SHADER_PARAM_TYPE_FLOAT, "0", "Need to know this to normalize intensity" )
@@ -54,16 +48,10 @@ BEGIN_VS_SHADER( LightShafts_dx9, "LightShafts" )
 		info.m_nShadowFilterSize = SHADOWFILTERSIZE;
 		info.m_nShadowAtten = SHADOWATTEN;
 		info.m_nShadowJitterSeed = SHADOWJITTERSEED;
-		info.m_nUberlight = UBERLIGHT;
 		info.m_nEnableShadows = ENABLESHADOWS;
 
 		info.m_nFlashlightTime = FLASHLIGHTTIME;
 		info.m_nNumPlanes = NUMPLANES;
-
-		// Uberlight parameters
-		info.m_nUberNearFar = UBERNEARFAR;
-		info.m_nUberHeightWidth = UBERHEIGHTWIDTH;
-		info.m_nUberRoundness = UBERROUNDNESS;
 
 		info.m_nVolumetricIntensity = VOLUMETRICINTENSITY;
 	}

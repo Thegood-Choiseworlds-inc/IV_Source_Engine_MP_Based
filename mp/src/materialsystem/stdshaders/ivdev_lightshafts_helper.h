@@ -39,15 +39,9 @@ struct LightShaftsVars_t
 	int m_nShadowFilterSize;
 	int m_nShadowAtten;
 	int m_nShadowJitterSeed;
-	int m_nUberlight;
 	int m_nEnableShadows;
 	int m_nFlashlightTime;
 	int m_nNumPlanes;
-
-	// Uberlight parameters
-	int m_nUberNearFar;
-	int m_nUberHeightWidth;
-	int m_nUberRoundness;
 
 	int m_nTime;
 
