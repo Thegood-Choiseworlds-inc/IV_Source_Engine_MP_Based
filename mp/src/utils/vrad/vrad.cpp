@@ -2608,16 +2608,16 @@ int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 		}
 		else if (!Q_stricmp(argv[i],"-final"))
 		{
-			g_flSkySampleScale = 32.0f;
+			g_flSkySampleScale = 16.0f;
 			g_bStaticPropLighting = true;
 			g_bStaticPropPolys = true;
 			g_bTextureShadows = true;
 			g_bNoAO = false;
 			g_bNoSoften = false;
 
-			g_bStaticPropBounce = true;
+			//g_bStaticPropBounce = true;
 			g_bDumpBumpStaticProps = true;
-			g_flStaticPropSampleScale = 32.0f;
+			g_flStaticPropSampleScale = 16.0f;
 			extern int g_numVradStaticPropsLightingStreams;
 			g_numVradStaticPropsLightingStreams = 3;
 
@@ -2637,12 +2637,13 @@ int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 			g_bNoSoften = true;
 			Warning("Soften Disabled!!!\n");
 		}
-		else if (!Q_stricmp(argv[i], "-disablestaticpropbounce"))
+		else if (!Q_stricmp(argv[i], "-enablestaticpropbounce"))
 		{
-			g_bStaticPropBounce = false;
-			Warning("StaticPropBounceLight State is 'FALSE'!!!\n");
-			Warning("StaticPropBounceLight State is 'FALSE'!!!\n");
-			Warning("StaticPropBounceLight State is 'FALSE'!!!\n");
+			g_bStaticPropBounce = true;
+			g_flStaticPropBounceBoost = 3;
+			Warning("StaticPropBounceLight State is 'TRUE' Perfomance Loss!!!\n");
+			Warning("StaticPropBounceLight State is 'TRUE' Perfomance Loss!!!\n");
+			Warning("StaticPropBounceLight State is 'TRUE' Perfomance Loss!!!\n");
 		}
 		else if (!Q_stricmp(argv[i],"-extrasky"))
 		{
