@@ -3002,7 +3002,7 @@ void PrintUsage( int argc, char **argv )
 		"  -textureshadows : Allows texture alpha channels to block light - rays intersecting alpha surfaces will sample the texture\n"
 		"  -disableao : Force Disable Ambient Occlusion for Brushes\n"
 		"  -disablesoften : Force Disable Soften\n"
-		"  -disablestaticpropbounce : Force Disable Static Prop Bounce Light for Compile Perfomance\n"
+		"  -enablestaticpropbounce : Force Enable Static Prop Bounce Light. Perfomance Loss!!!\n"
 		"  -noskyboxrecurse : Turn off recursion into 3d skybox (skybox shadows on world)\n"
 		"  -nossprops      : Globally disable self-shadowing on static props\n"
 		"\n"
