@@ -36,6 +36,9 @@ $Project
 		$File	"ai_speechqueue.cpp" [$NEW_RESPONSE_SYSTEM]
 		$File	"ai_speechqueue.h" [$NEW_RESPONSE_SYSTEM]
 
+		//IV Note: IV Engine Base Stuff
+		$File	"env_material_global_parms.cpp"
+
 		$Folder	"Mapbase"
 		{
 			$File	"$SRCDIR\game\shared\mapbase\mapbase_shared.cpp"

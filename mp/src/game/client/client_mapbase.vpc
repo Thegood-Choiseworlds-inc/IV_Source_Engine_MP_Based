@@ -36,7 +36,10 @@ $Project
 		$File	"c_movie_display.h"
 		$File	"vgui_movie_display.cpp"
 		$File	"convarproxy.cpp"
-	
+
+		//IV Note: IV Engine Base Stuff
+		$File	"c_env_material_global_parms.cpp"
+
 		$Folder	"Mapbase"
 		{
 			$File	"$SRCDIR\game\shared\mapbase\mapbase_shared.cpp"
