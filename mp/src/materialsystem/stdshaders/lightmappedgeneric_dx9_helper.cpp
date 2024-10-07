@@ -42,6 +42,9 @@ ConVar mat_force_envmap_light_scale("mat_force_envmap_light_scale", "0.0", FCVAR
 ConVar mat_force_envmap_light_min("mat_force_envmap_light_min", "0.0", FCVAR_CHEAT, "Enviroment Maps Light Min");
 ConVar mat_force_envmap_light_max("mat_force_envmap_light_max", "1.0", FCVAR_CHEAT, "Enviroment Maps Light Max");
 
+ConVar ivdev_engine_force_lightmapped_phong("ivdev_engine_force_lightmapped_phong", "0", FCVAR_DEVELOPMENTONLY, "Engine CallBack Force Phong On Lightmapped Materials");
+ConVar ivdev_engine_force_envmap_anisotropy("ivdev_engine_force_envmap_anisotropy", "0", FCVAR_DEVELOPMENTONLY, "Engine CallBack Force Envmap Anisotropy On Lightmapped Materials");
+
 class CLightmappedGeneric_DX9_Context : public CBasePerMaterialContextData
 {
 public:
@@ -244,7 +247,7 @@ void InitParamsLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** pa
 			params[info.m_nPhong]->SetIntValue( 0 );
 		}
 	}
-	else if ( mat_force_lightmapped_phong.GetBool() && mat_enable_lightmapped_phong.GetBool() && 
+	else if ( (ivdev_engine_force_lightmapped_phong.GetBool() || mat_force_lightmapped_phong.GetBool()) && mat_enable_lightmapped_phong.GetBool() && 
 		params[info.m_nEnvmapMaskTransform]->MatrixIsIdentity() )
 	{
 		params[info.m_nPhong]->SetIntValue( 1 );
@@ -873,7 +876,7 @@ void DrawLightmappedGeneric_DX9_Internal(CBaseVSShader *pShader, IMaterialVar** 
 		pContextData->m_bFullyOpaque = bFullyOpaque;
 		pContextData->m_bFullyOpaqueWithoutAlphaTest = bFullyOpaqueWithoutAlphaTest;
 		bool bEnvmapAnisotropy = mat_envmap_anisotropy_enabled.GetBool() && hasBump && !hasSSBump && (info.m_nEnvmapAnisotropy != -1) &&
-							  ( params[info.m_nEnvmapAnisotropy]->GetIntValue() == 1 || mat_force_envmap_anisotropy.GetBool() );
+							  ( params[info.m_nEnvmapAnisotropy]->GetIntValue() == 1 || (ivdev_engine_force_envmap_anisotropy.GetBool() || mat_force_envmap_anisotropy.GetBool()) );
 
 		NormalDecodeMode_t nNormalDecodeMode = NORMAL_DECODE_NONE;
 		if ( hasBump && g_pHardwareConfig->SupportsNormalMapCompression() && g_pHardwareConfig->SupportsPixelShaders_2_b() )
@@ -1454,7 +1457,7 @@ void DrawLightmappedGeneric_DX9_Internal(CBaseVSShader *pShader, IMaterialVar** 
 				float envMapParams[4] = { 0, 0, 0, 0 };
 				if (bEnvmapAnisotropy)
 				{
-					if (!mat_force_envmap_anisotropy.GetBool())
+					if (!ivdev_engine_force_envmap_anisotropy.GetBool() && !mat_force_envmap_anisotropy.GetBool())
 						envMapParams[0] = GetFloatParam(info.m_nEnvmapAnisotropyScale, params);
 					else
 						envMapParams[0] = mat_force_envmap_anisotropy_scale.GetFloat();

@@ -10,6 +10,10 @@
 #include "tier0/memdbgon.h"
 
 
+static bool g_mat_force_phong = false;
+static bool g_mat_force_anisotropic = false;
+
+
 //------------------------------------------------------------------------------
 // Purpose : Material Global Parms entity
 //------------------------------------------------------------------------------
@@ -19,6 +23,8 @@ public:
 	DECLARE_CLASS(C_MatGlobalParmsControl, C_BaseEntity);
 
 	DECLARE_CLIENTCLASS();
+
+	C_MatGlobalParmsControl();
 
 	void OnDataChanged(DataUpdateType_t updateType);
 	bool ShouldDraw();
@@ -34,6 +40,17 @@ RecvPropBool(RECVINFO(m_bForceEnableAnisotopicReflection)),
 END_RECV_TABLE()
 
 
+C_MatGlobalParmsControl::C_MatGlobalParmsControl()
+{
+	//IV Note: Force Reload All Materials for Revent Changes!!!
+	if (g_mat_force_phong || g_mat_force_anisotropic)
+	{
+		g_mat_force_phong = false;
+		g_mat_force_anisotropic = false;
+		materials->ReloadMaterials();
+	}
+}
+
 //------------------------------------------------------------------------------
 // Purpose :
 // Input   :
@@ -41,17 +58,28 @@ END_RECV_TABLE()
 //------------------------------------------------------------------------------
 void C_MatGlobalParmsControl::OnDataChanged(DataUpdateType_t updateType)
 {
-	ConVarRef temp_convar_force_lightmapped_phong("mat_force_lightmapped_phong");
-	ConVarRef temp_convar_force_envmap_anisotopy("mat_force_envmap_anisotropy");
+	ConVarRef temp_convar_force_lightmapped_phong("ivdev_engine_force_lightmapped_phong");
+	ConVarRef temp_convar_force_envmap_anisotopy("ivdev_engine_force_envmap_anisotropy");
 
 	if (!temp_convar_force_lightmapped_phong.IsValid() || !temp_convar_force_envmap_anisotopy.IsValid())
 	{
+		Assert(0);
 		Warning("Invalid Material ConVars!!! Aborting Global Parms Change!!!\n");
 		return;
 	}
 
-	temp_convar_force_lightmapped_phong.SetValue(m_bForceEnablePhongOnBrushes);
-	temp_convar_force_envmap_anisotopy.SetValue(m_bForceEnableAnisotopicReflection);
+	g_mat_force_phong = m_bForceEnablePhongOnBrushes;
+	g_mat_force_anisotropic = m_bForceEnableAnisotopicReflection;
+
+	temp_convar_force_lightmapped_phong.SetValue(g_mat_force_phong);
+	temp_convar_force_envmap_anisotopy.SetValue(g_mat_force_anisotropic);
+
+	Warning("Force Applying Material Parms for Remake Map!!!\n");
+	Warning("Force Applying Material Parms for Remake Map!!!\n");
+	Warning("Force Applying Material Parms for Remake Map!!!\n");
+
+	//IV Note: Force Reload All Materials for Apply Changes!!!
+	materials->ReloadMaterials();
 }
 
 //------------------------------------------------------------------------------
