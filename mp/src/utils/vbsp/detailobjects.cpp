@@ -606,8 +606,8 @@ static void PlaceDetail( DetailModel_t const& model, const Vector& pt, const Vec
 
 	// TERROR: Ported from CS:GO Engine Branch
 
-	if (g_BlockerList.Count() > 0)
-		Msg("Checking Detail Block Area...\n");
+	/*if (g_BlockerList.Count() > 0)
+		Msg("Checking Detail Block Area...\n");*/
 
 	for( int i = 0; i < g_BlockerList.Count(); ++i )
 	{
