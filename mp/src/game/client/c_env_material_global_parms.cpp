@@ -13,6 +13,12 @@
 static bool g_mat_force_phong = false;
 static bool g_mat_force_anisotropic = false;
 
+void IV_Force_Reload_All_Materials()
+{
+	materials->UncacheAllMaterials();
+	materials->CacheUsedMaterials();
+}
+
 
 //------------------------------------------------------------------------------
 // Purpose : Material Global Parms entity
@@ -47,7 +53,8 @@ C_MatGlobalParmsControl::C_MatGlobalParmsControl()
 	{
 		g_mat_force_phong = false;
 		g_mat_force_anisotropic = false;
-		materials->ReloadMaterials();
+		Warning("Force Revent Back Material Global Parms!!!\n");
+		IV_Force_Reload_All_Materials();
 	}
 }
 
@@ -79,7 +86,7 @@ void C_MatGlobalParmsControl::OnDataChanged(DataUpdateType_t updateType)
 	Warning("Force Applying Material Parms for Remake Map!!!\n");
 
 	//IV Note: Force Reload All Materials for Apply Changes!!!
-	materials->ReloadMaterials();
+	IV_Force_Reload_All_Materials();
 }
 
 //------------------------------------------------------------------------------
