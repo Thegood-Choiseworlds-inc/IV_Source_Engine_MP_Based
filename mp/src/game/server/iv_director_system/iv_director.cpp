@@ -179,7 +179,7 @@ void CIV_Director::Event_NPCKilled(CBaseEntity *pNPC, const CTakeDamageInfo &inf
 			}
 		}
 
-		//pPlayer->GetIntensity()->Increase(stress);
+		pPlayer->GetIntensity()->Increase(stress);
 	}
 }
 
@@ -209,7 +209,7 @@ void CIV_Director::PlayerTookDamage(CBasePlayer *pPlayer, const CTakeDamageInfo 
 		stress = CIVPlayer_Intensity::EXTREME;
 	}
 
-	//pPlayer->GetIntensity()->Increase(stress);
+	pPlayer->GetIntensity()->Increase(stress);
 }
 
 void CIV_Director::UpdateHorde()
