@@ -4,7 +4,7 @@
 #pragma once
 #endif
 
-#include "ai_navtype.h"
+#include "ai_basenpc.h"
 
 class CAI_Network;
 class CTriggerMultiple;
