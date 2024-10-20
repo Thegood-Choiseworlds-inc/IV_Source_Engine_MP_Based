@@ -135,6 +135,8 @@ CIV_Director_Spawn_Manager g_Spawn_Manager;
 CIV_Director_Spawn_Manager* IVDirectorSpawnManager() { return &g_Spawn_Manager; }
 
 extern ConVar iv_director_debug;
+
+ConVar iv_spawning_enabled("iv_spawning_enabled", "1", FCVAR_CHEAT, "Director Spawner Enable/Disable State");
 ConVar iv_horde_min_distance("iv_horde_min_distance", "800", FCVAR_CHEAT, "Minimum distance away from the marines the horde can spawn");
 ConVar iv_horde_max_distance("iv_horde_max_distance", "1500", FCVAR_CHEAT, "Maximum distance away from the marines the horde can spawn");
 ConVar iv_max_alien_batch("iv_max_alien_batch", "10", FCVAR_CHEAT, "Max number of aliens spawned in a horde batch");
@@ -531,10 +533,9 @@ void CIV_Director_Spawn_Manager::UpdateCandidateNodes(int sended_hull)
 		return;
 	}
 
-	int total_players_count = 0;
-	CBasePlayer* temp_players_list = UTIL_GetPlayersList(&total_players_count);
+	int total_players_count = gpGlobals->maxClients;
 
-	if (!temp_players_list || total_players_count <= 0)
+	if (total_players_count <= 0)
 	{
 		Msg("Error: Connected Players List is Invalid or Invalid Players Count!!!\n");
 		return;
@@ -542,9 +543,9 @@ void CIV_Director_Spawn_Manager::UpdateCandidateNodes(int sended_hull)
 
 	Vector vecSouthPlayer = vec3_origin;
 	Vector vecNorthPlayer = vec3_origin;
-	for (int i = 0; i < total_players_count; i++)
+	for (int i = 1; i <= total_players_count; i++)
 	{
-		CBasePlayer *pPlayer = &temp_players_list[i];
+		CBasePlayer *pPlayer = UTIL_PlayerByIndex(i);
 
 		if (!pPlayer || pPlayer->GetHealth() <= 0)
 			continue;
@@ -870,16 +871,15 @@ bool CIV_Director_Spawn_Manager::ValidSpawnPoint(const Vector &vecPosition, cons
 
 	if (flPlayerNearDistance > 0)
 	{
-		int total_players_count = 0;
-		CBasePlayer *temp_players_list = UTIL_GetPlayersList(&total_players_count);
+		int total_players_count = gpGlobals->maxClients;
 
-		if (!temp_players_list || total_players_count <= 0)
+		if (total_players_count <= 0)
 			return false;
 
 		float distance = 0.0f;
-		for (int i = 0; i < total_players_count; i++)
+		for (int i = 1; i <= total_players_count; i++)
 		{
-			CBasePlayer *pPlayer = &temp_players_list[i];
+			CBasePlayer *pPlayer = UTIL_PlayerByIndex(i);
 
 			if (!pPlayer)
 				continue;

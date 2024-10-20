@@ -682,28 +682,6 @@ CBasePlayer* UTIL_PlayerByUserId( int userID )
 	return NULL;
 }
 
-CBasePlayer *UTIL_GetPlayersList(int *total_clients_count)
-{
-	int clients_count = gpGlobals->maxClients;
-	total_clients_count = &clients_count;
-
-	if (clients_count <= 0)
-		return NULL;
-
-	CBasePlayer *players_list = new CBasePlayer[clients_count];
-
-	for (int i = 1; i <= clients_count; i++)
-	{
-		CBasePlayer *pPlayer = UTIL_PlayerByIndex(i);
-		if (!pPlayer)
-			continue;
-
-		players_list[i] = *pPlayer;
-	}
-
-	return players_list;
-}
-
 CBasePlayer *UTIL_GetNearestPlayerSimple(const Vector &origin, float *nearest_distance)
 {
 	float distToNearest = 99999999999999999999999999999999999999.0f;

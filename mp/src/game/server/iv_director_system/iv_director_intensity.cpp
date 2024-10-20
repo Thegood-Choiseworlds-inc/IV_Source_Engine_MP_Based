@@ -71,15 +71,14 @@ void CIV_Director::UpdateIntensity()
 	float fDeltaTime = m_IntensityUpdateTimer.GetElapsedTime();
 	m_IntensityUpdateTimer.Start();
 
-	int total_players = 0;
-	CBasePlayer *temp_players_list = UTIL_GetPlayersList(&total_players);
+	int total_players = gpGlobals->maxClients;
 
-	if (!temp_players_list || total_players <= 0)
+	if (total_players <= 0)
 		return;
 
-	for (int i = 0; i < total_players; i++)
+	for (int i = 1; i <= total_players; i++)
 	{
-		CBasePlayer *pPlayer = &temp_players_list[i];
+		CBasePlayer *pPlayer = UTIL_PlayerByIndex(i);
 
 		if (!pPlayer)
 			continue;
@@ -96,16 +95,15 @@ void CIV_Director::UpdateIntensity()
 
 float CIV_Director::GetMaxIntensity()
 {
-	int total_players = 0;
-	CBasePlayer *temp_players_list = UTIL_GetPlayersList(&total_players);
+	int total_players = gpGlobals->maxClients;
 
-	if (!temp_players_list || total_players <= 0)
+	if (total_players <= 0)
 		return 0.0f;
 
 	float flIntensity = 0;
-	for (int i = 0; i < total_players; i++)
+	for (int i = 1; i <= total_players; i++)
 	{
-		CBasePlayer *pPlayer = &temp_players_list[i];
+		CBasePlayer *pPlayer = UTIL_PlayerByIndex(i);
 
 		if (!pPlayer)
 			continue;

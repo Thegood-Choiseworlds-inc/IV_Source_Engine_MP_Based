@@ -251,7 +251,7 @@ CBasePlayer *UTIL_GetListenServerHost( void );
 //-----------------------------------------------------------------------------
 // Purpose: Convenience function so we don't have to make this check all over
 //-----------------------------------------------------------------------------
-static CBasePlayer * UTIL_GetLocalPlayerOrListenServerHost( void )
+static CBasePlayer *UTIL_GetLocalPlayerOrListenServerHost(void)
 {
 	if ( gpGlobals->maxClients > 1 )
 	{
@@ -268,7 +268,6 @@ static CBasePlayer * UTIL_GetLocalPlayerOrListenServerHost( void )
 
 CBasePlayer* UTIL_PlayerByUserId( int userID );
 CBasePlayer* UTIL_PlayerByName( const char *name ); // not case sensitive
-CBasePlayer *UTIL_GetPlayersList(int *total_clients_count);
 CBasePlayer *UTIL_GetNearestPlayerSimple(const Vector &origin, float *nearest_distance);
 
 // Returns true if the command was issued by the listenserver host, or by the dedicated server, via rcon or the server console.

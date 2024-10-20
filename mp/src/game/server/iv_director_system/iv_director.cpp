@@ -12,8 +12,8 @@ ConVar iv_director_debug("iv_director_debug", "0", FCVAR_CHEAT, "Displays direct
 extern ConVar iv_intensity_far_range;
 extern ConVar iv_spawning_enabled;
 
-extern ConVar iv_horde_override;
-extern ConVar iv_wanderer_override;
+ConVar iv_horde_override("iv_horde_override", "0", FCVAR_CHEAT, "Force Override Horde State");
+ConVar iv_wanderer_override("iv_wanderer_override", "0", FCVAR_CHEAT, "Force Override Wanderer Spawn State");
 ConVar iv_horde_interval_min("iv_horde_interval_min", "45", FCVAR_CHEAT, "Min time between hordes");
 ConVar iv_horde_interval_max("iv_horde_interval_max", "65", FCVAR_CHEAT, "Min time between hordes");
 ConVar iv_horde_size_min("iv_horde_size_min", "9", FCVAR_CHEAT, "Min horde size");
@@ -140,15 +140,14 @@ void CIV_Director::Event_NPCKilled(CBaseEntity *pNPC, const CTakeDamageInfo &inf
 	bool bDangerous = pNPC->Classify() == CLASS_COMBINE_HUNTER;
 	bool bVeryDangerous = pNPC->Classify() == CLASS_COMBINE_GUNSHIP;
 
-	int clients_count = 0;
-	CBasePlayer *players_list = UTIL_GetPlayersList(&clients_count);
+	int clients_count = gpGlobals->maxClients;
 
-	if (!players_list || clients_count <= 0)
+	if (clients_count <= 0)
 		return;
 
-	for (int i = 0; i < clients_count; i++)
+	for (int i = 1; i <= clients_count; i++)
 	{
-		CBasePlayer *pPlayer = &players_list[i];
+		CBasePlayer *pPlayer = UTIL_PlayerByIndex(i);
 
 		if (!pPlayer)
 			continue;
