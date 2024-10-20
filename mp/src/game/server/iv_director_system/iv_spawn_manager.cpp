@@ -166,6 +166,16 @@ IV_Director_NPC_Class_Entry g_NPCs_Classes_Zombies_Bosses[] =
 	IV_Director_NPC_Class_Entry("npc_poisonzombie", HULL_WIDE_HUMAN)
 };
 
+IV_Director_NPC_Class_Entry g_NPCs_Classes_Ants[] =
+{
+	IV_Director_NPC_Class_Entry("npc_antlion", HULL_MEDIUM)
+};
+
+IV_Director_NPC_Class_Entry g_NPCs_Classes_Ants_Bosses[] =
+{
+	IV_Director_NPC_Class_Entry("npc_antlionguard", HULL_LARGE)
+};
+
 CIV_Director_Spawn_Manager::CIV_Director_Spawn_Manager()
 {
 	m_nAwakeCommonNPCs = 0;
@@ -190,7 +200,9 @@ int CIV_Director_Spawn_Manager::GetNumNPCClasses()
 	if (g_NPCs_Selected_Type == IV_Spawn_Classes_Types::Zombie)
 		return NELEMS(g_NPCs_Classes_Zombies);
 	else
-		return 0;
+		return NELEMS(g_NPCs_Classes_Ants);
+	/*else
+		return 0;*/
 }
 
 IV_Director_NPC_Class_Entry* CIV_Director_Spawn_Manager::GetNPCClass(int i)
@@ -200,7 +212,9 @@ IV_Director_NPC_Class_Entry* CIV_Director_Spawn_Manager::GetNPCClass(int i)
 	if (g_NPCs_Selected_Type == IV_Spawn_Classes_Types::Zombie)
 		return &g_NPCs_Classes_Zombies[i];
 	else
-		return NULL;
+		return &g_NPCs_Classes_Ants[i];
+	/*else
+		return NULL;*/
 }
 
 int CIV_Director_Spawn_Manager::GetNumNPCClassesSpecial()
@@ -208,7 +222,9 @@ int CIV_Director_Spawn_Manager::GetNumNPCClassesSpecial()
 	if (g_NPCs_Selected_Type == IV_Spawn_Classes_Types::Zombie)
 		return NELEMS(g_NPCs_Classes_Zombies_Bosses);
 	else
-		return 0;
+		return NELEMS(g_NPCs_Classes_Ants_Bosses);
+	/*else
+		return 0;*/
 }
 
 IV_Director_NPC_Class_Entry* CIV_Director_Spawn_Manager::GetNPCClassSpecial(int i)
@@ -218,7 +234,9 @@ IV_Director_NPC_Class_Entry* CIV_Director_Spawn_Manager::GetNPCClassSpecial(int 
 	if (g_NPCs_Selected_Type == IV_Spawn_Classes_Types::Zombie)
 		return &g_NPCs_Classes_Zombies_Bosses[i];
 	else
-		return NULL;
+		return &g_NPCs_Classes_Ants_Bosses[i];
+	/*else
+		return NULL;*/
 }
 
 bool CIV_Director_Spawn_Manager::IS_NPC_Class_Special(const char *npc_class_name)
@@ -808,6 +826,7 @@ CBaseEntity* CIV_Director_Spawn_Manager::SpawnNPCAt(IV_Director_NPC_Class_Entry 
 	if (pNPC)
 	{
 		pNPC->AddSpawnFlags(SF_NPC_FALL_TO_GROUND);
+		pNPC->SetDirectorSpawnState(true);
 	}
 
 	// Strip pitch and roll from the spawner's angles. Pass only yaw to the spawned NPC.

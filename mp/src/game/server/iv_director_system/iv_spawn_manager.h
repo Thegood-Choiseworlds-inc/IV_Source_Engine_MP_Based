@@ -44,7 +44,6 @@ public:
 enum IV_Spawn_Classes_Types
 {
 	Zombie,
-	Combine,
 	Antlions
 };
 
