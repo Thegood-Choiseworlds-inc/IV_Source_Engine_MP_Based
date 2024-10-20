@@ -1,16 +1,16 @@
-#ifndef _INCLUDED_ASW_DIRECTOR_H
-#define _INCLUDED_ASW_DIRECTOR_H
+#ifndef _INCLUDED_IV_DIRECTOR_H
+#define _INCLUDED_IV_DIRECTOR_H
 #ifdef _WIN32
 #pragma once
 #endif
 
 #include "igamesystem.h"
 
-// A marine's intensity level (how much tension/excitement they're experiencing)
-class CASW_Intensity
+// A players's intensity level (how much tension/excitement they're experiencing)
+class CIVPlayer_Intensity
 {
 public:
-	CASW_Intensity();
+	CIVPlayer_Intensity();
 
 	enum IntensityType
 	{
@@ -33,7 +33,7 @@ protected:
 	CountdownTimer m_decayInhibitTimer;
 };
 
-inline void CASW_Intensity::InhibitDecay( float duration )
+inline void CIVPlayer_Intensity::InhibitDecay(float duration)
 {
 	if ( m_decayInhibitTimer.GetRemainingTime() < duration )
 	{
@@ -41,19 +41,18 @@ inline void CASW_Intensity::InhibitDecay( float duration )
 	}
 }
 
-inline float CASW_Intensity::GetCurrent( void ) const
+inline float CIVPlayer_Intensity::GetCurrent(void) const
 {
 	return m_flIntensity;
 }
 
-class CASW_Marine;
-class CASW_Spawner;
+class CBasePlayer;
 
-class CASW_Director : public CAutoGameSystemPerFrame
+class CIV_Director : public CAutoGameSystemPerFrame
 {
 public:
-	CASW_Director();
-	~CASW_Director();
+	CIV_Director();
+	~CIV_Director();
 
 	virtual bool Init();
 	virtual void Shutdown();
@@ -63,31 +62,26 @@ public:
 	virtual void FrameUpdatePreEntityThink();
 	virtual void FrameUpdatePostEntityThink();
 
-	void Event_AlienKilled( CBaseEntity *pAlien, const CTakeDamageInfo &info );
-	void MarineTookDamage( CASW_Marine *pMarine, const CTakeDamageInfo &info, bool bFriendlyFire );
-	void OnMarineStartedHack( CASW_Marine *pMarine, CBaseEntity *pComputer );
-	void UpdateMarineInsideEscapeRoom( CASW_Marine *pMarine );
+	void Event_NPCKilled( CBaseEntity *pNPC, const CTakeDamageInfo &info );
+	void PlayerTookDamage(CBasePlayer *pPlayer, const CTakeDamageInfo &info, bool bFriendlyFire);
 
-	void OnMissionStarted();
-
-	// Spawning hordes of aliens
+	// Spawning hordes of NPC's
 	void OnHordeFinishedSpawning();
 
 	// intensity access
 	float GetMaxIntensity();
 
-	bool CanSpawnAlien( CASW_Spawner *pSpawner );			// if director is controlling alien spawns, then mapper set spawners ask permission before spawning	
-
 	void StartFinale();
 	void SetHordesEnabled( bool bHordes ) { m_bHordesEnabled = bHordes; }
 	void SetWanderersEnabled( bool bWanderers ) { m_bWanderersEnabled = bWanderers; }
+
+	void SetSpawnTableType(int table_type_index);
 
 protected:
 	void UpdateHorde();
 	void UpdateIntensity();
 	void UpdateSpawningState();
 	void UpdateWanderers();
-	void UpdateMarineRooms();
 
 private:
 	IntervalTimer m_IntensityUpdateTimer;
@@ -95,13 +89,13 @@ private:
 	bool m_bHordeInProgress;
 
 	bool m_bInitialWait;
-	bool m_bSpawningAliens;
+	bool m_bSpawningNPCs;
 	bool m_bReachedIntensityPeak;
 	CountdownTimer m_SustainTimer;
-	float m_fTimeBetweenAliens;
-	CountdownTimer m_AlienSpawnTimer;
+	float m_fTimeBetweenNPCs;
+	CountdownTimer m_NPCSpawnTimer;
 
-	// marines are about to escape, throw everything at them
+	// players are about to escape, throw everything at them
 	bool m_bFinale;
 	bool m_bWanderersEnabled;
 	bool m_bHordesEnabled;
@@ -109,6 +103,6 @@ private:
 	bool m_bDirectorControlsSpawners;
 };
 
-CASW_Director* ASWDirector();
+CIV_Director* IVDirector();
 
-#endif // _INCLUDED_ASW_DIRECTOR_H
+#endif // _INCLUDED_IV_DIRECTOR_H

@@ -18,6 +18,7 @@
 #include "hintsystem.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "util_shared.h"
+#include "iv_director_system\iv_director.h"
 
 #if defined USES_ECON_ITEMS
 #include "game_item_schema.h"
@@ -276,6 +277,8 @@ public:
 
 	CPlayerState			*PlayerData( void ) { return &pl; }
 	
+	CIVPlayer_Intensity			*GetIntensity() { return &m_pPlayer_Intensivity; }
+
 	int						RequiredEdictIndex( void ) { return ENTINDEX(edict()); } 
 
 	void					LockPlayerInPlace( void );
@@ -974,6 +977,7 @@ public:
 
 private:
 
+	CIVPlayer_Intensity		m_pPlayer_Intensivity;
 	Activity				m_Activity;
 	float					m_flLastObjectiveTime;				// Last curtime player touched/killed something the gamemode considers an objective
 

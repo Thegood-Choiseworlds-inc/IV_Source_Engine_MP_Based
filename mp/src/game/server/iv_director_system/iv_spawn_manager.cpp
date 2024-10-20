@@ -1,136 +1,283 @@
 #include "cbase.h"
-#include "asw_spawn_manager.h"
-#include "asw_marine.h"
-#include "asw_marine_resource.h"
-#include "asw_game_resource.h"
-#include "iasw_spawnable_npc.h"
-#include "asw_player.h"
+#include "iv_spawn_manager.h"
 #include "ai_network.h"
 #include "ai_waypoint.h"
 #include "ai_node.h"
-#include "asw_director.h"
-#include "asw_util_shared.h"
-#include "asw_path_utils.h"
-#include "asw_trace_filter_doors.h"
-#include "asw_objective_escape.h"
+#include "ai_basenpc.h"
+#include "iv_director.h"
 #include "triggers.h"
 #include "datacache/imdlcache.h"
 #include "ai_link.h"
-#include "asw_alien.h"
+#include "ai_pathfinder.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-CASW_Spawn_Manager g_Spawn_Manager;
-CASW_Spawn_Manager* ASWSpawnManager() { return &g_Spawn_Manager; }
-
-#define CANDIDATE_ALIEN_HULL 11		// TODO: have this use the hull of the alien type we're spawning a horde of?
-#define MARINE_NEAR_DISTANCE 740.0f
-
-extern ConVar asw_director_debug;
-ConVar asw_horde_min_distance("asw_horde_min_distance", "800", FCVAR_CHEAT, "Minimum distance away from the marines the horde can spawn" );
-ConVar asw_horde_max_distance("asw_horde_max_distance", "1500", FCVAR_CHEAT, "Maximum distance away from the marines the horde can spawn" );
-ConVar asw_max_alien_batch("asw_max_alien_batch", "10", FCVAR_CHEAT, "Max number of aliens spawned in a horde batch" );
-ConVar asw_batch_interval("asw_batch_interval", "5", FCVAR_CHEAT, "Time between successive batches spawning in the same spot");
-ConVar asw_candidate_interval("asw_candidate_interval", "1.0", FCVAR_CHEAT, "Interval between updating candidate spawning nodes");
-ConVar asw_horde_class( "asw_horde_class", "asw_drone", FCVAR_CHEAT, "Alien class used when spawning hordes" );
-
-CASW_Spawn_Manager::CASW_Spawn_Manager()
+class CIV_Director_Path_Utils_NPC : public CAI_BaseNPC
 {
-	m_nAwakeAliens = 0;
-	m_nAwakeDrones = 0;
-}
+public:
+	DECLARE_CLASS(CIV_Director_Path_Utils_NPC, CAI_BaseNPC);
 
-CASW_Spawn_Manager::~CASW_Spawn_Manager()
-{
-
-}
-
-// ==================================
-// == Master list of alien classes ==
-// ==================================
-
-// NOTE: If you add new entries to this list, update the asw_spawner choices in swarm.fgd.
-//       Do not rearrange the order or you will be changing what spawns in all the maps.
-
-ASW_Alien_Class_Entry g_Aliens[]=
-{
-	ASW_Alien_Class_Entry( "asw_drone", HULL_MEDIUMBIG ),
-	ASW_Alien_Class_Entry( "asw_buzzer", HULL_TINY_CENTERED ),
-	ASW_Alien_Class_Entry( "asw_parasite", HULL_TINY ),
-	ASW_Alien_Class_Entry( "asw_shieldbug", HULL_LARGE ),
-	ASW_Alien_Class_Entry( "asw_grub", HULL_TINY ),
-	ASW_Alien_Class_Entry( "asw_drone_jumper", HULL_MEDIUMBIG ),
-	ASW_Alien_Class_Entry( "asw_harvester", HULL_HUMAN ),
-	ASW_Alien_Class_Entry( "asw_parasite_defanged", HULL_TINY ),
-	ASW_Alien_Class_Entry( "asw_queen", HULL_TINY ),
-	ASW_Alien_Class_Entry( "asw_boomer", HULL_HUMAN ),
-	ASW_Alien_Class_Entry( "asw_ranger", HULL_HUMAN ),
-	ASW_Alien_Class_Entry( "asw_mortarbug", HULL_LARGE ),
-	ASW_Alien_Class_Entry( "asw_shaman", HULL_LARGE ),
+	void	Precache(void);
+	void	Spawn(void);
+	float	MaxYawSpeed(void) { return 90.0f; }
+	Class_T Classify(void) { return CLASS_NONE; }
 };
 
-// Array indices of drones.  Used by carnage mode.
-const int g_nDroneClassEntry = 0;
-const int g_nDroneJumperClassEntry = 5;
+LINK_ENTITY_TO_CLASS(iv_pathfinder_npc, CIV_Director_Path_Utils_NPC);
 
-int CASW_Spawn_Manager::GetNumAlienClasses()
+CHandle<CIV_Director_Path_Utils> g_hIVDirectorPathfinder;
+
+void CIV_Director_Path_Utils_NPC::Spawn()
 {
-	return NELEMS( g_Aliens );
+	CapabilitiesAdd(bits_CAP_MOVE_GROUND | bits_CAP_OPEN_DOORS);
+
+	SetModel("models/headcrabclassic.mdl");
+	NPCInit();
+
+	UTIL_SetSize(this, NAI_Hull::Mins(HULL_TINY), NAI_Hull::Maxs(HULL_TINY));
+	SetSolid(SOLID_BBOX);
+	AddSolidFlags(FSOLID_NOT_SOLID);
+	AddSolidFlags(FSOLID_NOT_STANDABLE);
+	AddEffects(EF_NODRAW);
+	SetMoveType(MOVETYPE_STEP);
+	m_takedamage = DAMAGE_NO;
 }
 
-ASW_Alien_Class_Entry* CASW_Spawn_Manager::GetAlienClass( int i )
+void CIV_Director_Path_Utils_NPC::Precache()
 {
-	Assert( i >= 0 && i < NELEMS( g_Aliens ) );
-	return &g_Aliens[ i ];
+	PrecacheModel("models/headcrabclassic.mdl");
 }
 
-void CASW_Spawn_Manager::LevelInitPreEntity()
+
+CIV_Director_Path_Utils g_IVDirectorPathfinder;
+CIV_Director_Path_Utils* IVDirectorPathUtils() { return &g_IVDirectorPathfinder; }
+
+CIV_Director_Path_Utils_NPC* CIV_Director_Path_Utils::GetPathfinderNPC()
 {
-	m_nAwakeAliens = 0;
-	m_nAwakeDrones = 0;
-	// init alien classes
-	for ( int i = 0; i < GetNumAlienClasses(); i++ )
+	if (m_hPathfinderNPC.Get() == NULL)
 	{
-		GetAlienClass( i )->m_iszAlienClass = AllocPooledString( GetAlienClass( i )->m_pszAlienClass );
+		m_hPathfinderNPC = dynamic_cast<CIV_Director_Path_Utils_NPC*>(CBaseEntity::Create("iv_pathfinder_npc", vec3_origin, vec3_angle, NULL));
+	}
+
+	return m_hPathfinderNPC.Get();
+}
+
+AI_Waypoint_t *CIV_Director_Path_Utils::BuildRoute(const Vector &vStart, const Vector &vEnd,
+	CBaseEntity *pTarget, float goalTolerance, Navigation_t curNavType, int nBuildFlags)
+{
+	if (!GetPathfinderNPC())
+		return NULL;
+
+	m_pLastRoute = GetPathfinderNPC()->GetPathfinder()->BuildRoute(vStart, vEnd, pTarget, goalTolerance, curNavType, nBuildFlags);
+
+	return m_pLastRoute;
+}
+
+Vector g_vecPathStart = vec3_origin;
+
+void CIV_Director_Path_Utils::DeleteRoute(AI_Waypoint_t *pWaypointList)
+{
+	while (pWaypointList)
+	{
+		AI_Waypoint_t *pPrevWaypoint = pWaypointList;
+		pWaypointList = pWaypointList->GetNext();
+		delete pPrevWaypoint;
 	}
 }
 
-void CASW_Spawn_Manager::LevelInitPostEntity()
+void iv_director_path_start_f()
+{
+	CBasePlayer *pPlayer = UTIL_GetCommandClient();
+	if (!pPlayer || !IVDirectorPathUtils())
+		return;
+
+	g_vecPathStart = pPlayer->GetAbsOrigin();
+}
+ConCommand iv_director_path_start("iv_director_path_start", iv_director_path_start_f, "mark start of pathfinding test", FCVAR_CHEAT);
+
+void CIV_Director_Path_Utils::DebugDrawRoute(const Vector &vecStartPos, AI_Waypoint_t *pWaypoint)
+{
+	Vector vecLastPos = vecStartPos;
+	Msg(" Pathstart = %f %f %f\n", VectorExpand(g_vecPathStart));
+	while (pWaypoint)
+	{
+		Msg("  waypoint = %f %f %f\n", VectorExpand(pWaypoint->GetPos()));
+		DebugDrawLine(vecLastPos + Vector(0, 0, 10), pWaypoint->GetPos() + Vector(0, 0, 10), 255, 0, 255, true, 30.0f);
+		vecLastPos = pWaypoint->GetPos();
+		pWaypoint = pWaypoint->GetNext();
+	}
+}
+
+void iv_director_path_end_f()
+{
+	CBasePlayer *pPlayer = UTIL_GetCommandClient();
+	if (!pPlayer || !IVDirectorPathUtils())
+		return;
+
+	Vector vecPathEnd = pPlayer->GetAbsOrigin();
+	debugoverlay->AddBoxOverlay(g_vecPathStart, Vector(-10, -10, -10), Vector(10, 10, 10), vec3_angle, 255, 0, 0, 255, 30.0f);
+	debugoverlay->AddBoxOverlay(vecPathEnd, Vector(-10, -10, -10), Vector(10, 10, 10), vec3_angle, 255, 255, 0, 255, 30.0f);
+
+	AI_Waypoint_t *pWaypoint = IVDirectorPathUtils()->BuildRoute(g_vecPathStart, vecPathEnd, NULL, 100, NAV_NONE, bits_BUILD_GET_CLOSE);
+	if (!pWaypoint)
+	{
+		Msg("Failed to find route\n");
+		return;
+	}
+
+	IVDirectorPathUtils()->DebugDrawRoute(g_vecPathStart, pWaypoint);
+}
+ConCommand iv_director_path_end("iv_director_path_end", iv_director_path_end_f, "mark end of pathfinding test", FCVAR_CHEAT);
+
+
+CIV_Director_Spawn_Manager g_Spawn_Manager;
+CIV_Director_Spawn_Manager* IVDirectorSpawnManager() { return &g_Spawn_Manager; }
+
+extern ConVar iv_director_debug;
+ConVar iv_horde_min_distance("iv_horde_min_distance", "800", FCVAR_CHEAT, "Minimum distance away from the marines the horde can spawn");
+ConVar iv_horde_max_distance("iv_horde_max_distance", "1500", FCVAR_CHEAT, "Maximum distance away from the marines the horde can spawn");
+ConVar iv_max_alien_batch("iv_max_alien_batch", "10", FCVAR_CHEAT, "Max number of aliens spawned in a horde batch");
+ConVar iv_batch_interval("iv_batch_interval", "5", FCVAR_CHEAT, "Time between successive batches spawning in the same spot");
+ConVar iv_candidate_interval("iv_candidate_interval", "1.0", FCVAR_CHEAT, "Interval between updating candidate spawning nodes");
+ConVar iv_director_player_near_distance("iv_director_player_near_distance", "1500", FCVAR_CHEAT, "Near Distance to Allow Horde Spawning");
+
+
+CIV_Director_Spawn_Manager::CIV_Director_Spawn_Manager()
+{
+	m_nAwakeCommonNPCs = 0;
+	m_nAwakeSpecialNPCs = 0;
+	m_pDefinedHordeClass = &g_NPCs_Classes_Zombies[0];
+}
+
+CIV_Director_Spawn_Manager::~CIV_Director_Spawn_Manager()
+{
+
+}
+
+// ==================================
+// == Master list of NPC classes ==
+// ==================================
+
+// DEPRICATED NOTE!!!
+// NOTE: If you add new entries to this list, update the asw_spawner choices in swarm.fgd.
+//       Do not rearrange the order or you will be changing what spawns in all the maps.
+
+IV_Director_NPC_Class_Entry g_NPCs_Classes_Zombies[] =
+{
+	IV_Director_NPC_Class_Entry("npc_headcrab", HULL_TINY),
+	IV_Director_NPC_Class_Entry("npc_headcrab_fast", HULL_TINY),
+	IV_Director_NPC_Class_Entry("npc_zombie", HULL_HUMAN),
+	IV_Director_NPC_Class_Entry("npc_fastzombie", HULL_HUMAN)
+};
+
+IV_Director_NPC_Class_Entry g_NPCs_Classes_Zombies_Bosses[] =
+{
+	IV_Director_NPC_Class_Entry("npc_poisonzombie", HULL_WIDE_HUMAN)
+};
+
+IV_Spawn_Classes_Types g_NPCs_Selected_Type = IV_Spawn_Classes_Types::Zombie;
+
+void CIV_Director_Spawn_Manager::IV_Set_Spawn_Table(int sended_table_index)
+{
+	g_NPCs_Selected_Type = (IV_Spawn_Classes_Types)sended_table_index;
+}
+
+int CIV_Director_Spawn_Manager::GetNumNPCClasses()
+{
+	if (g_NPCs_Selected_Type == IV_Spawn_Classes_Types::Zombie)
+		return NELEMS(g_NPCs_Classes_Zombies);
+	else
+		return 0;
+}
+
+IV_Director_NPC_Class_Entry* CIV_Director_Spawn_Manager::GetNPCClass(int i)
+{
+	Assert(i >= 0 && i < GetNumNPCClasses());
+
+	if (g_NPCs_Selected_Type == IV_Spawn_Classes_Types::Zombie)
+		return &g_NPCs_Classes_Zombies[i];
+	else
+		return NULL;
+}
+
+int CIV_Director_Spawn_Manager::GetNumNPCClassesSpecial()
+{
+	if (g_NPCs_Selected_Type == IV_Spawn_Classes_Types::Zombie)
+		return NELEMS(g_NPCs_Classes_Zombies_Bosses);
+	else
+		return 0;
+}
+
+IV_Director_NPC_Class_Entry* CIV_Director_Spawn_Manager::GetNPCClassSpecial(int i)
+{
+	Assert(i >= 0 && i < GetNumNPCClassesSpecial());
+
+	if (g_NPCs_Selected_Type == IV_Spawn_Classes_Types::Zombie)
+		return &g_NPCs_Classes_Zombies_Bosses[i];
+	else
+		return NULL;
+}
+
+bool CIV_Director_Spawn_Manager::IS_NPC_Class_Special(const char *npc_class_name)
+{
+	for (int i = 0; i < GetNumNPCClassesSpecial(); i++)
+	{
+		IV_Director_NPC_Class_Entry *temp_npc_class = GetNPCClassSpecial(i);
+
+		if (!Q_stricmp(npc_class_name, temp_npc_class->m_pszNPCClass))
+			return true;
+	}
+
+	return false;
+}
+
+void CIV_Director_Spawn_Manager::LevelInitPreEntity()
+{
+	m_nAwakeCommonNPCs = 0;
+	m_nAwakeSpecialNPCs = 0;
+	// init NPC classes
+	for (int i = 0; i < GetNumNPCClasses(); i++)
+	{
+		GetNPCClass(i)->m_iszNPCClass = AllocPooledString(GetNPCClass(i)->m_pszNPCClass);
+	}
+}
+
+void CIV_Director_Spawn_Manager::LevelInitPostEntity()
 {
 	m_vecHordePosition = vec3_origin;
 	m_angHordeAngle = vec3_angle;
 	m_batchInterval.Invalidate();
 	m_CandidateUpdateTimer.Invalidate();
 	m_iHordeToSpawn = 0;
-	m_iAliensToSpawn = 0;
+	m_iNPCsToSpawn = 0;
 
 	m_northCandidateNodes.Purge();
 	m_southCandidateNodes.Purge();
 
-	FindEscapeTriggers();
+	//FindEscapeTriggers();
 }
 
-void CASW_Spawn_Manager::OnAlienWokeUp( CASW_Alien *pAlien )
+void CIV_Director_Spawn_Manager::OnNPCWokeUp(CAI_BaseNPC *pNPC)
 {
-	m_nAwakeAliens++;
-	if ( pAlien && pAlien->Classify() == CLASS_ASW_DRONE )
+	m_nAwakeCommonNPCs++;
+	if (pNPC && IS_NPC_Class_Special(pNPC->GetClassname()))
 	{
-		m_nAwakeDrones++;
+		m_nAwakeSpecialNPCs++;
 	}
 }
 
-void CASW_Spawn_Manager::OnAlienSleeping( CASW_Alien *pAlien )
+void CIV_Director_Spawn_Manager::OnNPCSleeping(CAI_BaseNPC *pNPC)
 {
-	m_nAwakeAliens--;
-	if ( pAlien && pAlien->Classify() == CLASS_ASW_DRONE )
+	m_nAwakeCommonNPCs--;
+	if (pNPC && IS_NPC_Class_Special(pNPC->GetClassname()))
 	{
-		m_nAwakeDrones--;
+		m_nAwakeSpecialNPCs--;
 	}
 }
 
 // finds all trigger_multiples linked to asw_objective_escape entities
-void CASW_Spawn_Manager::FindEscapeTriggers()
+/*void CIV_Director_Spawn_Manager::FindEscapeTriggers()
 {
 	m_EscapeTriggers.Purge();
 
@@ -189,73 +336,79 @@ void CASW_Spawn_Manager::FindEscapeTriggers()
 			
 		}
 	}
-	Msg("Spawn manager found %d escape triggers\n", m_EscapeTriggers.Count() );
-}
+	Msg("IV Director Spawn manager found %d escape triggers\n", m_EscapeTriggers.Count() );
+}*/
 
 
-void CASW_Spawn_Manager::Update()
+void CIV_Director_Spawn_Manager::Update()
 {
 	if ( m_iHordeToSpawn > 0 )
-	{		
+	{
 		if ( m_vecHordePosition != vec3_origin && ( !m_batchInterval.HasStarted() || m_batchInterval.IsElapsed() ) )
 		{
-			int iToSpawn = MIN( m_iHordeToSpawn, asw_max_alien_batch.GetInt() );
-			int iSpawned = SpawnAlienBatch( asw_horde_class.GetString(), iToSpawn, m_vecHordePosition, m_angHordeAngle, 0 );
+			int random_spawn_index = RandomInt(0, GetNumNPCClasses());
+			m_pDefinedHordeClass = GetNPCClass(random_spawn_index);
+
+			int iToSpawn = MIN(m_iHordeToSpawn, iv_max_alien_batch.GetInt());
+			int iSpawned = SpawnNPCBatch(m_pDefinedHordeClass, iToSpawn, m_vecHordePosition, m_angHordeAngle, 0);
 			m_iHordeToSpawn -= iSpawned;
 			if ( m_iHordeToSpawn <= 0 )
 			{
-				ASWDirector()->OnHordeFinishedSpawning();
+				IVDirector()->OnHordeFinishedSpawning();
 				m_vecHordePosition = vec3_origin;
 			}
-			else if ( iSpawned == 0 )			// if we failed to spawn any aliens, then try to find a new horde location
+			else if ( iSpawned == 0 )			// if we failed to spawn any NPC's, then try to find a new horde location
 			{
-				if ( asw_director_debug.GetBool() )
+				if ( iv_director_debug.GetBool() )
 				{
-					Msg( "Horde failed to spawn any aliens, trying new horde position.\n" );
+					Msg( "Horde failed to spawn any NPC's, trying new horde position.\n" );
 				}
-				if ( !FindHordePosition() )		// if we failed to find a new location, just abort this horde
+				if (!FindHordePosition(m_pDefinedHordeClass->m_nHullType))		// if we failed to find a new location, just abort this horde
 				{
 					m_iHordeToSpawn = 0;
-					ASWDirector()->OnHordeFinishedSpawning();
+					IVDirector()->OnHordeFinishedSpawning();
 					m_vecHordePosition = vec3_origin;
 				}
 			}
-			m_batchInterval.Start( asw_batch_interval.GetFloat() );
+			m_batchInterval.Start( iv_batch_interval.GetFloat() );
 		}
 		else if ( m_vecHordePosition == vec3_origin )
 		{
 			Msg( "Warning: Had horde to spawn but no position, clearing.\n" );
 			m_iHordeToSpawn = 0;
-			ASWDirector()->OnHordeFinishedSpawning();
+			IVDirector()->OnHordeFinishedSpawning();
 		}
 	}
 
-	if ( asw_director_debug.GetBool() )
+	if ( iv_director_debug.GetBool() )
 	{
 		engine->Con_NPrintf( 14, "SM: Batch interval: %f pos = %f %f %f\n", m_batchInterval.HasStarted() ? m_batchInterval.GetRemainingTime() : -1, VectorExpand( m_vecHordePosition ) );		
 	}
 
-	if ( m_iAliensToSpawn > 0 )
+	if ( m_iNPCsToSpawn > 0 )
 	{
-		if ( SpawnAlientAtRandomNode() )
-			m_iAliensToSpawn--;
+		if ( SpawnNPCAtRandomNode() )
+			m_iNPCsToSpawn--;
 	}
 }
 
-void CASW_Spawn_Manager::AddAlien()
+void CIV_Director_Spawn_Manager::AddNPC()
 {
 	// don't stock up more than 10 wanderers at once
-	if ( m_iAliensToSpawn > 10 )
+	if ( m_iNPCsToSpawn > 10 )
 		return;
 
-	m_iAliensToSpawn++;
+	m_iNPCsToSpawn++;
 }
 
-bool CASW_Spawn_Manager::SpawnAlientAtRandomNode()
+bool CIV_Director_Spawn_Manager::SpawnNPCAtRandomNode()
 {
-	UpdateCandidateNodes();
+	int random_spawn_index = RandomInt(0, GetNumNPCClasses());
+	IV_Director_NPC_Class_Entry* temp_selected_npc_class = GetNPCClass(random_spawn_index);
 
-	// decide if the alien is going to come from behind or in front
+	UpdateCandidateNodes(temp_selected_npc_class->m_nHullType);
+
+	// decide if the NPC is going to come from behind or in front
 	bool bNorth = RandomFloat() < 0.7f;
 	if ( m_northCandidateNodes.Count() <= 0 )
 	{
@@ -271,92 +424,86 @@ bool CASW_Spawn_Manager::SpawnAlientAtRandomNode()
 	if ( candidateNodes.Count() <= 0 )
 		return false;
 
-	const char *szAlienClass = "asw_drone";
 	Vector vecMins, vecMaxs;
-	GetAlienBounds( szAlienClass, vecMins, vecMaxs );
+	GetNPCBounds(temp_selected_npc_class, vecMins, vecMaxs);
 
 	int iMaxTries = 1;
-	for ( int i=0 ; i<iMaxTries ; i++ )
+	for (int i=0; i<iMaxTries; i++)
 	{
 		int iChosen = RandomInt( 0, candidateNodes.Count() - 1);
-		CAI_Node *pNode = GetNetwork()->GetNode( candidateNodes[iChosen] );
-		if ( !pNode )
+		CAI_Node *pNode = GetNetwork()->GetNode(candidateNodes[iChosen]);
+		if (!pNode)
 			continue;
 
-		float flDistance = 0;
-		CASW_Marine *pMarine = dynamic_cast<CASW_Marine*>(UTIL_ASW_NearestMarine( pNode->GetPosition( CANDIDATE_ALIEN_HULL ), flDistance ));
-		if ( !pMarine )
+		float fldistance = 0;
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(pNode->GetPosition(temp_selected_npc_class->m_nHullType), &fldistance);
+		if (!pPlayer)
 			return false;
 
-		// check if there's a route from this node to the marine(s)
-		AI_Waypoint_t *pRoute = ASWPathUtils()->BuildRoute( pNode->GetPosition( CANDIDATE_ALIEN_HULL ), pMarine->GetAbsOrigin(), NULL, 100 );
-		if ( !pRoute )
+		// check if there's a route from this node to the Player(s)
+		AI_Waypoint_t *pRoute = IVDirectorPathUtils()->BuildRoute(pNode->GetPosition(temp_selected_npc_class->m_nHullType), pPlayer->GetAbsOrigin(), NULL, 100);
+		if (!pRoute)
 		{
-			if ( asw_director_debug.GetBool() )
+			if (iv_director_debug.GetBool())
 			{
 				NDebugOverlay::Cross3D( pNode->GetOrigin(), 10.0f, 255, 128, 0, true, 20.0f );
 			}
 			continue;
 		}
-
-		if ( bNorth && UTIL_ASW_DoorBlockingRoute( pRoute, true ) )
-		{
-			DeleteRoute( pRoute );
-			continue;
-		}
 		
-		Vector vecSpawnPos = pNode->GetPosition( CANDIDATE_ALIEN_HULL ) + Vector( 0, 0, 32 );
-		if ( ValidSpawnPoint( vecSpawnPos, vecMins, vecMaxs, true, MARINE_NEAR_DISTANCE ) )
+		Vector vecSpawnPos = pNode->GetPosition(temp_selected_npc_class->m_nHullType) + Vector(0, 0, 32);
+		if (ValidSpawnPoint(vecSpawnPos, vecMins, vecMaxs, true, iv_director_player_near_distance.GetFloat()))
 		{
-			if ( SpawnAlienAt( szAlienClass, vecSpawnPos, vec3_angle ) )
+			if (SpawnNPCAt(temp_selected_npc_class, vecSpawnPos, vec3_angle))
 			{
-				if ( asw_director_debug.GetBool() )
+				if (iv_director_debug.GetBool())
 				{
-					NDebugOverlay::Cross3D( vecSpawnPos, 25.0f, 255, 255, 255, true, 20.0f );
-					float flDist;
-					CASW_Marine *pMarine = UTIL_ASW_NearestMarine( vecSpawnPos, flDist );
-					if ( pMarine )
+					NDebugOverlay::Cross3D(vecSpawnPos, 25.0f, 255, 255, 255, true, 20.0f);
+					float fldistance = 0;
+					CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(vecSpawnPos, &fldistance);
+					if (pPlayer)
 					{
-						NDebugOverlay::Line( pMarine->GetAbsOrigin(), vecSpawnPos, 64, 64, 64, true, 60.0f );
+						NDebugOverlay::Line(pPlayer->GetAbsOrigin(), vecSpawnPos, 64, 64, 64, true, 60.0f);
 					}
 				}
-				DeleteRoute( pRoute );
+				DeleteRoute(pRoute);
 				return true;
 			}
 		}
 		else
 		{
-			if ( asw_director_debug.GetBool() )
+			if (iv_director_debug.GetBool())
 			{
-				NDebugOverlay::Cross3D( vecSpawnPos, 25.0f, 255, 0, 0, true, 20.0f );
+				NDebugOverlay::Cross3D(vecSpawnPos, 25.0f, 255, 0, 0, true, 20.0f);
 			}
 		}
-		DeleteRoute( pRoute );
+		DeleteRoute(pRoute);
 	}
+
 	return false;
 }
 
-bool CASW_Spawn_Manager::AddHorde( int iHordeSize )
+bool CIV_Director_Spawn_Manager::AddHorde(int iHordeSize)
 {
 	m_iHordeToSpawn = iHordeSize;
 
-	if ( m_vecHordePosition == vec3_origin )
+	if (m_vecHordePosition == vec3_origin)
 	{
-		if ( !FindHordePosition() )
+		if (!FindHordePosition(m_pDefinedHordeClass->m_nHullType))
 		{
 			Msg("Error: Failed to find horde position\n");
 			return false;
 		}
 		else
 		{
-			if ( asw_director_debug.GetBool() )
+			if (iv_director_debug.GetBool())
 			{
-				NDebugOverlay::Cross3D( m_vecHordePosition, 50.0f, 255, 128, 0, true, 60.0f );
-				float flDist;
-				CASW_Marine *pMarine = UTIL_ASW_NearestMarine( m_vecHordePosition, flDist );
-				if ( pMarine )
+				NDebugOverlay::Cross3D(m_vecHordePosition, 50.0f, 255, 128, 0, true, 60.0f);
+				float fldistance = 0;
+				CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(m_vecHordePosition, &fldistance);
+				if (pPlayer)
 				{
-					NDebugOverlay::Line( pMarine->GetAbsOrigin(), m_vecHordePosition, 255, 128, 0, true, 60.0f );
+					NDebugOverlay::Line(pPlayer->GetAbsOrigin(), m_vecHordePosition, 255, 128, 0, true, 60.0f);
 				}
 			}
 		}
@@ -364,315 +511,285 @@ bool CASW_Spawn_Manager::AddHorde( int iHordeSize )
 	return true;
 }
 
-CAI_Network* CASW_Spawn_Manager::GetNetwork()
+CAI_Network* CIV_Director_Spawn_Manager::GetNetwork()
 {
 	return g_pBigAINet;
 }
 
-void CASW_Spawn_Manager::UpdateCandidateNodes()
+void CIV_Director_Spawn_Manager::UpdateCandidateNodes(int sended_hull)
 {
 	// don't update too frequently
-	if ( m_CandidateUpdateTimer.HasStarted() && !m_CandidateUpdateTimer.IsElapsed() )
+	if (m_CandidateUpdateTimer.HasStarted() && !m_CandidateUpdateTimer.IsElapsed())
 		return;
 
-	m_CandidateUpdateTimer.Start( asw_candidate_interval.GetFloat() );
+	m_CandidateUpdateTimer.Start(iv_candidate_interval.GetFloat());
 
-	if ( !GetNetwork() || !GetNetwork()->NumNodes() )
+	if (!GetNetwork() || !GetNetwork()->NumNodes())
 	{
 		m_vecHordePosition = vec3_origin;
 		Msg("Error: Can't spawn hordes as this map has no node network\n");
 		return;
 	}
 
-	CASW_Game_Resource *pGameResource = ASWGameResource();
-	if ( !pGameResource )
-		return;
+	int total_players_count = 0;
+	CBasePlayer* temp_players_list = UTIL_GetPlayersList(&total_players_count);
 
-	Vector vecSouthMarine = vec3_origin;
-	Vector vecNorthMarine = vec3_origin;
-	for ( int i=0;i<pGameResource->GetMaxMarineResources();i++ )
+	if (!temp_players_list || total_players_count <= 0)
 	{
-		CASW_Marine_Resource *pMR = pGameResource->GetMarineResource(i);
-		if ( !pMR )
+		Msg("Error: Connected Players List is Invalid or Invalid Players Count!!!\n");
+		return;
+	}
+
+	Vector vecSouthPlayer = vec3_origin;
+	Vector vecNorthPlayer = vec3_origin;
+	for (int i = 0; i < total_players_count; i++)
+	{
+		CBasePlayer *pPlayer = &temp_players_list[i];
+
+		if (!pPlayer || pPlayer->GetHealth() <= 0)
 			continue;
 
-		CASW_Marine *pMarine = pMR->GetMarineEntity();
-		if ( !pMarine || pMarine->GetHealth() <= 0 )
-			continue;
-
-		if ( vecSouthMarine == vec3_origin || vecSouthMarine.y > pMarine->GetAbsOrigin().y )
+		if (vecSouthPlayer == vec3_origin || vecSouthPlayer.y > pPlayer->GetAbsOrigin().y)
 		{
-			vecSouthMarine = pMarine->GetAbsOrigin();
+			vecSouthPlayer = pPlayer->GetAbsOrigin();
 		}
-		if ( vecNorthMarine == vec3_origin || vecNorthMarine.y < pMarine->GetAbsOrigin().y )
+		if (vecNorthPlayer == vec3_origin || vecNorthPlayer.y < pPlayer->GetAbsOrigin().y)
 		{
-			vecNorthMarine = pMarine->GetAbsOrigin();
+			vecNorthPlayer = pPlayer->GetAbsOrigin();
 		}
 	}
-	if ( vecSouthMarine == vec3_origin || vecNorthMarine == vec3_origin )		// no live marines
+
+	if (vecSouthPlayer == vec3_origin || vecNorthPlayer == vec3_origin)		// no live Players
 		return;
 	
 	int iNumNodes = GetNetwork()->NumNodes();
 	m_northCandidateNodes.Purge();
 	m_southCandidateNodes.Purge();
-	for ( int i=0 ; i<iNumNodes; i++ )
+
+	for (int i = 0; i < iNumNodes; i++)
 	{
-		CAI_Node *pNode = GetNetwork()->GetNode( i );
-		if ( !pNode || pNode->GetType() != NODE_GROUND )
+		CAI_Node *pNode = GetNetwork()->GetNode(i);
+		if (!pNode || pNode->GetType() != NODE_GROUND)
 			continue;
 
-		Vector vecPos = pNode->GetPosition( CANDIDATE_ALIEN_HULL );
+		Vector vecPos = pNode->GetPosition(sended_hull);
 		
-		// find the nearest marine to this node
+		// find the nearest Player to this node
 		float flDistance = 0;
-		CASW_Marine *pMarine = dynamic_cast<CASW_Marine*>(UTIL_ASW_NearestMarine( vecPos, flDistance ));
-		if ( !pMarine )
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(vecPos, &flDistance);
+		if (!pPlayer)
 			return;
 
-		if ( flDistance > asw_horde_max_distance.GetFloat() || flDistance < asw_horde_min_distance.GetFloat() )
+		if (flDistance > iv_horde_max_distance.GetFloat() || flDistance < iv_horde_min_distance.GetFloat())
 			continue;
 
 		// check node isn't in an exit trigger
 		bool bInsideEscapeArea = false;
-		for ( int d=0; d<m_EscapeTriggers.Count(); d++ )
+		for (int d = 0; d < m_EscapeTriggers.Count(); d++)
 		{
-			if ( m_EscapeTriggers[d]->CollisionProp()->IsPointInBounds( vecPos ) )
+			if (m_EscapeTriggers[d]->CollisionProp()->IsPointInBounds(vecPos))
 			{
 				bInsideEscapeArea = true;
 				break;
 			}
 		}
-		if ( bInsideEscapeArea )
+
+		if (bInsideEscapeArea)
 			continue;
 
-		if ( vecPos.y >= vecSouthMarine.y )
+		if (vecPos.y >= vecSouthPlayer.y)
 		{
-			if ( asw_director_debug.GetInt() == 3 )
+			if (iv_director_debug.GetInt() == 3)
 			{
-				NDebugOverlay::Box( vecPos, -Vector( 5, 5, 5 ), Vector( 5, 5, 5 ), 32, 32, 128, 10, 60.0f );
+				NDebugOverlay::Box(vecPos, -Vector( 5, 5, 5 ), Vector( 5, 5, 5 ), 32, 32, 128, 10, 60.0f);
 			}
-			m_northCandidateNodes.AddToTail( i );
+			m_northCandidateNodes.AddToTail(i);
 		}
-		if ( vecPos.y <= vecNorthMarine.y )
+		if (vecPos.y <= vecNorthPlayer.y)
 		{
-			m_southCandidateNodes.AddToTail( i );
-			if ( asw_director_debug.GetInt() == 3 )
+			m_southCandidateNodes.AddToTail(i);
+			if (iv_director_debug.GetInt() == 3)
 			{
-				NDebugOverlay::Box( vecPos, -Vector( 5, 5, 5 ), Vector( 5, 5, 5 ), 128, 32, 32, 10, 60.0f );
+				NDebugOverlay::Box(vecPos, -Vector( 5, 5, 5 ), Vector( 5, 5, 5 ), 128, 32, 32, 10, 60.0f);
 			}
 		}
 	}
 }
 
-bool CASW_Spawn_Manager::FindHordePosition()
+bool CIV_Director_Spawn_Manager::FindHordePosition(int sended_hull)
 {
 	// need to find a suitable place from which to spawn a horde
 	// this place should:
-	//   - be far enough away from the marines so the whole horde can spawn before the marines get there
-	//   - should have a clear path to the marines
+	//   - be far enough away from the marines so the whole horde can spawn before the Players get there
+	//   - should have a clear path to the Players
 	
-	UpdateCandidateNodes();
+	UpdateCandidateNodes(sended_hull);
 
 	// decide if the horde is going to come from behind or in front
 	bool bNorth = RandomFloat() < 0.7f;
-	if ( m_northCandidateNodes.Count() <= 0 )
+	if (m_northCandidateNodes.Count() <= 0)
 	{
 		bNorth = false;
 	}
-	else if ( m_southCandidateNodes.Count() <= 0 )
+	else if (m_southCandidateNodes.Count() <= 0)
 	{
 		bNorth = true;
 	}
 
 	CUtlVector<int> &candidateNodes = bNorth ? m_northCandidateNodes : m_southCandidateNodes;
 
-	if ( candidateNodes.Count() <= 0 )
+	if (candidateNodes.Count() <= 0)
 	{
-		if ( asw_director_debug.GetBool() )
+		if (iv_director_debug.GetBool())
 		{
-			Msg( "  Failed to find horde pos as there are no candidate nodes\n" );
+			Msg("Failed to find horde pos as there are no candidate nodes\n");
 		}
 		return false;
 	}
 
 	int iMaxTries = 3;
-	for ( int i=0 ; i<iMaxTries ; i++ )
+	for (int i = 0; i < iMaxTries; i++)
 	{
-		int iChosen = RandomInt( 0, candidateNodes.Count() - 1);
-		CAI_Node *pNode = GetNetwork()->GetNode( candidateNodes[iChosen] );
-		if ( !pNode )
+		int iChosen = RandomInt(0, candidateNodes.Count() - 1);
+		CAI_Node *pNode = GetNetwork()->GetNode(candidateNodes[iChosen]);
+		if (!pNode)
 			continue;
 
 		float flDistance = 0;
-		CASW_Marine *pMarine = dynamic_cast<CASW_Marine*>(UTIL_ASW_NearestMarine( pNode->GetPosition( CANDIDATE_ALIEN_HULL ), flDistance ));
-		if ( !pMarine )
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(pNode->GetPosition(sended_hull), &flDistance);
+		if (!pPlayer)
 		{
-			if ( asw_director_debug.GetBool() )
+			if (iv_director_debug.GetBool())
 			{
-				Msg( "  Failed to find horde pos as there is no nearest marine\n" );
+				Msg("Failed to find horde pos as there is no nearest Player\n");
 			}
 			return false;
 		}
 
-		// check if there's a route from this node to the marine(s)
-		AI_Waypoint_t *pRoute = ASWPathUtils()->BuildRoute( pNode->GetPosition( CANDIDATE_ALIEN_HULL ), pMarine->GetAbsOrigin(), NULL, 100 );
-		if ( !pRoute )
+		// check if there's a route from this node to the Player(s)
+		AI_Waypoint_t *pRoute = IVDirectorPathUtils()->BuildRoute(pNode->GetPosition(sended_hull), pPlayer->GetAbsOrigin(), NULL, 100);
+		if (!pRoute)
 		{
-			if ( asw_director_debug.GetInt() >= 2 )
+			if (iv_director_debug.GetInt() >= 2)
 			{
-				Msg( "  Discarding horde node %d as there's no route.\n", iChosen );
+				Msg("Discarding horde node %d as there's no route.\n", iChosen);
 			}
-			continue;
-		}
-
-		if ( bNorth && UTIL_ASW_DoorBlockingRoute( pRoute, true ) )
-		{
-			if ( asw_director_debug.GetInt() >= 2 )
-			{
-				Msg( "  Discarding horde node %d as there's a door in the way.\n", iChosen );
-			}
-			DeleteRoute( pRoute );
 			continue;
 		}
 		
-		m_vecHordePosition = pNode->GetPosition( CANDIDATE_ALIEN_HULL ) + Vector( 0, 0, 32 );
+		m_vecHordePosition = pNode->GetPosition(sended_hull) + Vector(0, 0, 32);
 
-		// spawn facing the nearest marine
-		Vector vecDir = pMarine->GetAbsOrigin() - m_vecHordePosition;
+		// spawn facing the nearest Player
+		Vector vecDir = pPlayer->GetAbsOrigin() - m_vecHordePosition;
 		vecDir.z = 0;
 		vecDir.NormalizeInPlace();
 		VectorAngles( vecDir, m_angHordeAngle );
 
-		if ( asw_director_debug.GetInt() >= 2 )
+		if (iv_director_debug.GetInt() >= 2)
 		{
-			Msg( "  Accepting horde node %d.\n", iChosen );
+			Msg("Accepting horde node %d.\n", iChosen);
 		}
-		DeleteRoute( pRoute );
+		DeleteRoute(pRoute);
 		return true;
 	}
 
-	if ( asw_director_debug.GetBool() )
+	if (iv_director_debug.GetBool())
 	{
-		Msg( "  Failed to find horde pos as we tried 3 times to build routes to possible locations, but failed\n" );
+		Msg("Failed to find horde pos as we tried 3 times to build routes to possible locations, but failed\n");
 	}
 
 	return false;
 }
 
-bool CASW_Spawn_Manager::LineBlockedByGeometry( const Vector &vecSrc, const Vector &vecEnd )
+bool CIV_Director_Spawn_Manager::LineBlockedByGeometry(const Vector &vecSrc, const Vector &vecEnd)
 {
 	trace_t tr;
-	UTIL_TraceLine( vecSrc,
+	UTIL_TraceLine(vecSrc,
 		vecEnd, MASK_SOLID_BRUSHONLY, 
-		NULL, COLLISION_GROUP_NONE, &tr );
+		NULL, COLLISION_GROUP_NONE, &tr);
 
-	return ( tr.fraction != 1.0f );
+	return (tr.fraction != 1.0f);
 }
 
-bool CASW_Spawn_Manager::GetAlienBounds( const char *szAlienClass, Vector &vecMins, Vector &vecMaxs )
+bool CIV_Director_Spawn_Manager::GetNPCBounds(IV_Director_NPC_Class_Entry *sended_npc_class, Vector &vecMins, Vector &vecMaxs)
 {
-	int nCount = GetNumAlienClasses();
-	for ( int i = 0 ; i < nCount; i++ )
-	{
-		if ( !Q_stricmp( szAlienClass, GetAlienClass( i )->m_pszAlienClass ) )
-		{
-			vecMins = NAI_Hull::Mins( GetAlienClass( i )->m_nHullType );
-			vecMaxs = NAI_Hull::Maxs (GetAlienClass( i )->m_nHullType );
-			return true;
-		}
-	}
-	return false;
+	vecMins = NAI_Hull::Mins(sended_npc_class->m_nHullType);
+	vecMaxs = NAI_Hull::Maxs(sended_npc_class->m_nHullType);
+	return true;
 }
 
-bool CASW_Spawn_Manager::GetAlienBounds( string_t iszAlienClass, Vector &vecMins, Vector &vecMaxs )
+// spawn a group of NPC's at the target point
+int CIV_Director_Spawn_Manager::SpawnNPCBatch(IV_Director_NPC_Class_Entry *sended_npc_class, int iNumNPCs, const Vector &vecPosition, const QAngle &angFacing, float flPlayersBeyondDist)
 {
-	int nCount = GetNumAlienClasses();
-	for ( int i = 0 ; i < nCount; i++ )
-	{
-		if ( iszAlienClass == GetAlienClass( i )->m_iszAlienClass )
-		{
-			vecMins = NAI_Hull::Mins( GetAlienClass( i )->m_nHullType );
-			vecMaxs = NAI_Hull::Maxs (GetAlienClass( i )->m_nHullType );
-			return true;
-		}
-	}
-	return false;
-}
-
-// spawn a group of aliens at the target point
-int CASW_Spawn_Manager::SpawnAlienBatch( const char* szAlienClass, int iNumAliens, const Vector &vecPosition, const QAngle &angFacing, float flMarinesBeyondDist )
-{
-
 	int iSpawned = 0;
 	bool bCheckGround = true;
-	Vector vecMins = NAI_Hull::Mins(HULL_MEDIUMBIG);
-	Vector vecMaxs = NAI_Hull::Maxs(HULL_MEDIUMBIG);
-	GetAlienBounds( szAlienClass, vecMins, vecMaxs );
+	Vector vecMins = NAI_Hull::Mins(sended_npc_class->m_nHullType);
+	Vector vecMaxs = NAI_Hull::Maxs(sended_npc_class->m_nHullType);
 
-	float flAlienWidth = vecMaxs.x - vecMins.x;
-	float flAlienDepth = vecMaxs.y - vecMins.y;
+	float flNPCWidth = vecMaxs.x - vecMins.x;
+	float flNPCDepth = vecMaxs.y - vecMins.y;
 
 	// spawn one in the middle
-	if ( ValidSpawnPoint( vecPosition, vecMins, vecMaxs, bCheckGround, flMarinesBeyondDist ) )
+	if (ValidSpawnPoint(vecPosition, vecMins, vecMaxs, bCheckGround, flPlayersBeyondDist))
 	{
-		if ( SpawnAlienAt( szAlienClass, vecPosition, angFacing ) )
+		if (SpawnNPCAt(sended_npc_class, vecPosition, angFacing))
 			iSpawned++;
 	}
 
-	// try to spawn a 5x5 grid of aliens, starting at the centre and expanding outwards
+	// try to spawn a 5x5 grid of NPC's, starting at the centre and expanding outwards
 	Vector vecNewPos = vecPosition;
-	for ( int i=1; i<=5 && iSpawned < iNumAliens; i++ )
+	for (int i = 1; i <= 5 && iSpawned < iNumNPCs; i++)
 	{
 		QAngle angle = angFacing;
-		angle[YAW] += RandomFloat( -20, 20 );
-		// spawn aliens along top of box
-		for ( int x=-i; x<=i && iSpawned < iNumAliens; x++ )
+		angle[YAW] += RandomFloat(-20, 20);
+		// spawn NPC's along top of box
+		for (int x = -i; x <= i && iSpawned < iNumNPCs; x++)
 		{
 			vecNewPos = vecPosition;
-			vecNewPos.x += x * flAlienWidth;
-			vecNewPos.y -= i * flAlienDepth;
-			if ( !LineBlockedByGeometry( vecPosition, vecNewPos) && ValidSpawnPoint( vecNewPos, vecMins, vecMaxs, bCheckGround, flMarinesBeyondDist ) )
+			vecNewPos.x += x * flNPCWidth;
+			vecNewPos.y -= i * flNPCDepth;
+			if (!LineBlockedByGeometry(vecPosition, vecNewPos) && ValidSpawnPoint(vecNewPos, vecMins, vecMaxs, bCheckGround, flPlayersBeyondDist))
 			{
-				if ( SpawnAlienAt( szAlienClass, vecNewPos, angle ) )
+				if (SpawnNPCAt(sended_npc_class, vecNewPos, angle))
 					iSpawned++;
 			}
 		}
 
-		// spawn aliens along bottom of box
-		for ( int x=-i; x<=i && iSpawned < iNumAliens; x++ )
+		// spawn NPC's along bottom of box
+		for (int x = -i; x <= i && iSpawned < iNumNPCs; x++)
 		{
 			vecNewPos = vecPosition;
-			vecNewPos.x += x * flAlienWidth;
-			vecNewPos.y += i * flAlienDepth;
-			if ( !LineBlockedByGeometry( vecPosition, vecNewPos) && ValidSpawnPoint( vecNewPos, vecMins, vecMaxs, bCheckGround, flMarinesBeyondDist ) )
+			vecNewPos.x += x * flNPCWidth;
+			vecNewPos.y += i * flNPCDepth;
+			if (!LineBlockedByGeometry(vecPosition, vecNewPos) && ValidSpawnPoint(vecNewPos, vecMins, vecMaxs, bCheckGround, flPlayersBeyondDist))
 			{
-				if ( SpawnAlienAt( szAlienClass, vecNewPos, angle ) )
+				if (SpawnNPCAt(sended_npc_class, vecNewPos, angle))
 					iSpawned++;
 			}
 		}
 
-		// spawn aliens along left of box
-		for ( int y=-i + 1; y<i && iSpawned < iNumAliens; y++ )
+		// spawn NPC's along left of box
+		for (int y = -i + 1; y<i && iSpawned < iNumNPCs; y++)
 		{
 			vecNewPos = vecPosition;
-			vecNewPos.x -= i * flAlienWidth;
-			vecNewPos.y += y * flAlienDepth;
-			if ( !LineBlockedByGeometry( vecPosition, vecNewPos) && ValidSpawnPoint( vecNewPos, vecMins, vecMaxs, bCheckGround, flMarinesBeyondDist ) )
+			vecNewPos.x -= i * flNPCWidth;
+			vecNewPos.y += y * flNPCDepth;
+			if (!LineBlockedByGeometry(vecPosition, vecNewPos) && ValidSpawnPoint(vecNewPos, vecMins, vecMaxs, bCheckGround, flPlayersBeyondDist))
 			{
-				if ( SpawnAlienAt( szAlienClass, vecNewPos, angle ) )
+				if (SpawnNPCAt(sended_npc_class, vecNewPos, angle))
 					iSpawned++;
 			}
 		}
 
-		// spawn aliens along right of box
-		for ( int y=-i + 1; y<i && iSpawned < iNumAliens; y++ )
+		// spawn NPC's along right of box
+		for (int y = -i + 1; y<i && iSpawned < iNumNPCs; y++)
 		{
 			vecNewPos = vecPosition;
-			vecNewPos.x += i * flAlienWidth;
-			vecNewPos.y += y * flAlienDepth;
-			if ( !LineBlockedByGeometry( vecPosition, vecNewPos) && ValidSpawnPoint( vecNewPos, vecMins, vecMaxs, bCheckGround, flMarinesBeyondDist ) )
+			vecNewPos.x += i * flNPCWidth;
+			vecNewPos.y += y * flNPCDepth;
+			if (!LineBlockedByGeometry(vecPosition, vecNewPos) && ValidSpawnPoint(vecNewPos, vecMins, vecMaxs, bCheckGround, flPlayersBeyondDist))
 			{
-				if ( SpawnAlienAt( szAlienClass, vecNewPos, angle ) )
+				if (SpawnNPCAt(sended_npc_class, vecNewPos, angle))
 					iSpawned++;
 			}
 		}
@@ -681,52 +798,45 @@ int CASW_Spawn_Manager::SpawnAlienBatch( const char* szAlienClass, int iNumAlien
 	return iSpawned;
 }
 
-CBaseEntity* CASW_Spawn_Manager::SpawnAlienAt(const char* szAlienClass, const Vector& vecPos, const QAngle &angle)
+CBaseEntity* CIV_Director_Spawn_Manager::SpawnNPCAt(IV_Director_NPC_Class_Entry *sended_npc_class, const Vector& vecPos, const QAngle &angle)
 {	
 	CBaseEntity	*pEntity = NULL;	
-	pEntity = CreateEntityByName( szAlienClass );
+	pEntity = CreateEntityByName(sended_npc_class->m_pszNPCClass);
 	CAI_BaseNPC	*pNPC = dynamic_cast<CAI_BaseNPC*>(pEntity);
 
-	if ( pNPC )
+	if (pNPC)
 	{
-		pNPC->AddSpawnFlags( SF_NPC_FALL_TO_GROUND );		
+		pNPC->AddSpawnFlags(SF_NPC_FALL_TO_GROUND);
 	}
 
 	// Strip pitch and roll from the spawner's angles. Pass only yaw to the spawned NPC.
 	QAngle angles = angle;
 	angles.x = 0.0;
 	angles.z = 0.0;	
-	pEntity->SetAbsOrigin( vecPos );	
-	pEntity->SetAbsAngles( angles );
-	UTIL_DropToFloor( pEntity, MASK_SOLID );
+	pEntity->SetAbsOrigin(vecPos);	
+	pEntity->SetAbsAngles(angles);
+	UTIL_DropToFloor(pEntity, MASK_SOLID);
 
-	IASW_Spawnable_NPC* pSpawnable = dynamic_cast<IASW_Spawnable_NPC*>(pEntity);
-	ASSERT(pSpawnable);	
-	if ( !pSpawnable )
+	// have headcrabs unburrow by default, so we don't worry so much about them spawning onscreen
+	/*if (!Q_strcmp(sended_npc_class->m_pszNPCClass, "npc_headcrab"))
 	{
-		Warning("NULL Spawnable Ent in CASW_Spawn_Manager::SpawnAlienAt! AlienClass = %s\n", szAlienClass);
-		UTIL_Remove(pEntity);
-		return NULL;
-	}
+		pNPC->StartBurrowed();
+		pNPC->SetUnburrowIdleActivity(NULL_STRING);
+		pNPC->SetUnburrowActivity(NULL_STRING);
+	}*/
 
-	// have drones unburrow by default, so we don't worry so much about them spawning onscreen
-	if ( !Q_strcmp( szAlienClass, "asw_drone" ) )
-	{			
-		pSpawnable->StartBurrowed();
-		pSpawnable->SetUnburrowIdleActivity( NULL_STRING );
-		pSpawnable->SetUnburrowActivity( NULL_STRING );
-	}
-
-	DispatchSpawn( pEntity );	
+	DispatchSpawn(pEntity);	
 	pEntity->Activate();	
 
-	// give our aliens the orders
-	pSpawnable->SetAlienOrders(AOT_MoveToNearestMarine, vec3_origin, NULL);
+	// give our NPC's the orders
+	float flNearPlayerDist = 0;
+	CBasePlayer* pPlayer = UTIL_GetNearestPlayerSimple(pNPC->GetAbsOrigin(), &flNearPlayerDist);
+	pNPC->UpdateEnemyMemory(pPlayer, pPlayer->GetAbsOrigin());
 
 	return pEntity;
 }
 
-bool CASW_Spawn_Manager::ValidSpawnPoint( const Vector &vecPosition, const Vector &vecMins, const Vector &vecMaxs, bool bCheckGround, float flMarineNearDistance )
+bool CIV_Director_Spawn_Manager::ValidSpawnPoint(const Vector &vecPosition, const Vector &vecMins, const Vector &vecMaxs, bool bCheckGround, float flPlayerNearDistance)
 {
 	// check if we can fit there
 	trace_t tr;
@@ -758,17 +868,26 @@ bool CASW_Spawn_Manager::ValidSpawnPoint( const Vector &vecPosition, const Vecto
 			return false;
 	}
 
-	if ( flMarineNearDistance > 0 )
+	if (flPlayerNearDistance > 0)
 	{
-		CASW_Game_Resource* pGameResource = ASWGameResource();
+		int total_players_count = 0;
+		CBasePlayer *temp_players_list = UTIL_GetPlayersList(&total_players_count);
+
+		if (!temp_players_list || total_players_count <= 0)
+			return false;
+
 		float distance = 0.0f;
-		for ( int i=0 ; i < pGameResource->GetMaxMarineResources() ; i++ )
+		for (int i = 0; i < total_players_count; i++)
 		{
-			CASW_Marine_Resource* pMR = pGameResource->GetMarineResource(i);
-			if ( pMR && pMR->GetMarineEntity() && pMR->GetMarineEntity()->GetHealth() > 0 )
+			CBasePlayer *pPlayer = &temp_players_list[i];
+
+			if (!pPlayer)
+				continue;
+
+			if (pPlayer->GetHealth() > 0)
 			{
-				distance = pMR->GetMarineEntity()->GetAbsOrigin().DistTo( vecPosition );
-				if ( distance < flMarineNearDistance )
+				distance = pPlayer->GetAbsOrigin().DistTo(vecPosition);
+				if (distance < flPlayerNearDistance)
 				{
 					return false;
 				}
@@ -779,7 +898,7 @@ bool CASW_Spawn_Manager::ValidSpawnPoint( const Vector &vecPosition, const Vecto
 	return true;
 }
 
-void CASW_Spawn_Manager::DeleteRoute( AI_Waypoint_t *pWaypointList )
+void CIV_Director_Spawn_Manager::DeleteRoute( AI_Waypoint_t *pWaypointList )
 {
 	while ( pWaypointList )
 	{
@@ -789,33 +908,33 @@ void CASW_Spawn_Manager::DeleteRoute( AI_Waypoint_t *pWaypointList )
 	}
 }
 
-bool CASW_Spawn_Manager::SpawnRandomShieldbug()
+bool CIV_Director_Spawn_Manager::SpawnRandomHeadcrab()
 {
 	int iNumNodes = g_pBigAINet->NumNodes();
-	if ( iNumNodes < 6 )
+	if (iNumNodes < 6)
 		return false;
 
-	int nHull = HULL_WIDE_SHORT;
-	CUtlVector<CASW_Open_Area*> aAreas;
-	for ( int i = 0; i < 6; i++ )
+	int nHull = HULL_TINY;
+	CUtlVector<CIV_Director_Open_Area*> aAreas;
+	for (int i = 0; i < 6; i++)
 	{
 		CAI_Node *pNode = NULL;
 		int nTries = 0;
-		while ( nTries < 5 && ( !pNode || pNode->GetType() != NODE_GROUND ) )
+		while (nTries < 5 && (!pNode || pNode->GetType() != NODE_GROUND))
 		{
-			pNode = g_pBigAINet->GetNode( RandomInt( 0, iNumNodes ) );
+			pNode = g_pBigAINet->GetNode(RandomInt( 0, iNumNodes));
 			nTries++;
 		}
 		
-		if ( pNode )
+		if (pNode)
 		{
-			CASW_Open_Area *pArea = FindNearbyOpenArea( pNode->GetOrigin(), HULL_MEDIUMBIG );
-			if ( pArea && pArea->m_nTotalLinks > 30 )
+			CIV_Director_Open_Area *pArea = FindNearbyOpenArea(pNode->GetOrigin(), HULL_MEDIUM);
+			if (pArea && pArea->m_nTotalLinks > 30)
 			{
-				// test if there's room to spawn a shieldbug at that spot
-				if ( ValidSpawnPoint( pArea->m_pNode->GetPosition( nHull ), NAI_Hull::Mins( nHull ), NAI_Hull::Maxs( nHull ), true, false ) )
+				// test if there's room to spawn a headcrab at that spot
+				if ( ValidSpawnPoint(pArea->m_pNode->GetPosition(nHull), NAI_Hull::Mins(nHull), NAI_Hull::Maxs(nHull), true, false))
 				{
-					aAreas.AddToTail( pArea );
+					aAreas.AddToTail(pArea);
 				}
 				else
 				{
@@ -824,28 +943,30 @@ bool CASW_Spawn_Manager::SpawnRandomShieldbug()
 			}
 		}
 		// stop searching once we have 3 acceptable candidates
-		if ( aAreas.Count() >= 3 )
+		if (aAreas.Count() >= 3)
 			break;
 	}
 
 	// find area with the highest connectivity
-	CASW_Open_Area *pBestArea = NULL;
+	CIV_Director_Open_Area *pBestArea = NULL;
 	for ( int i = 0; i < aAreas.Count(); i++ )
 	{
-		CASW_Open_Area *pArea = aAreas[i];
+		CIV_Director_Open_Area *pArea = aAreas[i];
 		if ( !pBestArea || pArea->m_nTotalLinks > pBestArea->m_nTotalLinks )
 		{
 			pBestArea = pArea;
 		}
 	}
 
-	if ( pBestArea )
+	if (pBestArea)
 	{
-		CBaseEntity *pAlien = SpawnAlienAt( "asw_shieldbug", pBestArea->m_pNode->GetPosition( nHull ), RandomAngle( 0, 360 ) );
-		IASW_Spawnable_NPC *pSpawnable = dynamic_cast<IASW_Spawnable_NPC*>( pAlien );
-		if ( pSpawnable )
+		CBaseEntity *pNPC = SpawnNPCAt(&g_NPCs_Classes_Zombies[0], pBestArea->m_pNode->GetPosition(nHull), RandomAngle(0, 360));
+		CAI_BaseNPC *pSpawnableNPC = dynamic_cast<CAI_BaseNPC*>(pNPC);
+		if (pSpawnableNPC)
 		{
-			pSpawnable->SetAlienOrders(AOT_SpreadThenHibernate, vec3_origin, NULL);
+			float near_distance = 0;
+			CBasePlayer *temp_nearest_player = UTIL_GetNearestPlayerSimple(pNPC->GetAbsOrigin(), &near_distance);
+			pSpawnableNPC->UpdateEnemyMemory(temp_nearest_player, temp_nearest_player->GetAbsOrigin());
 		}
 		aAreas.PurgeAndDeleteElements();
 		return true;
@@ -858,37 +979,37 @@ bool CASW_Spawn_Manager::SpawnRandomShieldbug()
 Vector TraceToGround( const Vector &vecPos )
 {
 	trace_t tr;
-	UTIL_TraceLine( vecPos + Vector( 0, 0, 100 ), vecPos, MASK_NPCSOLID, NULL, ASW_COLLISION_GROUP_PARASITE, &tr );
+	UTIL_TraceLine(vecPos + Vector( 0, 0, 100 ), vecPos, MASK_NPCSOLID, NULL, COLLISION_GROUP_NPC, &tr);
 	return tr.endpos;
 }
 
-bool CASW_Spawn_Manager::SpawnRandomParasitePack( int nParasites )
+bool CIV_Director_Spawn_Manager::SpawnRandomFastHeadcrabs(int nFastHeadcrabs)
 {
 	int iNumNodes = g_pBigAINet->NumNodes();
-	if ( iNumNodes < 6 )
+	if (iNumNodes < 6)
 		return false;
 
 	int nHull = HULL_TINY;
-	CUtlVector<CASW_Open_Area*> aAreas;
-	for ( int i = 0; i < 6; i++ )
+	CUtlVector<CIV_Director_Open_Area*> aAreas;
+	for (int i = 0; i < 6; i++)
 	{
 		CAI_Node *pNode = NULL;
 		int nTries = 0;
-		while ( nTries < 5 && ( !pNode || pNode->GetType() != NODE_GROUND ) )
+		while (nTries < 5 && (!pNode || pNode->GetType() != NODE_GROUND))
 		{
-			pNode = g_pBigAINet->GetNode( RandomInt( 0, iNumNodes ) );
+			pNode = g_pBigAINet->GetNode(RandomInt( 0, iNumNodes));
 			nTries++;
 		}
 
-		if ( pNode )
+		if (pNode)
 		{
-			CASW_Open_Area *pArea = FindNearbyOpenArea( pNode->GetOrigin(), HULL_MEDIUMBIG );
-			if ( pArea && pArea->m_nTotalLinks > 30 )
+			CIV_Director_Open_Area *pArea = FindNearbyOpenArea(pNode->GetOrigin(), HULL_MEDIUM);
+			if (pArea && pArea->m_nTotalLinks > 30)
 			{
-				// test if there's room to spawn a shieldbug at that spot
-				if ( ValidSpawnPoint( pArea->m_pNode->GetPosition( nHull ), NAI_Hull::Mins( nHull ), NAI_Hull::Maxs( nHull ), true, false ) )
+				// test if there's room to spawn a fast headcrab at that spot
+				if (ValidSpawnPoint( pArea->m_pNode->GetPosition(nHull), NAI_Hull::Mins(nHull), NAI_Hull::Maxs(nHull), true, false))
 				{
-					aAreas.AddToTail( pArea );
+					aAreas.AddToTail(pArea);
 				}
 				else
 				{
@@ -897,35 +1018,37 @@ bool CASW_Spawn_Manager::SpawnRandomParasitePack( int nParasites )
 			}
 		}
 		// stop searching once we have 3 acceptable candidates
-		if ( aAreas.Count() >= 3 )
+		if (aAreas.Count() >= 3)
 			break;
 	}
 
 	// find area with the highest connectivity
-	CASW_Open_Area *pBestArea = NULL;
-	for ( int i = 0; i < aAreas.Count(); i++ )
+	CIV_Director_Open_Area *pBestArea = NULL;
+	for (int i = 0; i < aAreas.Count(); i++)
 	{
-		CASW_Open_Area *pArea = aAreas[i];
-		if ( !pBestArea || pArea->m_nTotalLinks > pBestArea->m_nTotalLinks )
+		CIV_Director_Open_Area *pArea = aAreas[i];
+		if (!pBestArea || pArea->m_nTotalLinks > pBestArea->m_nTotalLinks)
 		{
 			pBestArea = pArea;
 		}
 	}
 
-	if ( pBestArea )
+	if (pBestArea)
 	{
-		for ( int i = 0; i < nParasites; i++ )
+		for (int i = 0; i < nFastHeadcrabs; i++)
 		{
-			CBaseEntity *pAlien = SpawnAlienAt( "asw_parasite", TraceToGround( pBestArea->m_pNode->GetPosition( nHull ) ), RandomAngle( 0, 360 ) );
-			IASW_Spawnable_NPC *pSpawnable = dynamic_cast<IASW_Spawnable_NPC*>( pAlien );
-			if ( pSpawnable )
+			CBaseEntity *pNPC = SpawnNPCAt(&g_NPCs_Classes_Zombies[1], TraceToGround(pBestArea->m_pNode->GetPosition(nHull)), RandomAngle(0, 360));
+			CAI_BaseNPC *pNPCSpawnable = dynamic_cast<CAI_BaseNPC*>(pNPC);
+			if (pNPCSpawnable)
 			{
-				pSpawnable->SetAlienOrders(AOT_SpreadThenHibernate, vec3_origin, NULL);
+				float near_distance = 0;
+				CBasePlayer *temp_nearest_player = UTIL_GetNearestPlayerSimple(pNPC->GetAbsOrigin(), &near_distance);
+				pNPCSpawnable->UpdateEnemyMemory(temp_nearest_player, temp_nearest_player->GetAbsOrigin());
 			}
-			if ( asw_director_debug.GetBool() && pAlien )
+			if (iv_director_debug.GetBool() && pNPC)
 			{
-				Msg( "Spawned parasite at %f %f %f\n", pAlien->GetAbsOrigin() );
-				NDebugOverlay::Cross3D( pAlien->GetAbsOrigin(), 8.0f, 255, 0, 0, true, 20.0f );
+				Msg("Spawned Fast Headcrab at %f %f %f\n", pNPC->GetAbsOrigin());
+				NDebugOverlay::Cross3D(pNPC->GetAbsOrigin(), 8.0f, 255, 0, 0, true, 20.0f);
 			}
 		}
 		aAreas.PurgeAndDeleteElements();
@@ -937,50 +1060,50 @@ bool CASW_Spawn_Manager::SpawnRandomParasitePack( int nParasites )
 }
 
 // heuristic to find reasonably open space - searches for areas with high node connectivity
-CASW_Open_Area* CASW_Spawn_Manager::FindNearbyOpenArea( const Vector &vecSearchOrigin, int nSearchHull )
+CIV_Director_Open_Area* CIV_Director_Spawn_Manager::FindNearbyOpenArea(const Vector &vecSearchOrigin, int nSearchHull)
 {
-	CBaseEntity *pStartEntity = gEntList.FindEntityByClassname( NULL, "info_player_start" );
+	CBaseEntity *pStartEntity = gEntList.FindEntityByClassname(NULL, "info_player_start");
 	int iNumNodes = g_pBigAINet->NumNodes();
 	CAI_Node *pHighestConnectivity = NULL;
 	int nHighestLinks = 0;
-	for ( int i=0 ; i<iNumNodes; i++ )
+	for (int i=0 ; i<iNumNodes; i++)
 	{
-		CAI_Node *pNode = g_pBigAINet->GetNode( i );
-		if ( !pNode || pNode->GetType() != NODE_GROUND )
+		CAI_Node *pNode = g_pBigAINet->GetNode(i);
+		if (!pNode || pNode->GetType() != NODE_GROUND)
 			continue;
 
 		Vector vecPos = pNode->GetOrigin();
-		float flDist = vecPos.DistTo( vecSearchOrigin );
-		if ( flDist > 400.0f )
+		float flDist = vecPos.DistTo(vecSearchOrigin);
+		if (flDist > 400.0f)
 			continue;
 
 		// discard if node is too near start location
-		if ( pStartEntity && vecPos.DistTo( pStartEntity->GetAbsOrigin() ) < 1400.0f )  // NOTE: assumes all start points are clustered near one another
+		if (pStartEntity && vecPos.DistTo( pStartEntity->GetAbsOrigin() ) < 1400.0f)  // NOTE: assumes all start points are clustered near one another
 			continue;
 
 		// discard if node is inside an escape area
 		bool bInsideEscapeArea = false;
-		for ( int d=0; d<m_EscapeTriggers.Count(); d++ )
+		for (int d=0; d<m_EscapeTriggers.Count(); d++)
 		{
-			if ( m_EscapeTriggers[d]->CollisionProp()->IsPointInBounds( vecPos ) )
+			if (m_EscapeTriggers[d]->CollisionProp()->IsPointInBounds(vecPos))
 			{
 				bInsideEscapeArea = true;
 				break;
 			}
 		}
-		if ( bInsideEscapeArea )
+		if (bInsideEscapeArea)
 			continue;
 
 		// count links that drones could follow
 		int nLinks = pNode->NumLinks();
 		int nValidLinks = 0;
-		for ( int k = 0; k < nLinks; k++ )
+		for (int k = 0; k < nLinks; k++)
 		{
-			CAI_Link *pLink = pNode->GetLinkByIndex( k );
-			if ( !pLink )
+			CAI_Link *pLink = pNode->GetLinkByIndex(k);
+			if (!pLink)
 				continue;
 
-			if ( !( pLink->m_iAcceptedMoveTypes[nSearchHull] & bits_CAP_MOVE_GROUND ) )
+			if (!(pLink->m_iAcceptedMoveTypes[nSearchHull] & bits_CAP_MOVE_GROUND))
 				continue;
 
 			nValidLinks++;
@@ -990,24 +1113,24 @@ CASW_Open_Area* CASW_Spawn_Manager::FindNearbyOpenArea( const Vector &vecSearchO
 			nHighestLinks = nValidLinks;
 			pHighestConnectivity = pNode;
 		}
-		if ( asw_director_debug.GetBool() )
+		if (iv_director_debug.GetBool())
 		{
 			NDebugOverlay::Text( vecPos, UTIL_VarArgs( "%d", nValidLinks ), false, 10.0f );
 		}
 	}
 
-	if ( !pHighestConnectivity )
+	if (!pHighestConnectivity)
 		return NULL;
 
 	// now, starting at the new node, find all nearby nodes with a minimum connectivity
-	CASW_Open_Area *pArea = new CASW_Open_Area();
+	CIV_Director_Open_Area *pArea = new CIV_Director_Open_Area();
 	pArea->m_vecOrigin = pHighestConnectivity->GetOrigin();
 	pArea->m_pNode = pHighestConnectivity;
 	int nMinLinks = nHighestLinks * 0.3f;
 	nMinLinks = MAX( nMinLinks, 4 );
 
 	pArea->m_aAreaNodes.AddToTail( pHighestConnectivity );
-	if ( asw_director_debug.GetBool() )
+	if (iv_director_debug.GetBool())
 	{
 		Msg( "minLinks = %d\n", nMinLinks );
 	}
@@ -1057,15 +1180,15 @@ CASW_Open_Area* CASW_Spawn_Manager::FindNearbyOpenArea( const Vector &vecSearchO
 		}
 	}
 	// highlight and measure bounds
-	Vector vecAreaMins = Vector( FLT_MAX, FLT_MAX, FLT_MAX );
-	Vector vecAreaMaxs = Vector( -FLT_MAX, -FLT_MAX, -FLT_MAX );
+	Vector vecAreaMins = Vector(FLT_MAX, FLT_MAX, FLT_MAX);
+	Vector vecAreaMaxs = Vector(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 	
 	for ( int i = 0; i < pArea->m_aAreaNodes.Count(); i++ )
 	{
-		vecAreaMins = VectorMin( vecAreaMins, pArea->m_aAreaNodes[i]->GetOrigin() );
-		vecAreaMaxs = VectorMax( vecAreaMaxs, pArea->m_aAreaNodes[i]->GetOrigin() );
+		VectorMin(vecAreaMins, pArea->m_aAreaNodes[i]->GetOrigin(), vecAreaMins);
+		VectorMax(vecAreaMaxs, pArea->m_aAreaNodes[i]->GetOrigin(), vecAreaMaxs);
 		
-		if ( asw_director_debug.GetBool() )
+		if (iv_director_debug.GetBool())
 		{
 			if ( i == 0 )
 			{
@@ -1081,19 +1204,19 @@ CASW_Open_Area* CASW_Spawn_Manager::FindNearbyOpenArea( const Vector &vecSearchO
 	Vector vecArea = ( vecAreaMaxs - vecAreaMins );
 	float flArea = vecArea.x * vecArea.y;
 
-	if ( asw_director_debug.GetBool() )
+	if (iv_director_debug.GetBool())
 	{
-		Msg( "area mins = %f %f %f\n", VectorExpand( vecAreaMins ) );
-		Msg( "area maxs = %f %f %f\n", VectorExpand( vecAreaMaxs ) );
-		NDebugOverlay::Box( vec3_origin, vecAreaMins, vecAreaMaxs, 255, 128, 128, 10, 10.0f );	
-		Msg( "Total links = %d Area = %f\n", pArea->m_nTotalLinks, flArea );
+		Msg("area mins = %f %f %f\n", VectorExpand(vecAreaMins));
+		Msg("area maxs = %f %f %f\n", VectorExpand(vecAreaMaxs));
+		NDebugOverlay::Box(vec3_origin, vecAreaMins, vecAreaMaxs, 255, 128, 128, 10, 10.0f);	
+		Msg("Total links = %d Area = %f\n", pArea->m_nTotalLinks, flArea);
 	}
 
 	return pArea;
 }
 
-// creates a batch of aliens at the mouse cursor
-void asw_alien_batch_f( const CCommand& args )
+// creates a batch of NPC's at the mouse cursor
+void iv_director_fast_headcrabs_batch_f(const CCommand& args)
 {
 	MDLCACHE_CRITICAL_SECTION();
 
@@ -1101,19 +1224,17 @@ void asw_alien_batch_f( const CCommand& args )
 	CBaseEntity::SetAllowPrecache( true );
 
 	// find spawn point
-	CASW_Player* pPlayer = ToASW_Player(UTIL_GetCommandClient());
+	CBasePlayer* pPlayer = UTIL_GetCommandClient();
 	if (!pPlayer)
 		return;
-	CASW_Marine *pMarine = pPlayer->GetMarine();
-	if (!pMarine)
-		return;
+
 	trace_t tr;
 	Vector forward;
 
-	AngleVectors( pMarine->EyeAngles(), &forward );
-	UTIL_TraceLine(pMarine->EyePosition(),
-		pMarine->EyePosition() + forward * 300.0f,MASK_SOLID, 
-		pMarine, COLLISION_GROUP_NONE, &tr );
+	AngleVectors(pPlayer->EyeAngles(), &forward);
+	UTIL_TraceLine(pPlayer->EyePosition(),
+		pPlayer->EyePosition() + forward * 300.0f, MASK_SOLID,
+		pPlayer, COLLISION_GROUP_NONE, &tr);
 	if ( tr.fraction != 0.0 )
 	{
 		// trace to the floor from this spot
@@ -1121,37 +1242,37 @@ void asw_alien_batch_f( const CCommand& args )
 		tr.endpos.z += 12;
 		UTIL_TraceLine( vecSrc + Vector(0, 0, 12),
 			vecSrc - Vector( 0, 0, 512 ) ,MASK_SOLID, 
-			pMarine, COLLISION_GROUP_NONE, &tr );
+			pPlayer, COLLISION_GROUP_NONE, &tr);
 		
-		ASWSpawnManager()->SpawnAlienBatch( "asw_parasite", 25, tr.endpos, vec3_angle );
+		IVDirectorSpawnManager()->SpawnNPCBatch(&g_NPCs_Classes_Zombies[1], 25, tr.endpos, vec3_angle);
 	}
 	
-	CBaseEntity::SetAllowPrecache( allowPrecache );
+	CBaseEntity::SetAllowPrecache(allowPrecache);
 }
-static ConCommand asw_alien_batch("asw_alien_batch", asw_alien_batch_f, "Creates a batch of aliens at the cursor", FCVAR_GAMEDLL | FCVAR_CHEAT);
+static ConCommand iv_director_fast_headcrabs_batch("iv_director_fast_headcrabs_batch", iv_director_fast_headcrabs_batch_f, "Creates a batch of Fast Headcrabs at the cursor", FCVAR_GAMEDLL | FCVAR_CHEAT);
 
 
-void asw_alien_horde_f( const CCommand& args )
+void iv_director_horde_f(const CCommand& args)
 {
-	if ( args.ArgC() < 2 )
+	if (args.ArgC() < 2)
 	{
 		Msg("supply horde size!\n");
 		return;
 	}
-	if ( !ASWSpawnManager()->AddHorde( atoi(args[1]) ) )
+	if (!IVDirectorSpawnManager()->AddHorde(atoi(args[1])))
 	{
 		Msg("Failed to add horde\n");
 	}
 }
-static ConCommand asw_alien_horde("asw_alien_horde", asw_alien_horde_f, "Creates a horde of aliens somewhere nearby", FCVAR_GAMEDLL | FCVAR_CHEAT);
+static ConCommand iv_director_horde("iv_director_horde", iv_director_horde_f, "Creates a horde of NPC's somewhere nearby", FCVAR_GAMEDLL | FCVAR_CHEAT);
 
 
-CON_COMMAND_F( asw_spawn_shieldbug, "Spawns a shieldbug somewhere randomly in the map", FCVAR_CHEAT )
+CON_COMMAND_F(iv_director_spawn_headcrab, "Spawns a headcrab somewhere randomly in the map", FCVAR_CHEAT)
 {
-	ASWSpawnManager()->SpawnRandomShieldbug();
+	IVDirectorSpawnManager()->SpawnRandomHeadcrab();
 }
 
-CON_COMMAND_F( asw_spawn_parasite_pack, "Spawns a group of parasites somewhere randomly in the map", FCVAR_CHEAT )
+CON_COMMAND_F(iv_director_spawn_fast_headcrabs, "Spawns a group of Fast Headcrabs somewhere randomly in the map", FCVAR_CHEAT)
 {
-	ASWSpawnManager()->SpawnRandomParasitePack( RandomInt( 3, 5 ) );
+	IVDirectorSpawnManager()->SpawnRandomFastHeadcrabs(RandomInt( 3, 5 ));
 }
