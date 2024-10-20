@@ -688,7 +688,7 @@ CBasePlayer *UTIL_GetPlayersList(int *total_clients_count)
 	total_clients_count = &clients_count;
 
 	if (clients_count <= 0)
-		return;
+		return NULL;
 
 	CBasePlayer *players_list = new CBasePlayer[clients_count];
 

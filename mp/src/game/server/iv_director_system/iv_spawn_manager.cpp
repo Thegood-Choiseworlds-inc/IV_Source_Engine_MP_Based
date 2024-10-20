@@ -64,12 +64,12 @@ CIV_Director_Path_Utils_NPC* CIV_Director_Path_Utils::GetPathfinderNPC()
 }
 
 AI_Waypoint_t *CIV_Director_Path_Utils::BuildRoute(const Vector &vStart, const Vector &vEnd,
-	CBaseEntity *pTarget, float goalTolerance, Navigation_t curNavType, int nBuildFlags)
+	CBaseEntity *pTarget, float goalTolerance, Navigation_t curNavType)
 {
 	if (!GetPathfinderNPC())
 		return NULL;
 
-	m_pLastRoute = GetPathfinderNPC()->GetPathfinder()->BuildRoute(vStart, vEnd, pTarget, goalTolerance, curNavType, nBuildFlags);
+	m_pLastRoute = GetPathfinderNPC()->GetPathfinder()->BuildRoute(vStart, vEnd, pTarget, goalTolerance, curNavType, true);
 
 	return m_pLastRoute;
 }
@@ -119,7 +119,7 @@ void iv_director_path_end_f()
 	debugoverlay->AddBoxOverlay(g_vecPathStart, Vector(-10, -10, -10), Vector(10, 10, 10), vec3_angle, 255, 0, 0, 255, 30.0f);
 	debugoverlay->AddBoxOverlay(vecPathEnd, Vector(-10, -10, -10), Vector(10, 10, 10), vec3_angle, 255, 255, 0, 255, 30.0f);
 
-	AI_Waypoint_t *pWaypoint = IVDirectorPathUtils()->BuildRoute(g_vecPathStart, vecPathEnd, NULL, 100, NAV_NONE, bits_BUILD_GET_CLOSE);
+	AI_Waypoint_t *pWaypoint = IVDirectorPathUtils()->BuildRoute(g_vecPathStart, vecPathEnd, NULL, 100, NAV_NONE);
 	if (!pWaypoint)
 	{
 		Msg("Failed to find route\n");
@@ -143,18 +143,6 @@ ConVar iv_candidate_interval("iv_candidate_interval", "1.0", FCVAR_CHEAT, "Inter
 ConVar iv_director_player_near_distance("iv_director_player_near_distance", "1500", FCVAR_CHEAT, "Near Distance to Allow Horde Spawning");
 
 
-CIV_Director_Spawn_Manager::CIV_Director_Spawn_Manager()
-{
-	m_nAwakeCommonNPCs = 0;
-	m_nAwakeSpecialNPCs = 0;
-	m_pDefinedHordeClass = &g_NPCs_Classes_Zombies[0];
-}
-
-CIV_Director_Spawn_Manager::~CIV_Director_Spawn_Manager()
-{
-
-}
-
 // ==================================
 // == Master list of NPC classes ==
 // ==================================
@@ -175,6 +163,18 @@ IV_Director_NPC_Class_Entry g_NPCs_Classes_Zombies_Bosses[] =
 {
 	IV_Director_NPC_Class_Entry("npc_poisonzombie", HULL_WIDE_HUMAN)
 };
+
+CIV_Director_Spawn_Manager::CIV_Director_Spawn_Manager()
+{
+	m_nAwakeCommonNPCs = 0;
+	m_nAwakeSpecialNPCs = 0;
+	m_pDefinedHordeClass = &g_NPCs_Classes_Zombies[0];
+}
+
+CIV_Director_Spawn_Manager::~CIV_Director_Spawn_Manager()
+{
+
+}
 
 IV_Spawn_Classes_Types g_NPCs_Selected_Type = IV_Spawn_Classes_Types::Zombie;
 
