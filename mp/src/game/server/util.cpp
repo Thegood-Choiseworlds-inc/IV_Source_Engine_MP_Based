@@ -682,7 +682,7 @@ CBasePlayer* UTIL_PlayerByUserId( int userID )
 	return NULL;
 }
 
-CBasePlayer *UTIL_GetNearestPlayerSimple(const Vector &origin, float *nearest_distance)
+CBasePlayer *UTIL_GetNearestPlayerSimple(const Vector &origin, float &nearest_distance)
 {
 	float distToNearest = 99999999999999999999999999999999999999.0f;
 	CBasePlayer *pNearest = NULL;
@@ -703,7 +703,7 @@ CBasePlayer *UTIL_GetNearestPlayerSimple(const Vector &origin, float *nearest_di
 		}
 	}
 
-	nearest_distance = &distToNearest;
+	nearest_distance = distToNearest;
 	return pNearest;
 }
 

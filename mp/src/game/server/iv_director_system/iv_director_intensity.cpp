@@ -87,7 +87,7 @@ void CIV_Director::UpdateIntensity()
 
 		if (iv_director_debug.GetInt() > 0)
 		{
-			engine->Con_NPrintf(i + 2, "Marine %d Intensity = %f", i, pPlayer->GetIntensity()->GetCurrent());
+			engine->Con_NPrintf(i + 2, "Player %d Intensity = %f", i, pPlayer->GetIntensity()->GetCurrent());
 		}
 	}
 }

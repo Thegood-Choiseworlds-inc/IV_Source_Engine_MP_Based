@@ -456,7 +456,7 @@ bool CIV_Director_Spawn_Manager::SpawnNPCAtRandomNode()
 			continue;
 
 		float fldistance = 0;
-		CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(pNode->GetPosition(temp_selected_npc_class->m_nHullType), &fldistance);
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(pNode->GetPosition(temp_selected_npc_class->m_nHullType), fldistance);
 		if (!pPlayer)
 			return false;
 
@@ -480,7 +480,7 @@ bool CIV_Director_Spawn_Manager::SpawnNPCAtRandomNode()
 				{
 					NDebugOverlay::Cross3D(vecSpawnPos, 25.0f, 255, 255, 255, true, 20.0f);
 					float fldistance = 0;
-					CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(vecSpawnPos, &fldistance);
+					CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(vecSpawnPos, fldistance);
 					if (pPlayer)
 					{
 						NDebugOverlay::Line(pPlayer->GetAbsOrigin(), vecSpawnPos, 64, 64, 64, true, 60.0f);
@@ -520,7 +520,7 @@ bool CIV_Director_Spawn_Manager::AddHorde(int iHordeSize)
 			{
 				NDebugOverlay::Cross3D(m_vecHordePosition, 50.0f, 255, 128, 0, true, 60.0f);
 				float fldistance = 0;
-				CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(m_vecHordePosition, &fldistance);
+				CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(m_vecHordePosition, fldistance);
 				if (pPlayer)
 				{
 					NDebugOverlay::Line(pPlayer->GetAbsOrigin(), m_vecHordePosition, 255, 128, 0, true, 60.0f);
@@ -595,7 +595,7 @@ void CIV_Director_Spawn_Manager::UpdateCandidateNodes(int sended_hull)
 		
 		// find the nearest Player to this node
 		float flDistance = 0;
-		CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(vecPos, &flDistance);
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(vecPos, flDistance);
 		if (!pPlayer)
 			return;
 
@@ -675,7 +675,7 @@ bool CIV_Director_Spawn_Manager::FindHordePosition(int sended_hull)
 			continue;
 
 		float flDistance = 0;
-		CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(pNode->GetPosition(sended_hull), &flDistance);
+		CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(pNode->GetPosition(sended_hull), flDistance);
 		if (!pPlayer)
 		{
 			if (iv_director_debug.GetBool())
@@ -850,7 +850,7 @@ CBaseEntity* CIV_Director_Spawn_Manager::SpawnNPCAt(IV_Director_NPC_Class_Entry 
 
 	// give our NPC's the orders
 	float flNearPlayerDist = 0;
-	CBasePlayer* pPlayer = UTIL_GetNearestPlayerSimple(pNPC->GetAbsOrigin(), &flNearPlayerDist);
+	CBasePlayer* pPlayer = UTIL_GetNearestPlayerSimple(pNPC->GetAbsOrigin(), flNearPlayerDist);
 	pNPC->UpdateEnemyMemory(pPlayer, pPlayer->GetAbsOrigin());
 
 	return pEntity;
@@ -984,7 +984,7 @@ bool CIV_Director_Spawn_Manager::SpawnRandomHeadcrab()
 		if (pSpawnableNPC)
 		{
 			float near_distance = 0;
-			CBasePlayer *temp_nearest_player = UTIL_GetNearestPlayerSimple(pNPC->GetAbsOrigin(), &near_distance);
+			CBasePlayer *temp_nearest_player = UTIL_GetNearestPlayerSimple(pNPC->GetAbsOrigin(), near_distance);
 			pSpawnableNPC->UpdateEnemyMemory(temp_nearest_player, temp_nearest_player->GetAbsOrigin());
 		}
 		aAreas.PurgeAndDeleteElements();
@@ -1061,7 +1061,7 @@ bool CIV_Director_Spawn_Manager::SpawnRandomFastHeadcrabs(int nFastHeadcrabs)
 			if (pNPCSpawnable)
 			{
 				float near_distance = 0;
-				CBasePlayer *temp_nearest_player = UTIL_GetNearestPlayerSimple(pNPC->GetAbsOrigin(), &near_distance);
+				CBasePlayer *temp_nearest_player = UTIL_GetNearestPlayerSimple(pNPC->GetAbsOrigin(), near_distance);
 				pNPCSpawnable->UpdateEnemyMemory(temp_nearest_player, temp_nearest_player->GetAbsOrigin());
 			}
 			if (iv_director_debug.GetBool() && pNPC)
