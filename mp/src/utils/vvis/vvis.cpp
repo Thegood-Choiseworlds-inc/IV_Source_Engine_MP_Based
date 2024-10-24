@@ -889,7 +889,7 @@ float DetermineVisRadius( )
 		char* pEntity = ValueForKey(&entities[i], "classname");
 		if (!stricmp(pEntity, "env_fog_controller"))
 		{
-			bool farz_priority = IntForKey(&entities[i], "farzpriority");
+			bool farz_priority = IntForKey(&entities[i], "farzpriority") > 0;
 
 			if (priority_fog_controller_farz && !farz_priority)
 				continue;
