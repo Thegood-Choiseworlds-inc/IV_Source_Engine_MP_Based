@@ -108,9 +108,8 @@ private:
 	int m_nAwakeSpecialNPCs;
 	IV_Director_NPC_Class_Entry *m_pDefinedHordeClass;
 
-	// maintaining a list of possible nodes to spawn aliens from
-	CUtlVector<int> m_northCandidateNodes;
-	CUtlVector<int> m_southCandidateNodes;
+	// maintaining a list of possible nodes to spawn NPC's from
+	CUtlVector<int> m_CentralCandidateNodes;
 	CountdownTimer m_CandidateUpdateTimer;
 
 	typedef CHandle<CTriggerMultiple> TriggerMultiple_t;

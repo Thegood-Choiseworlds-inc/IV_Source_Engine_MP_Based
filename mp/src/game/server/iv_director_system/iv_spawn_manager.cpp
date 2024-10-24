@@ -272,8 +272,7 @@ void CIV_Director_Spawn_Manager::LevelInitPostEntity()
 	m_iHordeToSpawn = 0;
 	m_iNPCsToSpawn = 0;
 
-	m_northCandidateNodes.Purge();
-	m_southCandidateNodes.Purge();
+	m_CentralCandidateNodes.Purge();
 
 	//FindEscapeTriggers();
 }
@@ -407,6 +406,32 @@ void CIV_Director_Spawn_Manager::Update()
 
 	if ( m_iNPCsToSpawn > 0 )
 	{
+		const char *npc_string = "npc_*";
+		CBaseEntity *last_ent = NULL;
+
+		for (int npc_next = 0; gEntList.FindEntityByClassname(last_ent, npc_string) != NULL; npc_next++)
+		{
+			last_ent = gEntList.FindEntityByClassname(last_ent, npc_string);
+
+			if (last_ent != NULL)
+			{
+				CAI_BaseNPC	*last_ent_npc = dynamic_cast<CAI_BaseNPC*>(last_ent);
+
+				if (last_ent_npc && last_ent_npc->GetDirectorSpawnState())
+				{
+					float fldistance = 0;
+					CBasePlayer *pPlayer = UTIL_GetNearestPlayerSimple(last_ent_npc->GetAbsOrigin(), fldistance);
+
+					if (!pPlayer)
+						continue;
+
+					float calc_distance = pPlayer->GetAbsOrigin().DistTo(last_ent_npc->GetAbsOrigin());
+					if (calc_distance > iv_horde_max_distance.GetInt())
+						last_ent_npc->Remove();
+				}
+			}
+		}
+
 		if ( SpawnNPCAtRandomNode() )
 			m_iNPCsToSpawn--;
 	}
@@ -429,7 +454,7 @@ bool CIV_Director_Spawn_Manager::SpawnNPCAtRandomNode()
 	UpdateCandidateNodes(temp_selected_npc_class->m_nHullType);
 
 	// decide if the NPC is going to come from behind or in front
-	bool bNorth = RandomFloat() < 0.7f;
+	/*bool bNorth = RandomFloat() < 0.7f;
 	if ( m_northCandidateNodes.Count() <= 0 )
 	{
 		bNorth = false;
@@ -437,9 +462,9 @@ bool CIV_Director_Spawn_Manager::SpawnNPCAtRandomNode()
 	else if ( m_southCandidateNodes.Count() <= 0 )
 	{
 		bNorth = true;
-	}
+	}*/
 
-	CUtlVector<int> &candidateNodes = bNorth ? m_northCandidateNodes : m_southCandidateNodes;
+	CUtlVector<int> &candidateNodes = m_CentralCandidateNodes;
 
 	if ( candidateNodes.Count() <= 0 )
 		return false;
@@ -559,8 +584,8 @@ void CIV_Director_Spawn_Manager::UpdateCandidateNodes(int sended_hull)
 		return;
 	}
 
-	Vector vecSouthPlayer = vec3_origin;
-	Vector vecNorthPlayer = vec3_origin;
+	Vector vecCentralPlayer = vec3_origin;
+	//Vector vecNorthPlayer = vec3_origin;
 	for (int i = 1; i <= total_players_count; i++)
 	{
 		CBasePlayer *pPlayer = UTIL_PlayerByIndex(i);
@@ -568,22 +593,21 @@ void CIV_Director_Spawn_Manager::UpdateCandidateNodes(int sended_hull)
 		if (!pPlayer || pPlayer->GetHealth() <= 0)
 			continue;
 
-		if (vecSouthPlayer == vec3_origin || vecSouthPlayer.y > pPlayer->GetAbsOrigin().y)
+		if (vecCentralPlayer == vec3_origin || vecCentralPlayer.y > pPlayer->GetAbsOrigin().y)
 		{
-			vecSouthPlayer = pPlayer->GetAbsOrigin();
+			vecCentralPlayer = pPlayer->GetAbsOrigin();
 		}
-		if (vecNorthPlayer == vec3_origin || vecNorthPlayer.y < pPlayer->GetAbsOrigin().y)
+		/*if (vecNorthPlayer == vec3_origin || vecNorthPlayer.y < pPlayer->GetAbsOrigin().y)
 		{
 			vecNorthPlayer = pPlayer->GetAbsOrigin();
-		}
+		}*/
 	}
 
-	if (vecSouthPlayer == vec3_origin || vecNorthPlayer == vec3_origin)		// no live Players
+	if (vecCentralPlayer == vec3_origin /*|| vecNorthPlayer == vec3_origin*/)		// no live Players
 		return;
 	
 	int iNumNodes = GetNetwork()->NumNodes();
-	m_northCandidateNodes.Purge();
-	m_southCandidateNodes.Purge();
+	m_CentralCandidateNodes.Purge();
 
 	for (int i = 0; i < iNumNodes; i++)
 	{
@@ -616,22 +640,22 @@ void CIV_Director_Spawn_Manager::UpdateCandidateNodes(int sended_hull)
 		if (bInsideEscapeArea)
 			continue;
 
-		if (vecPos.y >= vecSouthPlayer.y)
+		if (vecPos.y >= vecCentralPlayer.y)
 		{
 			if (iv_director_debug.GetInt() == 3)
 			{
 				NDebugOverlay::Box(vecPos, -Vector( 5, 5, 5 ), Vector( 5, 5, 5 ), 32, 32, 128, 10, 60.0f);
 			}
-			m_northCandidateNodes.AddToTail(i);
+			m_CentralCandidateNodes.AddToTail(i);
 		}
-		if (vecPos.y <= vecNorthPlayer.y)
+		/*if (vecPos.y <= vecNorthPlayer.y)
 		{
 			m_southCandidateNodes.AddToTail(i);
 			if (iv_director_debug.GetInt() == 3)
 			{
 				NDebugOverlay::Box(vecPos, -Vector( 5, 5, 5 ), Vector( 5, 5, 5 ), 128, 32, 32, 10, 60.0f);
 			}
-		}
+		}*/
 	}
 }
 
@@ -645,7 +669,7 @@ bool CIV_Director_Spawn_Manager::FindHordePosition(int sended_hull)
 	UpdateCandidateNodes(sended_hull);
 
 	// decide if the horde is going to come from behind or in front
-	bool bNorth = RandomFloat() < 0.7f;
+	/*bool bNorth = RandomFloat() < 0.7f;
 	if (m_northCandidateNodes.Count() <= 0)
 	{
 		bNorth = false;
@@ -653,9 +677,9 @@ bool CIV_Director_Spawn_Manager::FindHordePosition(int sended_hull)
 	else if (m_southCandidateNodes.Count() <= 0)
 	{
 		bNorth = true;
-	}
+	}*/
 
-	CUtlVector<int> &candidateNodes = bNorth ? m_northCandidateNodes : m_southCandidateNodes;
+	CUtlVector<int> &candidateNodes = m_CentralCandidateNodes;
 
 	if (candidateNodes.Count() <= 0)
 	{
@@ -818,7 +842,7 @@ int CIV_Director_Spawn_Manager::SpawnNPCBatch(IV_Director_NPC_Class_Entry *sende
 }
 
 CBaseEntity* CIV_Director_Spawn_Manager::SpawnNPCAt(IV_Director_NPC_Class_Entry *sended_npc_class, const Vector& vecPos, const QAngle &angle)
-{	
+{
 	CBaseEntity	*pEntity = NULL;	
 	pEntity = CreateEntityByName(sended_npc_class->m_pszNPCClass);
 	CAI_BaseNPC	*pNPC = dynamic_cast<CAI_BaseNPC*>(pEntity);
