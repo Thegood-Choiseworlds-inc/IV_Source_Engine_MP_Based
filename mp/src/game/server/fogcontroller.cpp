@@ -60,6 +60,7 @@ BEGIN_DATADESC( CFogController )
 	DEFINE_KEYFIELD( m_fog.maxdensity,		FIELD_FLOAT,	"fogmaxdensity" ),
 	DEFINE_KEYFIELD( m_fog.farz,			FIELD_FLOAT,	"farz" ),
 	DEFINE_KEYFIELD( m_fog.duration,		FIELD_FLOAT,	"foglerptime" ),
+	DEFINE_KEYFIELD( m_fog.bfarzPriority, FIELD_BOOLEAN, "farzpriority" ),
 
 	DEFINE_THINKFUNC( SetLerpValues ),
 
