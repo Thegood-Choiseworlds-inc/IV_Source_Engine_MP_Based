@@ -137,12 +137,11 @@ CIV_Director_Spawn_Manager* IVDirectorSpawnManager() { return &g_Spawn_Manager; 
 extern ConVar iv_director_debug;
 
 ConVar iv_spawning_enabled("iv_spawning_enabled", "1", FCVAR_CHEAT, "Director Spawner Enable/Disable State");
-ConVar iv_horde_min_distance("iv_horde_min_distance", "800", FCVAR_CHEAT, "Minimum distance away from the marines the horde can spawn");
-ConVar iv_horde_max_distance("iv_horde_max_distance", "1500", FCVAR_CHEAT, "Maximum distance away from the marines the horde can spawn");
-ConVar iv_max_alien_batch("iv_max_alien_batch", "10", FCVAR_CHEAT, "Max number of aliens spawned in a horde batch");
+ConVar iv_horde_min_distance("iv_horde_min_distance", "750", FCVAR_CHEAT, "Minimum distance away from the Players the horde can spawn");
+ConVar iv_horde_max_distance("iv_horde_max_distance", "1500", FCVAR_CHEAT, "Maximum distance away from the Players the horde can spawn");
+ConVar iv_max_npc_batch("iv_max_npc_batch", "10", FCVAR_CHEAT, "Max number of NPC's spawned in a horde batch");
 ConVar iv_batch_interval("iv_batch_interval", "5", FCVAR_CHEAT, "Time between successive batches spawning in the same spot");
 ConVar iv_candidate_interval("iv_candidate_interval", "1.0", FCVAR_CHEAT, "Interval between updating candidate spawning nodes");
-ConVar iv_director_player_near_distance("iv_director_player_near_distance", "1500", FCVAR_CHEAT, "Near Distance to Allow Horde Spawning");
 
 
 // ==================================
@@ -368,7 +367,7 @@ void CIV_Director_Spawn_Manager::Update()
 			int random_spawn_index = RandomInt(0, GetNumNPCClasses());
 			m_pDefinedHordeClass = GetNPCClass(random_spawn_index);
 
-			int iToSpawn = MIN(m_iHordeToSpawn, iv_max_alien_batch.GetInt());
+			int iToSpawn = MIN(m_iHordeToSpawn, iv_max_npc_batch.GetInt());
 			int iSpawned = SpawnNPCBatch(m_pDefinedHordeClass, iToSpawn, m_vecHordePosition, m_angHordeAngle, 0);
 			m_iHordeToSpawn -= iSpawned;
 			if ( m_iHordeToSpawn <= 0 )
@@ -453,17 +452,6 @@ bool CIV_Director_Spawn_Manager::SpawnNPCAtRandomNode()
 
 	UpdateCandidateNodes(temp_selected_npc_class->m_nHullType);
 
-	// decide if the NPC is going to come from behind or in front
-	/*bool bNorth = RandomFloat() < 0.7f;
-	if ( m_northCandidateNodes.Count() <= 0 )
-	{
-		bNorth = false;
-	}
-	else if ( m_southCandidateNodes.Count() <= 0 )
-	{
-		bNorth = true;
-	}*/
-
 	CUtlVector<int> &candidateNodes = m_CentralCandidateNodes;
 
 	if ( candidateNodes.Count() <= 0 )
@@ -489,7 +477,7 @@ bool CIV_Director_Spawn_Manager::SpawnNPCAtRandomNode()
 		AI_Waypoint_t *pRoute = IVDirectorPathUtils()->BuildRoute(pNode->GetPosition(temp_selected_npc_class->m_nHullType), pPlayer->GetAbsOrigin(), NULL, 100);
 		if (!pRoute)
 		{
-			if (iv_director_debug.GetBool())
+			if (iv_director_debug.GetInt() > 1)
 			{
 				NDebugOverlay::Cross3D( pNode->GetOrigin(), 10.0f, 255, 128, 0, true, 20.0f );
 			}
@@ -497,11 +485,11 @@ bool CIV_Director_Spawn_Manager::SpawnNPCAtRandomNode()
 		}
 		
 		Vector vecSpawnPos = pNode->GetPosition(temp_selected_npc_class->m_nHullType) + Vector(0, 0, 32);
-		if (ValidSpawnPoint(vecSpawnPos, vecMins, vecMaxs, true, iv_director_player_near_distance.GetFloat()))
+		if (ValidSpawnPoint(vecSpawnPos, vecMins, vecMaxs, true, iv_horde_min_distance.GetFloat()))
 		{
 			if (SpawnNPCAt(temp_selected_npc_class, vecSpawnPos, vec3_angle))
 			{
-				if (iv_director_debug.GetBool())
+				if (iv_director_debug.GetInt() > 1)
 				{
 					NDebugOverlay::Cross3D(vecSpawnPos, 25.0f, 255, 255, 255, true, 20.0f);
 					float fldistance = 0;
@@ -517,7 +505,7 @@ bool CIV_Director_Spawn_Manager::SpawnNPCAtRandomNode()
 		}
 		else
 		{
-			if (iv_director_debug.GetBool())
+			if (iv_director_debug.GetInt() > 1)
 			{
 				NDebugOverlay::Cross3D(vecSpawnPos, 25.0f, 255, 0, 0, true, 20.0f);
 			}
@@ -541,7 +529,7 @@ bool CIV_Director_Spawn_Manager::AddHorde(int iHordeSize)
 		}
 		else
 		{
-			if (iv_director_debug.GetBool())
+			if (iv_director_debug.GetInt() > 1)
 			{
 				NDebugOverlay::Cross3D(m_vecHordePosition, 50.0f, 255, 128, 0, true, 60.0f);
 				float fldistance = 0;
@@ -553,6 +541,7 @@ bool CIV_Director_Spawn_Manager::AddHorde(int iHordeSize)
 			}
 		}
 	}
+
 	return true;
 }
 
@@ -585,7 +574,6 @@ void CIV_Director_Spawn_Manager::UpdateCandidateNodes(int sended_hull)
 	}
 
 	Vector vecCentralPlayer = vec3_origin;
-	//Vector vecNorthPlayer = vec3_origin;
 	for (int i = 1; i <= total_players_count; i++)
 	{
 		CBasePlayer *pPlayer = UTIL_PlayerByIndex(i);
@@ -593,17 +581,13 @@ void CIV_Director_Spawn_Manager::UpdateCandidateNodes(int sended_hull)
 		if (!pPlayer || pPlayer->GetHealth() <= 0)
 			continue;
 
-		if (vecCentralPlayer == vec3_origin || vecCentralPlayer.y > pPlayer->GetAbsOrigin().y)
+		if (vecCentralPlayer == vec3_origin || vecCentralPlayer.y < pPlayer->GetAbsOrigin().y)
 		{
 			vecCentralPlayer = pPlayer->GetAbsOrigin();
 		}
-		/*if (vecNorthPlayer == vec3_origin || vecNorthPlayer.y < pPlayer->GetAbsOrigin().y)
-		{
-			vecNorthPlayer = pPlayer->GetAbsOrigin();
-		}*/
 	}
 
-	if (vecCentralPlayer == vec3_origin /*|| vecNorthPlayer == vec3_origin*/)		// no live Players
+	if (vecCentralPlayer == vec3_origin)		// no live Players
 		return;
 	
 	int iNumNodes = GetNetwork()->NumNodes();
@@ -640,22 +624,14 @@ void CIV_Director_Spawn_Manager::UpdateCandidateNodes(int sended_hull)
 		if (bInsideEscapeArea)
 			continue;
 
-		if (vecPos.y >= vecCentralPlayer.y)
+		if (vecPos.y <= vecCentralPlayer.y)
 		{
-			if (iv_director_debug.GetInt() == 3)
-			{
-				NDebugOverlay::Box(vecPos, -Vector( 5, 5, 5 ), Vector( 5, 5, 5 ), 32, 32, 128, 10, 60.0f);
-			}
 			m_CentralCandidateNodes.AddToTail(i);
-		}
-		/*if (vecPos.y <= vecNorthPlayer.y)
-		{
-			m_southCandidateNodes.AddToTail(i);
-			if (iv_director_debug.GetInt() == 3)
+			if (iv_director_debug.GetInt() >= 3)
 			{
 				NDebugOverlay::Box(vecPos, -Vector( 5, 5, 5 ), Vector( 5, 5, 5 ), 128, 32, 32, 10, 60.0f);
 			}
-		}*/
+		}
 	}
 }
 
@@ -667,17 +643,6 @@ bool CIV_Director_Spawn_Manager::FindHordePosition(int sended_hull)
 	//   - should have a clear path to the Players
 	
 	UpdateCandidateNodes(sended_hull);
-
-	// decide if the horde is going to come from behind or in front
-	/*bool bNorth = RandomFloat() < 0.7f;
-	if (m_northCandidateNodes.Count() <= 0)
-	{
-		bNorth = false;
-	}
-	else if (m_southCandidateNodes.Count() <= 0)
-	{
-		bNorth = true;
-	}*/
 
 	CUtlVector<int> &candidateNodes = m_CentralCandidateNodes;
 
@@ -1088,7 +1053,7 @@ bool CIV_Director_Spawn_Manager::SpawnRandomFastHeadcrabs(int nFastHeadcrabs)
 				CBasePlayer *temp_nearest_player = UTIL_GetNearestPlayerSimple(pNPC->GetAbsOrigin(), near_distance);
 				pNPCSpawnable->UpdateEnemyMemory(temp_nearest_player, temp_nearest_player->GetAbsOrigin());
 			}
-			if (iv_director_debug.GetBool() && pNPC)
+			if (iv_director_debug.GetInt() > 1 && pNPC)
 			{
 				Msg("Spawned Fast Headcrab at %f %f %f\n", pNPC->GetAbsOrigin());
 				NDebugOverlay::Cross3D(pNPC->GetAbsOrigin(), 8.0f, 255, 0, 0, true, 20.0f);
@@ -1156,7 +1121,7 @@ CIV_Director_Open_Area* CIV_Director_Spawn_Manager::FindNearbyOpenArea(const Vec
 			nHighestLinks = nValidLinks;
 			pHighestConnectivity = pNode;
 		}
-		if (iv_director_debug.GetBool())
+		if (iv_director_debug.GetInt() > 1)
 		{
 			NDebugOverlay::Text( vecPos, UTIL_VarArgs( "%d", nValidLinks ), false, 10.0f );
 		}
@@ -1231,7 +1196,7 @@ CIV_Director_Open_Area* CIV_Director_Spawn_Manager::FindNearbyOpenArea(const Vec
 		VectorMin(vecAreaMins, pArea->m_aAreaNodes[i]->GetOrigin(), vecAreaMins);
 		VectorMax(vecAreaMaxs, pArea->m_aAreaNodes[i]->GetOrigin(), vecAreaMaxs);
 		
-		if (iv_director_debug.GetBool())
+		if (iv_director_debug.GetInt() > 1)
 		{
 			if ( i == 0 )
 			{
@@ -1247,7 +1212,7 @@ CIV_Director_Open_Area* CIV_Director_Spawn_Manager::FindNearbyOpenArea(const Vec
 	Vector vecArea = ( vecAreaMaxs - vecAreaMins );
 	float flArea = vecArea.x * vecArea.y;
 
-	if (iv_director_debug.GetBool())
+	if (iv_director_debug.GetInt() > 1)
 	{
 		Msg("area mins = %f %f %f\n", VectorExpand(vecAreaMins));
 		Msg("area maxs = %f %f %f\n", VectorExpand(vecAreaMaxs));
