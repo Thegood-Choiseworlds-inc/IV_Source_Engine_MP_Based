@@ -499,11 +499,19 @@ CSpriteDataCache* LookupSpriteDataCache( const char *pSpritePath )
 		pData->m_pMaterial = CMaterial::CreateMaterial( filename, true );
 		if ( pData->m_pMaterial && pData->m_pMaterial->GetMaterial() )
 		{
+			bool bFound;
 			pData->m_Width = pData->m_pMaterial->GetWidth();
 			pData->m_Height = pData->m_pMaterial->GetHeight();
-			pData->m_pFrameVar = pData->m_pMaterial->GetMaterial()->FindVar( "$spriteFrame", 0 );
-			pData->m_pRenderModeVar = pData->m_pMaterial->GetMaterial()->FindVar( "$spriterendermode", 0 );
-
+			pData->m_pFrameVar = pData->m_pMaterial->GetMaterial()->FindVar( "$spriteFrame", &bFound );
+			if ( !bFound )
+			{
+				pData->m_pFrameVar = NULL;
+			}
+			pData->m_pRenderModeVar = pData->m_pMaterial->GetMaterial()->FindVar( "$spriterendermode", &bFound );
+			if ( !bFound )
+			{
+				pData->m_pRenderModeVar = NULL;
+			}
 			pData->m_pOrientationVar = pData->m_pMaterial->GetMaterial()->FindVar( "$spriteOrientation", &pData->m_bOrientationVarFound, false );
 			pData->m_pOriginVar = pData->m_pMaterial->GetMaterial()->FindVar( "$spriteorigin", &pData->m_bOriginVarFound );
 		}
