@@ -454,6 +454,8 @@ static bool IsModelValid( const char* pModelName )
 }
 
 
+#define MAX_DETAIL_SPRITES 65535 * 32 //IV Note: Settings Ported from CS:GO Engine Branch
+
 //-----------------------------------------------------------------------------
 // Add a detail to the lump.
 //-----------------------------------------------------------------------------
@@ -466,7 +468,7 @@ static void AddDetailToLump( const char* pModelName, const Vector& pt, const QAn
 	if (!IsModelValid(pModelName))
 		return;
 
-	if (s_DetailObjectLump.Count() == 65535)
+	if (s_DetailObjectLump.Count() == MAX_DETAIL_SPRITES)
 	{
 		++s_nDetailOverflow;
 		return;
@@ -494,9 +496,6 @@ static void AddDetailToLump( const char* pModelName, const Vector& pt, const QAn
 //-----------------------------------------------------------------------------
 // Add a detail sprite to the lump.
 //-----------------------------------------------------------------------------
-
-#define MAX_DETAIL_SPRITES 65535 * 32 //IV Note: Settings Ported from CS:GO Engine Branch
-
 static void AddDetailSpriteToLump( const Vector &vecOrigin, const QAngle &vecAngles, int nOrientation,
 								  const Vector2D *pPos, const Vector2D *pTex, float flScale, int iType,
 									int iShapeAngle = 0, int iShapeSize = 0, int iSwayAmount = 0 )
@@ -506,7 +505,7 @@ static void AddDetailSpriteToLump( const Vector &vecOrigin, const QAngle &vecAng
 
 	if (i >= MAX_DETAIL_SPRITES)
 	{
-		Error("Error! Too many detail props emitted on this map! (%sK max!)\n", MAX_DETAIL_SPRITES);
+		Error("Error! Too many detail props emitted on this map! (%dK max!)\n", MAX_DETAIL_SPRITES);
 	}
 
 	DetailObjectLump_t& objectLump = s_DetailObjectLump[i];
@@ -982,6 +981,8 @@ void EmitDetailModels()
 			continue;
 		}
 	}
+
+	Msg("Total Placed Detail Props: %d; Max = %d", s_DetailObjectLump.Count(), MAX_DETAIL_SPRITES);
 
 	EndPacifier( true );
 }
