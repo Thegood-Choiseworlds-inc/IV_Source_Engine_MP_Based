@@ -494,6 +494,9 @@ static void AddDetailToLump( const char* pModelName, const Vector& pt, const QAn
 //-----------------------------------------------------------------------------
 // Add a detail sprite to the lump.
 //-----------------------------------------------------------------------------
+
+#define MAX_DETAIL_SPRITES 65535 * 32 //IV Note: Settings Ported from CS:GO Engine Branch
+
 static void AddDetailSpriteToLump( const Vector &vecOrigin, const QAngle &vecAngles, int nOrientation,
 								  const Vector2D *pPos, const Vector2D *pTex, float flScale, int iType,
 									int iShapeAngle = 0, int iShapeSize = 0, int iSwayAmount = 0 )
@@ -501,9 +504,9 @@ static void AddDetailSpriteToLump( const Vector &vecOrigin, const QAngle &vecAng
 	// Insert an element into the object dictionary if it aint there...
 	int i = s_DetailObjectLump.AddToTail( );
 
-	if (i >= 65535)
+	if (i >= MAX_DETAIL_SPRITES)
 	{
-		Error( "Error! Too many detail props emitted on this map! (64K max!)n" );
+		Error("Error! Too many detail props emitted on this map! (%sK max!)\n", MAX_DETAIL_SPRITES);
 	}
 
 	DetailObjectLump_t& objectLump = s_DetailObjectLump[i];
@@ -604,7 +607,7 @@ static void PlaceDetail( DetailModel_t const& model, const Vector& pt, const Vec
 
 	// FIXME: We may also want a purely random rotation too
 
-	// TERROR: Ported from CS:GO Engine Branch
+	// IV Note: Ported from CS:GO Engine Branch
 
 	/*if (g_BlockerList.Count() > 0)
 		Msg("Checking Detail Block Area...\n");*/
