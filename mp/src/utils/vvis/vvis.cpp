@@ -899,6 +899,7 @@ float DetermineVisRadius( )
 				flRadius = -1.0f;
 			
 			priority_fog_controller_farz = farz_priority;
+			last_checked_fog_controller = &entities[i];
 
 			//break;
 		}
