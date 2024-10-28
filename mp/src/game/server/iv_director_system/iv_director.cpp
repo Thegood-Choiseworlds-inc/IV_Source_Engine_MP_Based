@@ -420,6 +420,14 @@ void CIV_Director::SetSpawnTableType(int sended_table_index)
 	IVDirectorSpawnManager()->IV_Set_Spawn_Table(sended_table_index);
 }
 
+void CIV_Director::SetNPCSHordeFrontState(bool state)
+{
+	if (!IVDirectorSpawnManager())
+		return;
+
+	IVDirectorSpawnManager()->SetHordeFrontSpawnState(state);
+}
+
 void CIV_Director::StartFinale()
 {
 	m_bFinale = true;

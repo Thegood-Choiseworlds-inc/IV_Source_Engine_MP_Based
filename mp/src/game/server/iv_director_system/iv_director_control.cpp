@@ -17,12 +17,14 @@ BEGIN_DATADESC(CIV_Director_Control)
 	DEFINE_KEYFIELD(m_bHordesStartEnabled, FIELD_BOOLEAN,	"hordes"),
 	DEFINE_KEYFIELD(m_bDirectorControlsSpawners, FIELD_BOOLEAN,	"controlspawners"),
 	DEFINE_KEYFIELD(m_iDirectorSpawnTableType, FIELD_INTEGER, "spawntabletype"),
+	DEFINE_KEYFIELD(m_bDirectorHordeFrontState, FIELD_BOOLEAN, "hordefrontstate"),
 	DEFINE_INPUTFUNC(FIELD_VOID,	"EnableHordes",	InputEnableHordes),
 	DEFINE_INPUTFUNC(FIELD_VOID,	"DisableHordes",	InputDisableHordes),
 	DEFINE_INPUTFUNC(FIELD_VOID,	"EnableWanderers",	InputEnableWanderers),
 	DEFINE_INPUTFUNC(FIELD_VOID,	"DisableWanderers",	InputDisableWanderers),
 	DEFINE_INPUTFUNC(FIELD_VOID,	"StartFinale",	InputStartFinale),
 	DEFINE_INPUTFUNC(FIELD_INTEGER, "SetSpawnTableType", InputSetDirectorSpawnTableType),
+	DEFINE_INPUTFUNC(FIELD_BOOLEAN, "SetFrontHordeState", InputSetDirectorHordeFrontState),
 	DEFINE_OUTPUT(m_OnEscapeRoomStart, "OnEscapeRoomStart"),
 END_DATADESC()
 
@@ -100,4 +102,12 @@ void CIV_Director_Control::InputSetDirectorSpawnTableType(inputdata_t &inputdata
 		return;
 
 	IVDirector()->SetSpawnTableType(inputdata.value.Int());
+}
+
+void CIV_Director_Control::InputSetDirectorHordeFrontState(inputdata_t &inputdata)
+{
+	if (!IVDirector())
+		return;
+
+	IVDirector()->SetNPCSHordeFrontState(inputdata.value.Bool());
 }

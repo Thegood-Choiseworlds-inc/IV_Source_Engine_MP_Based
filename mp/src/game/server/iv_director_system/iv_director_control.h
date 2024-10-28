@@ -30,6 +30,8 @@ public:
 
 	int m_iDirectorSpawnTableType;
 
+	bool m_bDirectorHordeFrontState;
+
 private:
 	void InputEnableHordes(inputdata_t &inputdata);
 	void InputDisableHordes(inputdata_t &inputdata);
@@ -37,6 +39,7 @@ private:
 	void InputDisableWanderers(inputdata_t &inputdata);
 	void InputStartFinale(inputdata_t &inputdata);
 	void InputSetDirectorSpawnTableType(inputdata_t &inputdata);
+	void InputSetDirectorHordeFrontState(inputdata_t &inputdata);
 
 	COutputEvent m_OnEscapeRoomStart;
 };

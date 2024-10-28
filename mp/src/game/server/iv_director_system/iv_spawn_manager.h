@@ -81,12 +81,14 @@ public:
 	int GetNumNPCClassesSpecial();
 	IV_Director_NPC_Class_Entry* GetNPCClassSpecial(int i);
 
+	void SetHordeFrontSpawnState(bool state) { m_bHordeSpawnFrontState = state; }
+
 	// spawns a headcrab somewhere randomly in the map
 	bool SpawnRandomHeadcrab();
 	bool SpawnRandomFastHeadcrabs(int nFastHeadcrabs);
 
 private:
-	void UpdateCandidateNodes(int sended_hull);
+	void UpdateCandidateNodes(int sended_hull, bool was_back_of_player);
 	bool FindHordePosition(int sended_hull);
 	CAI_Network* GetNetwork();
 	bool SpawnNPCAtRandomNode();
@@ -107,6 +109,8 @@ private:
 	int m_nAwakeCommonNPCs;
 	int m_nAwakeSpecialNPCs;
 	IV_Director_NPC_Class_Entry *m_pDefinedHordeClass;
+
+	bool m_bHordeSpawnFrontState;
 
 	// maintaining a list of possible nodes to spawn NPC's from
 	CUtlVector<int> m_CentralCandidateNodes;

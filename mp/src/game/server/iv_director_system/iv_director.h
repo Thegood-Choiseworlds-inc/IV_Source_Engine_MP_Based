@@ -77,6 +77,8 @@ public:
 
 	void SetSpawnTableType(int table_type_index);
 
+	void SetNPCSHordeFrontState(bool state);
+
 protected:
 	void UpdateHorde();
 	void UpdateIntensity();
