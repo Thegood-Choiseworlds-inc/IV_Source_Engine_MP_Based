@@ -53,7 +53,7 @@ bool CIV_Director::Init()
 	m_IntensityUpdateTimer.Invalidate();
 	m_bInitialWait = true;
 
-	m_bFiredEscapeRoom = false;
+	m_bFiredFinaleState = false;
 	
 	m_bHordeInProgress = false;
 	m_bFinale = false;
@@ -64,13 +64,37 @@ bool CIV_Director::Init()
 	{
 		m_bWanderersEnabled = pControl->m_bWanderersStartEnabled;
 		m_bHordesEnabled = pControl->m_bHordesStartEnabled;
-		m_bDirectorControlsSpawners = pControl->m_bDirectorControlsSpawners;
+
+		//IV Note: Spawn Manager NPC's Spawn Common Parms
+		SetSpawnTableType(pControl->m_iDirectorSpawnTableType);
+
+		SetMinCommonNPCS(pControl->m_iDirectorMinCommonNPCS);
+		SetMaxCommonNPCS(pControl->m_iDirectorMaxCommonNPCS);
+		SetMaxSpecialNPCS(pControl->m_iDirectorMaxSpecialNPCS);
+		SetSpecialNPCSOnceState(pControl->m_bDirectorSpecialsOnceAdded);
+		
+		SetMinCommonNPCSSpawnRadius(pControl->m_fDirectorCommonMinRadius);
+		SetMaxCommonNPCSSpawnRadius(pControl->m_fDirectorCommonMaxRadius);
+
+		SetNPCSHordeFrontState(pControl->m_bDirectorHordeFrontState);
 	}
 	else
 	{
 		m_bWanderersEnabled = false;
 		m_bHordesEnabled = false;
-		m_bDirectorControlsSpawners = false;
+
+		//IV Note: Spawn Manager NPC's Spawn Common Parms
+		SetSpawnTableType(0);
+
+		SetMinCommonNPCS(-1);
+		SetMaxCommonNPCS(-1);
+		SetMaxSpecialNPCS(0);
+		SetSpecialNPCSOnceState(true);
+
+		SetMinCommonNPCSSpawnRadius(-1);
+		SetMaxCommonNPCSSpawnRadius(-1);
+
+		SetNPCSHordeFrontState(true);
 	}
 
 	return true;
@@ -418,6 +442,54 @@ void CIV_Director::SetSpawnTableType(int sended_table_index)
 		return;
 
 	IVDirectorSpawnManager()->IV_Set_Spawn_Table(sended_table_index);
+}
+
+void CIV_Director::SetMinCommonNPCS(int count)
+{
+	if (!IVDirectorSpawnManager())
+		return;
+
+	IVDirectorSpawnManager()->SetSpawnCommonNPCSMinSize(count);
+}
+
+void CIV_Director::SetMaxCommonNPCS(int count)
+{
+	if (!IVDirectorSpawnManager())
+		return;
+
+	IVDirectorSpawnManager()->SetSpawnCommonNPCSMaxSize(count);
+}
+
+void CIV_Director::SetMaxSpecialNPCS(int count)
+{
+	if (!IVDirectorSpawnManager())
+		return;
+
+	IVDirectorSpawnManager()->SetSpawnSpecialNPCSMaxCount(count);
+}
+
+void CIV_Director::SetSpecialNPCSOnceState(bool state)
+{
+	if (!IVDirectorSpawnManager())
+		return;
+
+	IVDirectorSpawnManager()->SetSpawnSpecialNPCSOnceState(state);
+}
+
+void CIV_Director::SetMinCommonNPCSSpawnRadius(float radius)
+{
+	if (!IVDirectorSpawnManager())
+		return;
+
+	IVDirectorSpawnManager()->SetSpawnCommonNPCSMinRadius(radius);
+}
+
+void CIV_Director::SetMaxCommonNPCSSpawnRadius(float radius)
+{
+	if (!IVDirectorSpawnManager())
+		return;
+
+	IVDirectorSpawnManager()->SetSpawnCommonNPCSMaxRadius(radius);
 }
 
 void CIV_Director::SetNPCSHordeFrontState(bool state)

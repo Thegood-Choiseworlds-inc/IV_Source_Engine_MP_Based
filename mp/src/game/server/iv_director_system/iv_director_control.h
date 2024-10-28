@@ -22,13 +22,20 @@ public:
 
 	virtual void Precache();
 
-	virtual void OnEscapeRoomStart( CBasePlayer *pPlayer);			//Player has entered the escape room with all objectives complete
+	virtual void OnFinaleStarted(CBasePlayer *pPlayer);
 
 	bool m_bWanderersStartEnabled;
 	bool m_bHordesStartEnabled;
-	bool m_bDirectorControlsSpawners;
 
 	int m_iDirectorSpawnTableType;
+
+	int m_iDirectorMinCommonNPCS;
+	int m_iDirectorMaxCommonNPCS;
+	int m_iDirectorMaxSpecialNPCS;
+	bool m_bDirectorSpecialsOnceAdded;
+
+	float m_fDirectorCommonMinRadius;
+	float m_fDirectorCommonMaxRadius;
 
 	bool m_bDirectorHordeFrontState;
 
@@ -38,10 +45,20 @@ private:
 	void InputEnableWanderers(inputdata_t &inputdata);
 	void InputDisableWanderers(inputdata_t &inputdata);
 	void InputStartFinale(inputdata_t &inputdata);
+
 	void InputSetDirectorSpawnTableType(inputdata_t &inputdata);
+
+	void InputSetMinCommonNPCS(inputdata_t &inputdata);
+	void InputSetMaxCommonNPCS(inputdata_t &inputdata);
+	void InputSetMaxSpecialNPCS(inputdata_t &inputdata);
+	void InputSetSpecialNPCSOnceState(inputdata_t &inputdata);
+
+	void InputSetMinCommonNPCSSpawnRadius(inputdata_t &inputdata);
+	void InputSetMaxCommonNPCSSpawnRadius(inputdata_t &inputdata);
+
 	void InputSetDirectorHordeFrontState(inputdata_t &inputdata);
 
-	COutputEvent m_OnEscapeRoomStart;
+	COutputEvent m_OnFinaleEventStart;
 };
 
 #endif // IV_DIRECTOR_CONTROL_H

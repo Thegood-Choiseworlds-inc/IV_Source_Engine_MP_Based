@@ -148,6 +148,12 @@ ConVar iv_batch_interval("iv_batch_interval", "5", FCVAR_CHEAT, "Time between su
 ConVar iv_candidate_interval("iv_candidate_interval", "1.0", FCVAR_CHEAT, "Interval between updating candidate spawning nodes");
 ConVar iv_director_check_npcs_clear_state("iv_director_check_npcs_clear_state", "0", FCVAR_CHEAT, "Show Director NPC's Remove State in Console");
 
+ConVar iv_director_spawner_common_min_size("iv_director_spawner_common_min_size", "5", FCVAR_CHEAT, "Min Size of Common NPC's Spawned on Map");
+ConVar iv_director_spawner_common_max_size("iv_director_spawner_common_max_size", "15", FCVAR_CHEAT, "Max Size of Common NPC's Spawned on Map");
+ConVar iv_director_spawner_special_max_count("iv_director_spawner_special_max_count", "3", FCVAR_CHEAT, "Max Size of Special NPC's Spawned on Map");
+ConVar iv_director_spawner_common_min_spawn_radius("iv_director_spawner_common_min_spawn_radius", "750", FCVAR_CHEAT, "Min Radius of Common NPC's Spawn");
+ConVar iv_director_spawner_common_max_spawn_radius("iv_director_spawner_common_max_spawn_radius", "1500", FCVAR_CHEAT, "Max Radius of Common NPC's Spawn");
+
 // ==================================
 // == Master list of NPC classes ==
 // ==================================
@@ -184,6 +190,13 @@ CIV_Director_Spawn_Manager::CIV_Director_Spawn_Manager()
 	m_nAwakeCommonNPCs = 0;
 	m_nAwakeSpecialNPCs = 0;
 	m_pDefinedHordeClass = &g_NPCs_Classes_Zombies[0];
+
+	m_imincommonsize = iv_director_spawner_common_min_size.GetInt();
+	m_imaxcommonsize = iv_director_spawner_common_max_size.GetInt();
+	m_imaxspecialcount = iv_director_spawner_special_max_count.GetInt();
+
+	m_flmincommonradius = iv_director_spawner_common_min_spawn_radius.GetFloat();
+	m_flmaxcommonradius = iv_director_spawner_common_max_spawn_radius.GetFloat();
 
 	m_bHordeSpawnFrontState = false;
 }

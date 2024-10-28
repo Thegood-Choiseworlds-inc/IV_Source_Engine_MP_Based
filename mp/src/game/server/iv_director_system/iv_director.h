@@ -77,6 +77,14 @@ public:
 
 	void SetSpawnTableType(int table_type_index);
 
+	void SetMinCommonNPCS(int count);
+	void SetMaxCommonNPCS(int count);
+	void SetMaxSpecialNPCS(int count);
+	void SetSpecialNPCSOnceState(bool state);
+
+	void SetMinCommonNPCSSpawnRadius(float radius);
+	void SetMaxCommonNPCSSpawnRadius(float radius);
+
 	void SetNPCSHordeFrontState(bool state);
 
 protected:
@@ -101,8 +109,7 @@ private:
 	bool m_bFinale;
 	bool m_bWanderersEnabled;
 	bool m_bHordesEnabled;
-	bool m_bFiredEscapeRoom;
-	bool m_bDirectorControlsSpawners;
+	bool m_bFiredFinaleState;
 };
 
 CIV_Director* IVDirector();

@@ -47,6 +47,8 @@ enum IV_Spawn_Classes_Types
 	Antlions
 };
 
+#define IV_TOTAL_NPCS_AT_ONCE 50
+
 class CIV_Director_Spawn_Manager
 {
 public:
@@ -81,6 +83,14 @@ public:
 	int GetNumNPCClassesSpecial();
 	IV_Director_NPC_Class_Entry* GetNPCClassSpecial(int i);
 
+	void SetSpawnCommonNPCSMinSize(int size) { m_imincommonsize = size; }
+	void SetSpawnCommonNPCSMaxSize(int size) { m_imaxcommonsize = size; }
+	void SetSpawnSpecialNPCSMaxCount(int size) { m_imaxspecialcount = size; }
+	void SetSpawnSpecialNPCSOnceState(bool state) { m_bspecialsoncespawn = state; }
+
+	void SetSpawnCommonNPCSMinRadius(float radius) { m_flmincommonradius = radius; }
+	void SetSpawnCommonNPCSMaxRadius(float radius) { m_flmaxcommonradius = radius; }
+
 	void SetHordeFrontSpawnState(bool state) { m_bHordeSpawnFrontState = state; }
 
 	// spawns a headcrab somewhere randomly in the map
@@ -109,6 +119,14 @@ private:
 	int m_nAwakeCommonNPCs;
 	int m_nAwakeSpecialNPCs;
 	IV_Director_NPC_Class_Entry *m_pDefinedHordeClass;
+
+	int m_imincommonsize;
+	int m_imaxcommonsize;
+	int m_imaxspecialcount;
+	bool m_bspecialsoncespawn;
+
+	float m_flmincommonradius;
+	float m_flmaxcommonradius;
 
 	bool m_bHordeSpawnFrontState;
 
