@@ -49,6 +49,9 @@ enum IV_Spawn_Classes_Types
 
 #define IV_TOTAL_NPCS_AT_ONCE 50
 
+#define IV_DEBUG_NODES_VIS_MAX_TIME 8
+#define IV_DEBUG_NODES_VIS_MIN_TIME 4
+
 class CIV_Director_Spawn_Manager
 {
 public:
@@ -66,7 +69,7 @@ public:
 	int SpawnNPCBatch(IV_Director_NPC_Class_Entry *sended_npc_class, int iNumNPCS, const Vector &vecPosition, const QAngle &angle, float flPlayersBeyondDist = 0);	
 	CBaseEntity* SpawnNPCAt(IV_Director_NPC_Class_Entry *sended_npc_class, const Vector& vecPos, const QAngle &angle);
 
-	bool ValidSpawnPoint( const Vector &vecPosition, const Vector &vecMins, const Vector &vecMaxs, bool bCheckGround = true, float flPlayerNearDistance = 0 );
+	bool ValidSpawnPoint(const Vector &vecPosition, const Vector &vecMins, const Vector &vecMaxs, bool bCheckGround = true, bool ignore_near_distance = false, CBasePlayer *player_to_check = NULL);
 	bool LineBlockedByGeometry( const Vector &vecSrc, const Vector &vecEnd );
 	
 	bool GetNPCBounds(IV_Director_NPC_Class_Entry *sended_npc_class, Vector &vecMins, Vector &vecMaxs);
@@ -98,12 +101,15 @@ public:
 	bool SpawnRandomFastHeadcrabs(int nFastHeadcrabs);
 
 private:
-	void UpdateCandidateNodes(int sended_hull, bool was_back_of_player);
+	void UpdateCandidateNodes(int sended_hull, bool was_back_of_player, bool horde_prepair, bool common_near_check);
 	bool FindHordePosition(int sended_hull);
 	CAI_Network* GetNetwork();
 	bool SpawnNPCAtRandomNode();
 	//void FindEscapeTriggers();
 	void DeleteRoute(AI_Waypoint_t *pWaypointList);
+
+	void Check_Parms_Correct();
+	void Clear_NPCS_With_Rule();
 
 	bool IS_NPC_Class_Special(const char *npc_class_name);
 
