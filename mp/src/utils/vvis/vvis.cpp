@@ -906,7 +906,7 @@ float DetermineVisRadius( )
 	}
 
 	if (last_checked_fog_controller)
-		Warning("Checked 'env_fog_controller' Named '%s' Custom FarZ Radius = '%d'", ValueForKey(last_checked_fog_controller, "targetname"), flRadius);
+		Warning("Checked 'env_fog_controller' Named '%s' Custom FarZ Radius = '%f'", ValueForKey(last_checked_fog_controller, "targetname"), flRadius);
 
 	return flRadius;
 }
