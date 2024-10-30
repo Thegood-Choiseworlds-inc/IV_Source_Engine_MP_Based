@@ -843,7 +843,7 @@ int CIV_Director_Spawn_Manager::SpawnNPCBatch(IV_Director_NPC_Class_Entry *sende
 	float flNPCDepth = vecMaxs.y - vecMins.y;
 
 	// spawn one in the middle
-	if (ValidSpawnPoint(vecPosition, vecMins, vecMaxs, bCheckGround, flPlayersBeyondDist))
+	if (ValidSpawnPoint(vecPosition, vecMins, vecMaxs, bCheckGround))
 	{
 		if (SpawnNPCAt(sended_npc_class, vecPosition, angFacing))
 			iSpawned++;
@@ -861,7 +861,7 @@ int CIV_Director_Spawn_Manager::SpawnNPCBatch(IV_Director_NPC_Class_Entry *sende
 			vecNewPos = vecPosition;
 			vecNewPos.x += x * flNPCWidth;
 			vecNewPos.y -= i * flNPCDepth;
-			if (!LineBlockedByGeometry(vecPosition, vecNewPos) && ValidSpawnPoint(vecNewPos, vecMins, vecMaxs, bCheckGround, flPlayersBeyondDist))
+			if (!LineBlockedByGeometry(vecPosition, vecNewPos) && ValidSpawnPoint(vecNewPos, vecMins, vecMaxs, bCheckGround))
 			{
 				if (SpawnNPCAt(sended_npc_class, vecNewPos, angle))
 					iSpawned++;
@@ -874,7 +874,7 @@ int CIV_Director_Spawn_Manager::SpawnNPCBatch(IV_Director_NPC_Class_Entry *sende
 			vecNewPos = vecPosition;
 			vecNewPos.x += x * flNPCWidth;
 			vecNewPos.y += i * flNPCDepth;
-			if (!LineBlockedByGeometry(vecPosition, vecNewPos) && ValidSpawnPoint(vecNewPos, vecMins, vecMaxs, bCheckGround, flPlayersBeyondDist))
+			if (!LineBlockedByGeometry(vecPosition, vecNewPos) && ValidSpawnPoint(vecNewPos, vecMins, vecMaxs, bCheckGround))
 			{
 				if (SpawnNPCAt(sended_npc_class, vecNewPos, angle))
 					iSpawned++;
@@ -887,7 +887,7 @@ int CIV_Director_Spawn_Manager::SpawnNPCBatch(IV_Director_NPC_Class_Entry *sende
 			vecNewPos = vecPosition;
 			vecNewPos.x -= i * flNPCWidth;
 			vecNewPos.y += y * flNPCDepth;
-			if (!LineBlockedByGeometry(vecPosition, vecNewPos) && ValidSpawnPoint(vecNewPos, vecMins, vecMaxs, bCheckGround, flPlayersBeyondDist))
+			if (!LineBlockedByGeometry(vecPosition, vecNewPos) && ValidSpawnPoint(vecNewPos, vecMins, vecMaxs, bCheckGround))
 			{
 				if (SpawnNPCAt(sended_npc_class, vecNewPos, angle))
 					iSpawned++;
@@ -900,7 +900,7 @@ int CIV_Director_Spawn_Manager::SpawnNPCBatch(IV_Director_NPC_Class_Entry *sende
 			vecNewPos = vecPosition;
 			vecNewPos.x += i * flNPCWidth;
 			vecNewPos.y += y * flNPCDepth;
-			if (!LineBlockedByGeometry(vecPosition, vecNewPos) && ValidSpawnPoint(vecNewPos, vecMins, vecMaxs, bCheckGround, flPlayersBeyondDist))
+			if (!LineBlockedByGeometry(vecPosition, vecNewPos) && ValidSpawnPoint(vecNewPos, vecMins, vecMaxs, bCheckGround))
 			{
 				if (SpawnNPCAt(sended_npc_class, vecNewPos, angle))
 					iSpawned++;
@@ -1062,7 +1062,7 @@ bool CIV_Director_Spawn_Manager::SpawnRandomHeadcrab()
 			if (pArea && pArea->m_nTotalLinks > 30)
 			{
 				// test if there's room to spawn a headcrab at that spot
-				if ( ValidSpawnPoint(pArea->m_pNode->GetPosition(nHull), NAI_Hull::Mins(nHull), NAI_Hull::Maxs(nHull), true, false))
+				if ( ValidSpawnPoint(pArea->m_pNode->GetPosition(nHull), NAI_Hull::Mins(nHull), NAI_Hull::Maxs(nHull), true))
 				{
 					aAreas.AddToTail(pArea);
 				}
@@ -1137,7 +1137,7 @@ bool CIV_Director_Spawn_Manager::SpawnRandomFastHeadcrabs(int nFastHeadcrabs)
 			if (pArea && pArea->m_nTotalLinks > 30)
 			{
 				// test if there's room to spawn a fast headcrab at that spot
-				if (ValidSpawnPoint( pArea->m_pNode->GetPosition(nHull), NAI_Hull::Mins(nHull), NAI_Hull::Maxs(nHull), true, false))
+				if (ValidSpawnPoint( pArea->m_pNode->GetPosition(nHull), NAI_Hull::Mins(nHull), NAI_Hull::Maxs(nHull), true))
 				{
 					aAreas.AddToTail(pArea);
 				}
