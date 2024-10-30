@@ -299,6 +299,8 @@ void CIV_Director_Spawn_Manager::LevelInitPreEntity()
 	m_bHordeSpawnFrontState = false;
 }
 
+bool g_npcs_check_count_state = false;
+
 void CIV_Director_Spawn_Manager::LevelInitPostEntity()
 {
 	g_npcs_check_count_state = false;
@@ -345,13 +347,12 @@ void CIV_Director_Spawn_Manager::LevelInitPostEntity()
 		Warning("IV Director Warning!!! Player Start Entity is Not Master!!! Invalid Wander Distance!!!\n");
 
 	//FindEscapeTriggers();
-
+	
+	Check_Parms_Correct();
 	Clear_NPCS_With_Rule(true);
 
 	g_npcs_check_count_state = true;
 }
-
-bool g_npcs_check_count_state = false;
 
 void CIV_Director_Spawn_Manager::OnNPCWokeUp(CAI_BaseNPC *pNPC)
 {
@@ -540,7 +541,8 @@ void CIV_Director_Spawn_Manager::Clear_NPCS_With_Rule(bool map_spawn)
 					continue;
 
 				float calc_distance = pPlayer->GetAbsOrigin().DistTo(last_ent_npc->GetAbsOrigin());
-				bool is_not_able_to_see = !pPlayer->IsAbleToSee(last_ent_npc, CBaseCombatCharacter::FieldOfViewCheckType::USE_FOV) && calc_distance > m_flmincommonradius;
+				bool is_not_able_to_see = (m_nAwakeCommonNPCs >= m_imaxcommonsize || map_spawn) &&
+					(!pPlayer->IsAbleToSee(last_ent_npc, CBaseCombatCharacter::FieldOfViewCheckType::USE_FOV) && calc_distance > m_flmincommonradius);
 				if (calc_distance > m_flmaxcommonradius || is_not_able_to_see)
 				{
 					if (iv_director_debug.GetInt() > 2 || iv_director_check_npcs_clear_state.GetBool())
@@ -550,6 +552,7 @@ void CIV_Director_Spawn_Manager::Clear_NPCS_With_Rule(bool map_spawn)
 					}
 
 					last_ent_npc->Remove();
+					continue;
 				}
 
 				if (map_spawn)
