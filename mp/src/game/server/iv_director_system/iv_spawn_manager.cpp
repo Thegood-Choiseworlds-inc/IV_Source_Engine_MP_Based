@@ -32,7 +32,7 @@ CHandle<CIV_Director_Path_Utils> g_hIVDirectorPathfinder;
 
 void CIV_Director_Path_Utils_NPC::Spawn()
 {
-	CapabilitiesAdd(bits_CAP_MOVE_GROUND | bits_CAP_OPEN_DOORS);
+	CapabilitiesAdd(bits_CAP_MOVE_GROUND);
 
 	Precache();
 	SetModel(IV_PATHFINDER_BASE_MODEL);
@@ -73,7 +73,7 @@ AI_Waypoint_t *CIV_Director_Path_Utils::BuildRoute(const Vector &vStart, const V
 	if (!GetPathfinderNPC())
 		return NULL;
 
-	m_pLastRoute = GetPathfinderNPC()->GetPathfinder()->BuildRoute(vStart, vEnd, pTarget, goalTolerance, curNavType, false);
+	m_pLastRoute = GetPathfinderNPC()->GetPathfinder()->BuildRoute(vStart, vEnd, pTarget, goalTolerance, curNavType, true);
 
 	return m_pLastRoute;
 }
@@ -141,8 +141,8 @@ CIV_Director_Spawn_Manager* IVDirectorSpawnManager() { return &g_Spawn_Manager; 
 extern ConVar iv_director_debug;
 
 ConVar iv_spawning_enabled("iv_spawning_enabled", "1", FCVAR_CHEAT, "Director Spawner Enable/Disable State");
-//ConVar iv_horde_min_distance("iv_horde_min_distance", "750", FCVAR_CHEAT, "Minimum distance away from the Players the horde can spawn");
-//ConVar iv_horde_max_distance("iv_horde_max_distance", "1500", FCVAR_CHEAT, "Maximum distance away from the Players the horde can spawn");
+ConVar iv_horde_min_distance("iv_horde_min_distance", "750", FCVAR_CHEAT, "Minimum distance away from the Players the horde can spawn");
+ConVar iv_horde_max_distance("iv_horde_max_distance", "3500", FCVAR_CHEAT, "Maximum distance away from the Players the horde can spawn");
 ConVar iv_max_npc_batch("iv_max_npc_batch", "10", FCVAR_CHEAT, "Max number of NPC's spawned in a horde batch");
 ConVar iv_batch_interval("iv_batch_interval", "5", FCVAR_CHEAT, "Time between successive batches spawning in the same spot");
 ConVar iv_candidate_interval("iv_candidate_interval", "1.0", FCVAR_CHEAT, "Interval between updating candidate spawning nodes");
@@ -193,15 +193,14 @@ CIV_Director_Spawn_Manager::CIV_Director_Spawn_Manager()
 	m_nAwakeSpecialNPCs = 0;
 
 	m_pDefinedHordeClass = &g_NPCs_Classes_Zombies[0];
-	g_NPCs_Selected_Type = IV_Spawn_Classes_Types::Zombie;
 
-	m_imincommonsize = iv_director_spawner_common_min_size.GetInt();
-	m_imaxcommonsize = iv_director_spawner_common_max_size.GetInt();
-	m_imaxspecialcount = iv_director_spawner_special_max_count.GetInt();
+	m_imincommonsize = -1;
+	m_imaxcommonsize = -1;
+	m_imaxspecialcount = -1;
 	m_bspecialsoncespawn = true;
 
-	m_flmincommonradius = iv_director_spawner_common_min_spawn_radius.GetFloat();
-	m_flmaxcommonradius = iv_director_spawner_common_max_spawn_radius.GetFloat();
+	m_flmincommonradius = -1;
+	m_flmaxcommonradius = -1;
 
 	m_bHordeSpawnFrontState = false;
 }
@@ -279,6 +278,7 @@ void CIV_Director_Spawn_Manager::LevelInitPreEntity()
 {
 	m_nAwakeCommonNPCs = 0;
 	m_nAwakeSpecialNPCs = 0;
+
 	// init NPC classes
 	for (int i = 0; i < GetNumNPCClasses(); i++)
 	{
@@ -301,6 +301,10 @@ void CIV_Director_Spawn_Manager::LevelInitPreEntity()
 
 void CIV_Director_Spawn_Manager::LevelInitPostEntity()
 {
+	g_npcs_check_count_state = false;
+	m_nAwakeCommonNPCs = 0;
+	m_nAwakeSpecialNPCs = 0;
+
 	m_vecHordePosition = vec3_origin;
 	m_angHordeAngle = vec3_angle;
 	m_batchInterval.Invalidate();
@@ -310,16 +314,50 @@ void CIV_Director_Spawn_Manager::LevelInitPostEntity()
 
 	m_CentralCandidateNodes.Purge();
 
+	bool priority_was_founded = false;
 	g_players_start_ent = gEntList.FindEntityByClassname(NULL, "info_player_start");
+
+	if (g_players_start_ent)
+		priority_was_founded = g_players_start_ent->HasSpawnFlags(1);
+
+	CBaseEntity *temp_next_ent = g_players_start_ent;
+	while (temp_next_ent != NULL || !priority_was_founded)
+	{
+		temp_next_ent = gEntList.FindEntityByClassname(g_players_start_ent, "info_player_start");
+
+		if (!temp_next_ent)
+			break;
+
+		g_players_start_ent = temp_next_ent;
+		priority_was_founded = g_players_start_ent->HasSpawnFlags(1);
+
+		if (priority_was_founded)
+		{
+			Warning("Founded Priority Player Start Ent!!!\n");
+			break;
+		}
+	}
 
 	if (!g_players_start_ent)
 		Warning("IV Director Warning!!! No Player Start Entity Founded at Currient Map!!! Wander Spawning is Broken!!!\n");
 
+	if (g_players_start_ent && !priority_was_founded)
+		Warning("IV Director Warning!!! Player Start Entity is Not Master!!! Invalid Wander Distance!!!\n");
+
 	//FindEscapeTriggers();
+
+	Clear_NPCS_With_Rule(true);
+
+	g_npcs_check_count_state = true;
 }
+
+bool g_npcs_check_count_state = false;
 
 void CIV_Director_Spawn_Manager::OnNPCWokeUp(CAI_BaseNPC *pNPC)
 {
+	if (!g_npcs_check_count_state)
+		return;
+
 	m_nAwakeCommonNPCs++;
 	if (pNPC && IS_NPC_Class_Special(pNPC->GetClassname()))
 	{
@@ -329,6 +367,9 @@ void CIV_Director_Spawn_Manager::OnNPCWokeUp(CAI_BaseNPC *pNPC)
 
 void CIV_Director_Spawn_Manager::OnNPCSleeping(CAI_BaseNPC *pNPC)
 {
+	if (!g_npcs_check_count_state)
+		return;
+
 	m_nAwakeCommonNPCs--;
 	if (pNPC && IS_NPC_Class_Special(pNPC->GetClassname()))
 	{
@@ -404,8 +445,14 @@ void CIV_Director_Spawn_Manager::Update()
 {
 	Check_Parms_Correct();
 
-	if (m_iHordeToSpawn > 0 || m_iNPCsToSpawn > 0)
-		Clear_NPCS_With_Rule();
+	if ((m_iHordeToSpawn > 0 || m_iNPCsToSpawn > 0) || (m_nAwakeCommonNPCs > 0 || m_nAwakeSpecialNPCs > 0))
+		Clear_NPCS_With_Rule(false);
+
+	if (m_nAwakeCommonNPCs >= m_imaxcommonsize)
+		return;
+
+	if (m_nAwakeCommonNPCs + m_nAwakeSpecialNPCs >= m_imaxcommonsize)
+		return;
 
 	if ( m_iHordeToSpawn > 0 )
 	{
@@ -471,7 +518,7 @@ void CIV_Director_Spawn_Manager::Check_Parms_Correct()
 		m_flmaxcommonradius = iv_director_spawner_common_max_spawn_radius.GetFloat();
 }
 
-void CIV_Director_Spawn_Manager::Clear_NPCS_With_Rule()
+void CIV_Director_Spawn_Manager::Clear_NPCS_With_Rule(bool map_spawn)
 {
 	const char *npc_string = "npc_*";
 	CBaseEntity *last_ent = NULL;
@@ -493,15 +540,26 @@ void CIV_Director_Spawn_Manager::Clear_NPCS_With_Rule()
 					continue;
 
 				float calc_distance = pPlayer->GetAbsOrigin().DistTo(last_ent_npc->GetAbsOrigin());
-				if (calc_distance > m_flmaxcommonradius)
+				bool is_not_able_to_see = !pPlayer->IsAbleToSee(last_ent_npc, CBaseCombatCharacter::FieldOfViewCheckType::USE_FOV) && calc_distance > m_flmincommonradius;
+				if (calc_distance > m_flmaxcommonradius || is_not_able_to_see)
 				{
 					if (iv_director_debug.GetInt() > 2 || iv_director_check_npcs_clear_state.GetBool())
 					{
-						Warning("Force Removed Director NPC '%s' Named '%s'!!!", last_ent_npc->GetClassname(), last_ent_npc->GetEntityName());
+						Warning("Force Removed Director NPC '%s' Named '%s'!!!\n", last_ent_npc->GetClassname(), last_ent_npc->GetEntityName());
 						NDebugOverlay::Box(last_ent_npc->GetAbsOrigin(), -Vector(5, 5, 5), Vector(5, 5, 5), 128, 32, 32, 10, 8.0f);
 					}
 
 					last_ent_npc->Remove();
+				}
+
+				if (map_spawn)
+				{
+					bool special_state = IS_NPC_Class_Special(last_ent_npc->GetClassname());
+
+					if (special_state)
+						m_nAwakeSpecialNPCs++;
+					else
+						m_nAwakeCommonNPCs++;
 				}
 			}
 		}
@@ -715,8 +773,16 @@ void CIV_Director_Spawn_Manager::UpdateCandidateNodes(int sended_hull, bool was_
 
 		vec_t vec_node_distance = vecPos.DistTo(vecCentralPlayer);
 
-		if (vec_node_distance > m_flmaxcommonradius || (common_near_check && vec_node_distance < m_flmincommonradius))
-			continue;
+		if (!horde_prepair)
+		{
+			if (vec_node_distance > m_flmaxcommonradius || (common_near_check && vec_node_distance < m_flmincommonradius))
+				continue;
+		}
+		else
+		{
+			if (vec_node_distance > iv_horde_max_distance.GetFloat() || (common_near_check && vec_node_distance < iv_horde_min_distance.GetFloat()))
+				continue;
+		}
 
 		// check node isn't in an exit trigger
 		bool bInsideEscapeArea = false;
@@ -818,7 +884,7 @@ bool CIV_Director_Spawn_Manager::LineBlockedByGeometry(const Vector &vecSrc, con
 {
 	trace_t tr;
 	UTIL_TraceLine(vecSrc,
-		vecEnd, MASK_SOLID_BRUSHONLY, 
+		vecEnd, MASK_SOLID,
 		NULL, COLLISION_GROUP_NONE, &tr);
 
 	return (tr.fraction != 1.0f);

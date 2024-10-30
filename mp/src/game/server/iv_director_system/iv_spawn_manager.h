@@ -47,7 +47,7 @@ enum IV_Spawn_Classes_Types
 	Antlions
 };
 
-#define IV_TOTAL_NPCS_AT_ONCE 50
+#define IV_TOTAL_NPCS_AT_ONCE 30
 
 #define IV_DEBUG_NODES_VIS_MAX_TIME 8
 #define IV_DEBUG_NODES_VIS_MIN_TIME 4
@@ -109,7 +109,7 @@ private:
 	void DeleteRoute(AI_Waypoint_t *pWaypointList);
 
 	void Check_Parms_Correct();
-	void Clear_NPCS_With_Rule();
+	void Clear_NPCS_With_Rule(bool map_spawn);
 
 	bool IS_NPC_Class_Special(const char *npc_class_name);
 
