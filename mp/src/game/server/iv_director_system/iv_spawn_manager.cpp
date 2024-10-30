@@ -73,7 +73,7 @@ AI_Waypoint_t *CIV_Director_Path_Utils::BuildRoute(const Vector &vStart, const V
 	if (!GetPathfinderNPC())
 		return NULL;
 
-	m_pLastRoute = GetPathfinderNPC()->GetPathfinder()->BuildRoute(vStart, vEnd, pTarget, goalTolerance, curNavType, true);
+	m_pLastRoute = GetPathfinderNPC()->GetPathfinder()->BuildRoute(vStart, vEnd, pTarget, goalTolerance, curNavType, false);
 
 	return m_pLastRoute;
 }
