@@ -94,6 +94,8 @@ public:
 	void SetSpawnCommonNPCSMinRadius(float radius) { m_flmincommonradius = radius; }
 	void SetSpawnCommonNPCSMaxRadius(float radius) { m_flmaxcommonradius = radius; }
 
+	void SetWanderUpdateTime(float interval) { m_flWanderUpdateTime = interval; }
+
 	void SetHordeFrontSpawnState(bool state) { m_bHordeSpawnFrontState = state; }
 
 	// spawns a headcrab somewhere randomly in the map
@@ -133,6 +135,8 @@ private:
 
 	float m_flmincommonradius;
 	float m_flmaxcommonradius;
+
+	float m_flWanderUpdateTime;
 
 	bool m_bHordeSpawnFrontState;
 

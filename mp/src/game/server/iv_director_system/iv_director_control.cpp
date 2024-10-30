@@ -22,6 +22,7 @@ BEGIN_DATADESC(CIV_Director_Control)
 	DEFINE_KEYFIELD(m_bDirectorSpecialsOnceAdded, FIELD_BOOLEAN, "specialsoncespawned"),
 	DEFINE_KEYFIELD(m_fDirectorCommonMinRadius, FIELD_FLOAT, "mincommonspawnradius"),
 	DEFINE_KEYFIELD(m_fDirectorCommonMaxRadius, FIELD_FLOAT, "maxcommonspawnradius"),
+	DEFINE_KEYFIELD(m_fDirectorSpawnerWanderInterval, FIELD_FLOAT, "directorwanderinterval"),
 	DEFINE_KEYFIELD(m_bDirectorHordeFrontState, FIELD_BOOLEAN, "hordefrontstate"),
 	DEFINE_INPUTFUNC(FIELD_VOID,	"EnableHordes",	InputEnableHordes),
 	DEFINE_INPUTFUNC(FIELD_VOID,	"DisableHordes",	InputDisableHordes),
@@ -35,6 +36,7 @@ BEGIN_DATADESC(CIV_Director_Control)
 	DEFINE_INPUTFUNC(FIELD_BOOLEAN, "SetSpecialNPCSOnceState", InputSetSpecialNPCSOnceState),
 	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetMinCommonNPCSSpawnRadius", InputSetMinCommonNPCSSpawnRadius),
 	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetMaxCommonNPCSSpawnRadius", InputSetMaxCommonNPCSSpawnRadius),
+	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetWanderSpawnInterval", InputSetWanderSpawnInterval),
 	DEFINE_INPUTFUNC(FIELD_BOOLEAN, "SetFrontHordeState", InputSetDirectorHordeFrontState),
 	DEFINE_OUTPUT(m_OnFinaleEventStart, "OnFinaleStart"),
 END_DATADESC()
@@ -161,6 +163,14 @@ void CIV_Director_Control::InputSetMaxCommonNPCSSpawnRadius(inputdata_t &inputda
 		return;
 
 	IVDirector()->SetMaxCommonNPCSSpawnRadius(inputdata.value.Float());
+}
+
+void CIV_Director_Control::InputSetWanderSpawnInterval(inputdata_t &inputdata)
+{
+	if (!IVDirector())
+		return;
+
+	IVDirector()->SetSpawnerWanderInterval(inputdata.value.Float());
 }
 
 void CIV_Director_Control::InputSetDirectorHordeFrontState(inputdata_t &inputdata)

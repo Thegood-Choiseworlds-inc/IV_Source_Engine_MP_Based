@@ -85,6 +85,8 @@ public:
 	void SetMinCommonNPCSSpawnRadius(float radius);
 	void SetMaxCommonNPCSSpawnRadius(float radius);
 
+	void SetSpawnerWanderInterval(float interval);
+
 	void SetNPCSHordeFrontState(bool state);
 
 protected:

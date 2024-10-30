@@ -202,6 +202,8 @@ CIV_Director_Spawn_Manager::CIV_Director_Spawn_Manager()
 	m_flmincommonradius = -1;
 	m_flmaxcommonradius = -1;
 
+	m_flWanderUpdateTime = 1;
+
 	m_bHordeSpawnFrontState = false;
 }
 
@@ -295,6 +297,8 @@ void CIV_Director_Spawn_Manager::LevelInitPreEntity()
 
 	m_flmincommonradius = iv_director_spawner_common_min_spawn_radius.GetFloat();
 	m_flmaxcommonradius = iv_director_spawner_common_max_spawn_radius.GetFloat();
+
+	m_flWanderUpdateTime = iv_candidate_interval.GetFloat();
 
 	m_bHordeSpawnFrontState = false;
 }
@@ -517,6 +521,9 @@ void CIV_Director_Spawn_Manager::Check_Parms_Correct()
 		m_flmincommonradius = iv_director_spawner_common_min_spawn_radius.GetFloat();
 	if (m_flmaxcommonradius <= 0)
 		m_flmaxcommonradius = iv_director_spawner_common_max_spawn_radius.GetFloat();
+
+	if (m_flWanderUpdateTime <= 0)
+		m_flWanderUpdateTime = iv_candidate_interval.GetFloat();
 }
 
 void CIV_Director_Spawn_Manager::Clear_NPCS_With_Rule(bool map_spawn)
@@ -694,7 +701,7 @@ void CIV_Director_Spawn_Manager::UpdateCandidateNodes(int sended_hull, bool was_
 	if (m_CandidateUpdateTimer.HasStarted() && !m_CandidateUpdateTimer.IsElapsed())
 		return;
 
-	m_CandidateUpdateTimer.Start(iv_candidate_interval.GetFloat());
+	m_CandidateUpdateTimer.Start(m_flWanderUpdateTime);
 
 	if (!GetNetwork() || !GetNetwork()->NumNodes())
 	{

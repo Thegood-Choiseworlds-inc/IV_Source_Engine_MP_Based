@@ -37,6 +37,8 @@ public:
 	float m_fDirectorCommonMinRadius;
 	float m_fDirectorCommonMaxRadius;
 
+	float m_fDirectorSpawnerWanderInterval;
+
 	bool m_bDirectorHordeFrontState;
 
 private:
@@ -55,6 +57,8 @@ private:
 
 	void InputSetMinCommonNPCSSpawnRadius(inputdata_t &inputdata);
 	void InputSetMaxCommonNPCSSpawnRadius(inputdata_t &inputdata);
+
+	void InputSetWanderSpawnInterval(inputdata_t &inputdata);
 
 	void InputSetDirectorHordeFrontState(inputdata_t &inputdata);
 

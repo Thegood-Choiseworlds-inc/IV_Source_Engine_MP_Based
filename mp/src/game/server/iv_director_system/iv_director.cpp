@@ -76,6 +76,8 @@ bool CIV_Director::Init()
 		SetMinCommonNPCSSpawnRadius(pControl->m_fDirectorCommonMinRadius);
 		SetMaxCommonNPCSSpawnRadius(pControl->m_fDirectorCommonMaxRadius);
 
+		SetSpawnerWanderInterval(pControl->m_fDirectorSpawnerWanderInterval);
+
 		SetNPCSHordeFrontState(pControl->m_bDirectorHordeFrontState);
 	}
 	else
@@ -93,6 +95,8 @@ bool CIV_Director::Init()
 
 		SetMinCommonNPCSSpawnRadius(-1);
 		SetMaxCommonNPCSSpawnRadius(-1);
+
+		SetSpawnerWanderInterval(1);
 
 		SetNPCSHordeFrontState(true);
 	}
@@ -490,6 +494,14 @@ void CIV_Director::SetMaxCommonNPCSSpawnRadius(float radius)
 		return;
 
 	IVDirectorSpawnManager()->SetSpawnCommonNPCSMaxRadius(radius);
+}
+
+void CIV_Director::SetSpawnerWanderInterval(float interval)
+{
+	if (!IVDirectorSpawnManager())
+		return;
+
+	IVDirectorSpawnManager()->SetWanderUpdateTime(interval);
 }
 
 void CIV_Director::SetNPCSHordeFrontState(bool state)
