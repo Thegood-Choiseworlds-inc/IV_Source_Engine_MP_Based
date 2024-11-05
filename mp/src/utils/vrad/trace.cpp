@@ -595,10 +595,10 @@ void AddBrushToRaytraceEnvironment( dbrush_t *pBrush, const VMatrix &xform )
 {
 	int materialIndexList[256];
 	bool bTextureShadows = false;
-	
-	if (!(pBrush->contents & MASK_OPAQUE) && (!g_bTextureShadows || !g_bWorldTextureShadows))
+
+	if (!(pBrush->contents & MASK_OPAQUE) /*&& (!g_bTextureShadows || !g_bWorldTextureShadows)*/)
 		return;
-	else if (!(pBrush->contents & CONTENTS_GRATE) && !(g_bTranslucentShadows && (pBrush->contents & CONTENTS_WINDOW)))
+	else if ((!g_bTextureShadows || !g_bWorldTextureShadows) || (!(pBrush->contents & CONTENTS_GRATE) && !(g_bTranslucentShadows && (pBrush->contents & CONTENTS_WINDOW))))
 		return;
 
 	if (pBrush->contents & CONTENTS_LADDER)
@@ -635,9 +635,10 @@ void AddBrushToRaytraceEnvironment( dbrush_t *pBrush, const VMatrix &xform )
 		if ( tx->flags & SURF_SKY || side->dispinfo )
 			continue;
 
-		bool blocker_ignore_rule = transparent_rule && ((pBrush->contents & CONTENTS_WINDOW) || (pBrush->contents & CONTENTS_GRATE));
+		//IV Note: Deprecated. Solid Brushes was Always Checked for Light Blocking!!!
+		//bool blocker_ignore_rule = transparent_rule && ((pBrush->contents & CONTENTS_WINDOW) || (pBrush->contents & CONTENTS_GRATE));
 
-		if (((pBrush->contents & (CONTENTS_OPAQUE | CONTENTS_SOLID)) && (tx->flags & SURF_NODRAW)) && !blocker_ignore_rule)
+		if (((pBrush->contents & (CONTENTS_OPAQUE | CONTENTS_SOLID)) && (tx->flags & SURF_NODRAW)) /*&& !blocker_ignore_rule*/)
 		{
 			bIsLightBlocker = true;
 		}
