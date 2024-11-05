@@ -596,14 +596,14 @@ void AddBrushToRaytraceEnvironment( dbrush_t *pBrush, const VMatrix &xform )
 	int materialIndexList[256];
 	bool bTextureShadows = false;
 	
-	if ( !( pBrush->contents & (MASK_OPAQUE) ) && !(g_bTextureShadows && (pBrush->contents & CONTENTS_GRATE)) )
+	if (!(pBrush->contents & (MASK_OPAQUE)) && !g_bTextureShadows && !(pBrush->contents & CONTENTS_GRATE) && !(g_bTranslucentShadows && (pBrush->contents & CONTENTS_TRANSLUCENT)))
 		return;
 
 	if ( pBrush->contents & CONTENTS_LADDER )
 		return;
 
 	// load any transparent textures for shadows
-	if ( g_bTextureShadows && (pBrush->contents & CONTENTS_GRATE) && pBrush->numsides < ARRAYSIZE(materialIndexList) )
+	if (g_bTextureShadows && ((pBrush->contents & CONTENTS_GRATE) || g_bTranslucentShadows && (pBrush->contents & CONTENTS_TRANSLUCENT)) && pBrush->numsides < ARRAYSIZE(materialIndexList))
 	{
 		for (int i = 0; i < pBrush->numsides; i++ )
 		{
