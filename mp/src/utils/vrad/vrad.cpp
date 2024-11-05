@@ -2657,7 +2657,7 @@ int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 		}
 		else if (!Q_stricmp(argv[i], "-disableWorldTextureShadows"))
 		{
-			g_bTranslucentShadows = false;
+			g_bWorldTextureShadows = false;
 			Warning("Shadows from World Alpha surfaces is Disabled!!!\n");
 		}
 		else if (!Q_stricmp(argv[i], "-disabletranslucentshadows"))
@@ -3023,6 +3023,8 @@ void PrintUsage( int argc, char **argv )
 		"  -disableao : Force Disable Ambient Occlusion for Brushes\n"
 		"  -disablesoften : Force Disable Soften\n"
 		"  -enablestaticpropbounce : Force Enable Static Prop Bounce Light. Perfomance Loss!!!\n"
+		"  -disableWorldTextureShadows : Force Disable World Brushes Texture Shadows (That logic is Enabled by Default on Final Compile!!!)\n"
+		"  -disabletranslucentshadows : Force Disable Translucent World Brushes Texture Shadows (That logic is Enabled by Default on Final Compile!!!)\n"
 		"  -noskyboxrecurse : Turn off recursion into 3d skybox (skybox shadows on world)\n"
 		"  -nossprops      : Globally disable self-shadowing on static props\n"
 		"\n"
