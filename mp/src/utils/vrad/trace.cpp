@@ -598,14 +598,14 @@ void AddBrushToRaytraceEnvironment( dbrush_t *pBrush, const VMatrix &xform )
 	
 	if (!(pBrush->contents & MASK_OPAQUE) && (!g_bTextureShadows || !g_bWorldTextureShadows))
 		return;
-	else if (!(pBrush->contents & CONTENTS_GRATE) && (!g_bTranslucentShadows || !(pBrush->contents & CONTENTS_TRANSLUCENT)))
+	else if (!(pBrush->contents & CONTENTS_GRATE) && !(g_bTranslucentShadows && (pBrush->contents & CONTENTS_WINDOW)))
 		return;
 
 	if (pBrush->contents & CONTENTS_LADDER)
 		return;
 
 	// load any transparent textures for shadows
-	bool transparent_rule = g_bTextureShadows && ((pBrush->contents & CONTENTS_GRATE) || (pBrush->contents & CONTENTS_TRANSLUCENT));
+	bool transparent_rule = (g_bTextureShadows && g_bWorldTextureShadows) && ((pBrush->contents & CONTENTS_GRATE) || (g_bTranslucentShadows && (pBrush->contents & CONTENTS_WINDOW)));
 
 	if (transparent_rule && pBrush->numsides < ARRAYSIZE(materialIndexList))
 	{
@@ -635,7 +635,9 @@ void AddBrushToRaytraceEnvironment( dbrush_t *pBrush, const VMatrix &xform )
 		if ( tx->flags & SURF_SKY || side->dispinfo )
 			continue;
 
-		if ((pBrush->contents & (CONTENTS_OPAQUE | CONTENTS_SOLID)) && (tx->flags & SURF_NODRAW) && !(pBrush->contents & CONTENTS_TRANSLUCENT) && !(pBrush->contents & CONTENTS_GRATE))
+		bool blocker_ignore_rule = transparent_rule && ((pBrush->contents & CONTENTS_WINDOW) || (pBrush->contents & CONTENTS_GRATE));
+
+		if (((pBrush->contents & (CONTENTS_OPAQUE | CONTENTS_SOLID)) && (tx->flags & SURF_NODRAW)) && !blocker_ignore_rule)
 		{
 			bIsLightBlocker = true;
 		}
