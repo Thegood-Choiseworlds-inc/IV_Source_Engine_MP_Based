@@ -596,14 +596,16 @@ void AddBrushToRaytraceEnvironment( dbrush_t *pBrush, const VMatrix &xform )
 	int materialIndexList[256];
 	bool bTextureShadows = false;
 	
-	if ( !( pBrush->contents & (MASK_OPAQUE) ) && !(g_bTextureShadows && (pBrush->contents & CONTENTS_GRATE)) )
+	int trace_flags = !g_bWorldTextureShadowsOnTranslucents ? CONTENTS_GRATE : g_iTranslucentsTraceMode > 1 ? (CONTENTS_GRATE | CONTENTS_TRANSLUCENT) : (CONTENTS_GRATE | CONTENTS_WINDOW);
+
+	if (!(pBrush->contents & (MASK_OPAQUE)) && !(g_bTextureShadows && (pBrush->contents & trace_flags)))
 		return;
 
-	if ( pBrush->contents & CONTENTS_LADDER )
+	if (pBrush->contents & CONTENTS_LADDER)
 		return;
 
 	// load any transparent textures for shadows
-	if ( g_bTextureShadows && (pBrush->contents & CONTENTS_GRATE) && pBrush->numsides < ARRAYSIZE(materialIndexList) )
+	if (g_bTextureShadows && (pBrush->contents & trace_flags) && pBrush->numsides < ARRAYSIZE(materialIndexList))
 	{
 		for (int i = 0; i < pBrush->numsides; i++ )
 		{
@@ -628,10 +630,10 @@ void AddBrushToRaytraceEnvironment( dbrush_t *pBrush, const VMatrix &xform )
 		winding_t *w = BaseWindingForPlane (plane->normal, plane->dist);
 		bool bIsLightBlocker = false;
 
-		if ( tx->flags & SURF_SKY || side->dispinfo )
+		if (tx->flags & SURF_SKY || side->dispinfo)
 			continue;
 
-		if ( ( pBrush->contents & ( CONTENTS_OPAQUE | CONTENTS_SOLID ) ) && ( tx->flags & SURF_NODRAW ) )
+		if ((pBrush->contents & (CONTENTS_OPAQUE|CONTENTS_SOLID)) && (tx->flags & SURF_NODRAW))
 		{
 			bIsLightBlocker = true;
 		}
@@ -661,17 +663,17 @@ void AddBrushToRaytraceEnvironment( dbrush_t *pBrush, const VMatrix &xform )
 					v0 = xform.VMul4x3(w->p[0]);
 					v1 = xform.VMul4x3(w->p[j-1]);
 					v2 = xform.VMul4x3(w->p[j]);
-					g_RtEnv.AddTriangle( TRACE_ID_OPAQUE, v0, v1, v2, fullCoverage );
+					g_RtEnv.AddTriangle(TRACE_ID_OPAQUE, v0, v1, v2, fullCoverage);
 
 					// light blockers
-					if ( bIsLightBlocker )
+					if (bIsLightBlocker)
 					{
-						g_RtEnv_LightBlockers.AddTriangle( TRACE_ID_OPAQUE, v0, v1, v2, fullCoverage );
-						g_RtEnv_RadiosityPatches.AddTriangle( TRACE_ID_OPAQUE, v0, v1, v2, fullCoverage );
+						g_RtEnv_LightBlockers.AddTriangle(TRACE_ID_OPAQUE, v0, v1, v2, fullCoverage);
+						g_RtEnv_RadiosityPatches.AddTriangle(TRACE_ID_OPAQUE, v0, v1, v2, fullCoverage);
 					}
 				}
 			}
-			FreeWinding( w );
+			FreeWinding(w);
 		}
 	}
 }

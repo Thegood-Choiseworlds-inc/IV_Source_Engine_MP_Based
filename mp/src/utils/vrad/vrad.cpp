@@ -124,6 +124,8 @@ double		g_flStartTime;
 bool		g_bStaticPropLighting = false;
 bool        g_bStaticPropPolys = false;
 bool        g_bTextureShadows = false;
+bool        g_bWorldTextureShadowsOnTranslucents = false;
+int        g_iTranslucentsTraceMode = 1;
 bool        g_bDisablePropSelfShadowing = false;
 bool		g_bFastStaticProps = false;
 bool		g_bDumpBumpStaticProps = false;
@@ -2645,6 +2647,32 @@ int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 			Warning("StaticPropBounceLight State is 'TRUE' Perfomance Loss!!!\n");
 			Warning("StaticPropBounceLight State is 'TRUE' Perfomance Loss!!!\n");
 		}
+		else if (!Q_stricmp(argv[i], "-ExtraLightTransfers"))
+		{
+			g_bWorldTextureShadowsOnTranslucents = true;
+
+			int translucents_mode_index = 1;
+			if (++i < argc && *argv[i])
+			{
+				translucents_mode_index = atof(argv[i]);
+
+				if (translucents_mode_index < 1)
+					translucents_mode_index = 1;
+				else if (translucents_mode_index > 2)
+					translucents_mode_index = 2;
+			}
+			else
+			{
+				Warning("Error: Invalid Translucents Materials Check Mode - '%s'!!! Valid Values are 1...2!!!\n", argv[i]);
+				return -1;
+			}
+
+			g_iTranslucentsTraceMode = translucents_mode_index;
+
+			Warning("Extra List Transfers Is Enabled!!! Translucents Mode is %d. Perfomance Loss!!!\n", g_iTranslucentsTraceMode);
+			const char* translucents_mode = g_iTranslucentsTraceMode > 1 ? "Enabled All Translucents Materials Checking!!!" : "Transucents is Checked only for Windows Like Surfaces!!!";
+			Warning(translucents_mode);
+		}
 		else if (!Q_stricmp(argv[i],"-extrasky"))
 		{
 			if ( ++i < argc && *argv[i] )
@@ -2940,7 +2968,7 @@ void PrintUsage( int argc, char **argv )
 {
 	PrintCommandLine( argc, argv );
 
-	Warning(	
+	Warning(
 		"usage  : vrad [options...] bspfile\n"
 		"example: vrad c:\\hl2\\hl2\\maps\\test\n"
 		"\n"
@@ -2995,14 +3023,15 @@ void PrintUsage( int argc, char **argv )
 		"  -LargeDispSampleRadius: This can be used if there are splotches of bounced light\n"
 		"                          on terrain. The compile will take longer, but it will gather\n"
 		"                          light across a wider area.\n"
-        "  -StaticPropLighting   : generate backed static prop vertex lighting\n"
-        "  -StaticPropPolys   : Perform shadow tests of static props at polygon precision\n"
-        "  -OnlyStaticProps   : Only perform direct static prop lighting (vrad debug option)\n"
+		"  -StaticPropLighting   : generate backed static prop vertex lighting\n"
+		"  -StaticPropPolys   : Perform shadow tests of static props at polygon precision\n"
+		"  -OnlyStaticProps   : Only perform direct static prop lighting (vrad debug option)\n"
 		"  -StaticPropNormals : when lighting static props, just show their normal vector\n"
 		"  -textureshadows : Allows texture alpha channels to block light - rays intersecting alpha surfaces will sample the texture\n"
 		"  -disableao : Force Disable Ambient Occlusion for Brushes\n"
 		"  -disablesoften : Force Disable Soften\n"
 		"  -enablestaticpropbounce : Force Enable Static Prop Bounce Light. Perfomance Loss!!!\n"
+		"  -ExtraLightTransfers : Enable Extra Light Transfers Methods (Like Advanced Alpha Checking on Translucent Materials (1 - Windows Like Only; 2 and above - All Translucents)). Perfomance Loss!!!\n"
 		"  -noskyboxrecurse : Turn off recursion into 3d skybox (skybox shadows on world)\n"
 		"  -nossprops      : Globally disable self-shadowing on static props\n"
 		"\n"
