@@ -297,6 +297,8 @@ extern float g_flStaticPropSampleScale;							// extra sampling factor for indir
 extern bool g_bLargeDispSampleRadius;
 extern bool g_bStaticPropPolys;
 extern bool g_bTextureShadows;
+extern bool g_bWorldTextureShadowsOnTranslucents;
+extern int g_iTranslucentsTraceMode;
 extern bool g_bShowStaticPropNormals;
 extern bool g_bDisablePropSelfShadowing;
 extern bool g_bFiniteFalloffModel;							// whether to use 1/xxx or not
