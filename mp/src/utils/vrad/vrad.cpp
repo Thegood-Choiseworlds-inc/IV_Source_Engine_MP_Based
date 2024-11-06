@@ -124,8 +124,6 @@ double		g_flStartTime;
 bool		g_bStaticPropLighting = false;
 bool        g_bStaticPropPolys = false;
 bool        g_bTextureShadows = false;
-bool        g_bWorldTextureShadows = false;
-bool        g_bTranslucentShadows = false;
 bool        g_bDisablePropSelfShadowing = false;
 bool		g_bFastStaticProps = false;
 bool		g_bDumpBumpStaticProps = false;
@@ -2376,12 +2374,6 @@ void VRAD_LoadBSP( char const *pFilename )
 	float end = Plat_FloatTime();
 	printf ( "Done (%.2f seconds)\n", end-start );
 
-	if (g_bTextureShadows && g_bWorldTextureShadows)
-		Warning("World Alpha Materials for Shadows Checking is Enabled!!! Perfomance Loss!!!\n");
-
-	if (g_bTextureShadows && g_bWorldTextureShadows && g_bTranslucentShadows)
-		Warning("Translucent Materials for Shadows Checking is Enabled!!! Perfomance Loss!!!\n");
-
 #if 0  // To test only k-d build
 	exit(0);
 #endif
@@ -2620,8 +2612,6 @@ int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 			g_bStaticPropLighting = true;
 			g_bStaticPropPolys = true;
 			g_bTextureShadows = true;
-			g_bWorldTextureShadows = true;
-			g_bTranslucentShadows = true;
 			g_bNoAO = false;
 			g_bNoSoften = false;
 
@@ -2654,16 +2644,6 @@ int ParseCommandLine( int argc, char **argv, bool *onlydetail )
 			Warning("StaticPropBounceLight State is 'TRUE' Perfomance Loss!!!\n");
 			Warning("StaticPropBounceLight State is 'TRUE' Perfomance Loss!!!\n");
 			Warning("StaticPropBounceLight State is 'TRUE' Perfomance Loss!!!\n");
-		}
-		else if (!Q_stricmp(argv[i], "-disableWorldTextureShadows"))
-		{
-			g_bWorldTextureShadows = false;
-			Warning("Shadows from World Alpha surfaces is Disabled!!!\n");
-		}
-		else if (!Q_stricmp(argv[i], "-disabletranslucentshadows"))
-		{
-			g_bTranslucentShadows = false;
-			Warning("Shadows from translucent surfaces is Disabled!!!\n");
 		}
 		else if (!Q_stricmp(argv[i],"-extrasky"))
 		{
@@ -3023,8 +3003,6 @@ void PrintUsage( int argc, char **argv )
 		"  -disableao : Force Disable Ambient Occlusion for Brushes\n"
 		"  -disablesoften : Force Disable Soften\n"
 		"  -enablestaticpropbounce : Force Enable Static Prop Bounce Light. Perfomance Loss!!!\n"
-		"  -disableWorldTextureShadows : Force Disable World Brushes Texture Shadows (That logic is Enabled by Default on Final Compile!!!)\n"
-		"  -disabletranslucentshadows : Force Disable Translucent World Brushes Texture Shadows (That logic is Enabled by Default on Final Compile!!!)\n"
 		"  -noskyboxrecurse : Turn off recursion into 3d skybox (skybox shadows on world)\n"
 		"  -nossprops      : Globally disable self-shadowing on static props\n"
 		"\n"

@@ -551,7 +551,7 @@ dmodel_t *BrushmodelForEntity( entity_t *pEntity )
 }
 
 // Add one that casts textureshadows
-void AddTexturedBrushWinding(winding_t *w, const VMatrix &xform, texinfo_t *tx, int shadowMaterialIndex)
+void AddTexturedBrushWinding( winding_t *w, const VMatrix &xform, texinfo_t *tx, int shadowMaterialIndex )
 {
 	Vector2D uv[MAX_POINTS_ON_WINDING];
 	int mappingWidth = 32;
@@ -595,21 +595,17 @@ void AddBrushToRaytraceEnvironment( dbrush_t *pBrush, const VMatrix &xform )
 {
 	int materialIndexList[256];
 	bool bTextureShadows = false;
-
-	if (!(pBrush->contents & MASK_OPAQUE) /*&& (!g_bTextureShadows || !g_bWorldTextureShadows)*/)
-		return;
-	else if ((!g_bTextureShadows || !g_bWorldTextureShadows) || (!(pBrush->contents & CONTENTS_GRATE) && !(g_bTranslucentShadows && (pBrush->contents & CONTENTS_WINDOW))))
+	
+	if ( !( pBrush->contents & (MASK_OPAQUE) ) && !(g_bTextureShadows && (pBrush->contents & CONTENTS_GRATE)) )
 		return;
 
-	if (pBrush->contents & CONTENTS_LADDER)
+	if ( pBrush->contents & CONTENTS_LADDER )
 		return;
 
 	// load any transparent textures for shadows
-	bool transparent_rule = (g_bTextureShadows && g_bWorldTextureShadows) && ((pBrush->contents & CONTENTS_GRATE) || (g_bTranslucentShadows && (pBrush->contents & CONTENTS_WINDOW)));
-
-	if (transparent_rule && pBrush->numsides < ARRAYSIZE(materialIndexList))
+	if ( g_bTextureShadows && (pBrush->contents & CONTENTS_GRATE) && pBrush->numsides < ARRAYSIZE(materialIndexList) )
 	{
-		for (int i = 0; i < pBrush->numsides; i++)
+		for (int i = 0; i < pBrush->numsides; i++ )
 		{
 			dbrushside_t *side = &dbrushsides[pBrush->firstside + i];
 			texinfo_t *tx = &texinfo[side->texinfo];
@@ -635,10 +631,7 @@ void AddBrushToRaytraceEnvironment( dbrush_t *pBrush, const VMatrix &xform )
 		if ( tx->flags & SURF_SKY || side->dispinfo )
 			continue;
 
-		//IV Note: Deprecated. Solid Brushes was Always Checked for Light Blocking!!!
-		//bool blocker_ignore_rule = transparent_rule && ((pBrush->contents & CONTENTS_WINDOW) || (pBrush->contents & CONTENTS_GRATE));
-
-		if (((pBrush->contents & (CONTENTS_OPAQUE | CONTENTS_SOLID)) && (tx->flags & SURF_NODRAW)) /*&& !blocker_ignore_rule*/)
+		if ( ( pBrush->contents & ( CONTENTS_OPAQUE | CONTENTS_SOLID ) ) && ( tx->flags & SURF_NODRAW ) )
 		{
 			bIsLightBlocker = true;
 		}
