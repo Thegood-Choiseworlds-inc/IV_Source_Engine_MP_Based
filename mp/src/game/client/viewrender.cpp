@@ -3862,6 +3862,8 @@ void CRendering3dView::ReleaseLists()
 }
 
 
+static ConVar r_flashlightdepth_drawtranslucents("r_flashlightdepth_drawtranslucents", "1", FCVAR_NONE, "Pass Translucents Materials for Depth View");
+
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
@@ -3886,7 +3888,7 @@ void CRendering3dView::SetupRenderablesList( int viewID )
 		setupInfo.m_nDetailBuildFrame = m_pMainView->BuildWorldListsNumber();	//
 		setupInfo.m_pRenderList = m_pRenderablesList;
 		setupInfo.m_bDrawDetailObjects = g_pClientMode->ShouldDrawDetailObjects() && r_DrawDetailProps.GetInt();
-		setupInfo.m_bDrawTranslucentObjects = (viewID != VIEW_SHADOW_DEPTH_TEXTURE);
+		setupInfo.m_bDrawTranslucentObjects = (r_flashlightdepth_drawtranslucents.GetBool() || viewID != VIEW_SHADOW_DEPTH_TEXTURE);
 
 		setupInfo.m_vecRenderOrigin = origin;
 		setupInfo.m_vecRenderForward = CurrentViewForward();
@@ -5704,6 +5706,12 @@ void CShadowDepthView::Draw()
 	{
 		VPROF_BUDGET( "DrawOpaqueRenderables", VPROF_BUDGETGROUP_SHADOW_DEPTH_TEXTURING );
 		DrawOpaqueRenderables( DEPTH_MODE_SHADOW );
+	}
+
+	if (r_flashlightdepth_drawtranslucents.GetBool())
+	{
+		VPROF_BUDGET("DrawTranslucentRenderables", VPROF_BUDGETGROUP_SHADOW_DEPTH_TEXTURING);
+		DrawTranslucentRenderables(false, true);
 	}
 
 	modelrender->ForcedMaterialOverride( 0 );
