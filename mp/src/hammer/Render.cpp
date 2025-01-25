@@ -703,7 +703,12 @@ bool CRender::BeginClientSpace(void)
 
 	pRenderContext->MatrixMode(MATERIAL_VIEW);
 	pRenderContext->PushMatrix();
+	// For DX9, we need to offset vertex positions by 1/2 pixel, so that pixel and texel centers fall on the same spot.
+	// If we don't do this, we are at relying on undefined behavior in the various GPUs' texture units, and e.g. the 4800 series
+	// will render garbage text because of it. If Hammer ever needs to run on top of GL or D3D10/11, this translate has to
+	// become conditional based on the API we're using.
 	pRenderContext->LoadIdentity();
+	pRenderContext->Translate( -.5f, .5f, 0.0f );
 
 	if ( m_bIsLocalTransform )
 	{
