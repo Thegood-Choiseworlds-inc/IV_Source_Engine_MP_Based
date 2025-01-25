@@ -35,6 +35,7 @@
 #include "eventlist.h"
 #include "soundent.h"
 #include "ai_navigator.h"
+#include "iv_director_system\iv_spawn_manager.h"
 #include "tier1/functors.h"
 
 
@@ -727,6 +728,9 @@ private:
 	virtual int			RunTask ( Task_t *pTask )	{ DevMsg( "Called wrong RunTask()\n" ); RunTask( (const Task_t *)pTask ); return 0; } // to ensure correct signature in derived classes
 
 public:
+	bool GetDirectorSpawnState() { return m_bIsDirectorSpawned; }
+	void SetDirectorSpawnState(bool state) { m_bIsDirectorSpawned = state; }
+
 	//-----------------------------------------------------
 	//
 	// Schedules & tasks
@@ -840,6 +844,8 @@ private:
 	float				m_flLastRealThinkTime;
 	int					m_iFrameBlocked;
 	bool				m_bInChoreo;
+
+	bool				m_bIsDirectorSpawned;
 
 	static int			gm_iNextThinkRebalanceTick;
 	static float		gm_flTimeLastSpawn;

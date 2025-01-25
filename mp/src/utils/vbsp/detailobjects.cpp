@@ -982,7 +982,7 @@ void EmitDetailModels()
 		}
 	}
 
-	Msg("Total Placed Detail Props: %d; Max = %d", s_DetailObjectLump.Count(), MAX_DETAIL_SPRITES);
+	Msg("Total Placed Detail Props: %d; Max = %d\n", s_DetailObjectLump.Count(), MAX_DETAIL_SPRITES);
 
 	EndPacifier( true );
 }

@@ -790,6 +790,8 @@ CBasePlayer::CBasePlayer( )
 
 	m_flLastObjectiveTime = -1.f;
 	m_hPostProcessCtrl.Set( NULL );
+
+	m_pPlayer_Intensivity = CIVPlayer_Intensity();
 }
 
 CBasePlayer::~CBasePlayer( )

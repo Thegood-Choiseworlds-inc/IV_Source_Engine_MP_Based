@@ -880,6 +880,8 @@ static void CalcVisibleFogVolumes()
 float DetermineVisRadius( )
 {
 	float flRadius = -1;
+	bool priority_fog_controller_farz = false;
+	entity_t *last_checked_fog_controller = NULL;
 
 	// Check the max vis range to determine the vis radius
 	for (int i = 0; i < num_entities; ++i)
@@ -887,12 +889,27 @@ float DetermineVisRadius( )
 		char* pEntity = ValueForKey(&entities[i], "classname");
 		if (!stricmp(pEntity, "env_fog_controller"))
 		{
+			bool farz_priority = IntForKey(&entities[i], "farzpriority") > 0;
+
+			if (priority_fog_controller_farz && !farz_priority)
+				continue;
+
 			flRadius = FloatForKey (&entities[i], "farz");
 			if (flRadius == 0.0f)
 				flRadius = -1.0f;
-			break;
+			
+			priority_fog_controller_farz = farz_priority;
+			last_checked_fog_controller = &entities[i];
+
+			//break;
 		}
 	}
+
+	if (last_checked_fog_controller)
+		Warning("Checked 'env_fog_controller' Named '%s' Custom FarZ Radius = '%f'\n", ValueForKey(last_checked_fog_controller, "targetname"), flRadius);
+
+	if (last_checked_fog_controller && !priority_fog_controller_farz)
+		Warning("No Priority 'env_fog_controller' Ents Founded!!! Used Last Checked fog controller ent FarZ Parm!!!\n");
 
 	return flRadius;
 }

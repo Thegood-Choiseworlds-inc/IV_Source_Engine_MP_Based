@@ -7819,6 +7819,11 @@ void CAI_BaseNPC::NPCInit ( void )
 		return;
 	}
 
+	if (IVDirectorSpawnManager() && m_bIsDirectorSpawned)
+	{
+		IVDirectorSpawnManager()->OnNPCWokeUp(this);
+	}
+
 	if( IsWaitingToRappel() )
 	{
 		// If this guy's supposed to rappel, keep him from
@@ -12110,6 +12115,7 @@ BEGIN_DATADESC( CAI_BaseNPC )
 	//								m_poseAim_Pitch (not saved; recomputed on restore)
 	//								m_poseAim_Yaw (not saved; recomputed on restore)
 	//								m_poseMove_Yaw (not saved; recomputed on restore)
+	DEFINE_FIELD(m_bIsDirectorSpawned, FIELD_BOOLEAN),
 	DEFINE_FIELD( m_flTimePingEffect,			FIELD_TIME ),
 	DEFINE_FIELD( m_bForceConditionsGather,		FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_bConditionsGathered,		FIELD_BOOLEAN ),
@@ -13132,6 +13138,8 @@ CAI_BaseNPC::CAI_BaseNPC(void)
 	m_iFrameBlocked = -1;
 	m_bInChoreo = true; // assume so until call to UpdateEfficiency()
 	
+	m_bIsDirectorSpawned = false;
+
 	SetCollisionGroup( COLLISION_GROUP_NPC );
 
 #ifdef MAPBASE
@@ -13180,6 +13188,11 @@ void CAI_BaseNPC::UpdateOnRemove(void)
 			CGMsg( 1, CON_GROUP_NPC_AI, "May not have cleaned up on NPC death\n" );
 
 		CleanupOnDeath( NULL, false );
+	}
+
+	if (IVDirectorSpawnManager() && m_bIsDirectorSpawned)
+	{
+		IVDirectorSpawnManager()->OnNPCSleeping(this);
 	}
 
 	// Chain at end to mimic destructor unwind order

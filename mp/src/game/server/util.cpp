@@ -682,6 +682,31 @@ CBasePlayer* UTIL_PlayerByUserId( int userID )
 	return NULL;
 }
 
+CBasePlayer *UTIL_GetNearestPlayerSimple(const Vector &origin, float &nearest_distance)
+{
+	float distToNearest = 99999999999999999999999999999999999999.0f;
+	CBasePlayer *pNearest = NULL;
+
+	for (int i = 1; i <= gpGlobals->maxClients; i++)
+	{
+		CBasePlayer *pPlayer = UTIL_PlayerByIndex(i);
+		if (!pPlayer)
+			continue;
+
+		float flDist = (pPlayer->GetAbsOrigin() - origin).LengthSqr();
+		if (flDist < distToNearest)
+
+		{
+			pNearest = pPlayer;
+			distToNearest = flDist;
+
+		}
+	}
+
+	nearest_distance = distToNearest;
+	return pNearest;
+}
+
 //
 // Return the local player.
 // If this is a multiplayer game, return NULL.

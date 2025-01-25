@@ -39,6 +39,24 @@ $Project
 		//IV Note: IV Engine Base Stuff
 		$File	"env_material_global_parms.cpp"
 
+		$Folder	"IV Engine Logic"
+		{
+			$Folder	"IV Director System"
+			{
+				$Folder	"Headers"
+				{
+					$File	"iv_director_system\iv_director.h"
+					$File	"iv_director_system\iv_director_control.h"
+					$File	"iv_director_system\iv_spawn_manager.h"
+				}
+
+				$File	"iv_director_system\iv_director.cpp"
+				$File	"iv_director_system\iv_director_control.cpp"
+				$File	"iv_director_system\iv_director_intensity.cpp"
+				$File	"iv_director_system\iv_spawn_manager.cpp"
+			}
+		}
+
 		$Folder	"Mapbase"
 		{
 			$File	"$SRCDIR\game\shared\mapbase\mapbase_shared.cpp"

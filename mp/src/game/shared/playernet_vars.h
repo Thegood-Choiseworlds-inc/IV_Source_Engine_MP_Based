@@ -44,6 +44,7 @@ struct fogparams_t
 	CNetworkVar( float, duration );
 	CNetworkVar( bool, enable );
 	CNetworkVar( bool, blend );
+	CNetworkVar( bool, bfarzPriority );
 };
 
 // Crappy. Needs to be here because it wants to use 
