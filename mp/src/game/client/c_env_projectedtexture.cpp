@@ -270,7 +270,7 @@ void C_EnvProjectedTexture::UpdateLight( void )
 
 	float currient_far_z = m_flFarZ;
 
-	if (bVisible && m_bLightDistanceSupport && (m_flLightDistanceFar > 0 && m_flLightDistanceFar > m_flLightDistanceNear))
+	if (r_projectedtexture_distance_check_support.GetBool() && (bVisible && m_bLightDistanceSupport && (m_flLightDistanceFar > 0 && m_flLightDistanceFar > m_flLightDistanceNear)))
 	{
 		Vector vPos;
 		QAngle EyeAngles;
