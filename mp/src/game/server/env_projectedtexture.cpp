@@ -38,6 +38,10 @@ BEGIN_DATADESC( CEnvProjectedTexture )
 	DEFINE_KEYFIELD( m_nSpotlightTextureFrame, FIELD_INTEGER, "textureframe" ),
 	DEFINE_KEYFIELD( m_flNearZ, FIELD_FLOAT, "nearz" ),
 	DEFINE_KEYFIELD( m_flFarZ, FIELD_FLOAT, "farz" ),
+	DEFINE_KEYFIELD(m_bLightDistanceSupport, FIELD_BOOLEAN, "lightdistancesupport"),
+	DEFINE_KEYFIELD(m_bLightDistanceControlFarZ, FIELD_BOOLEAN, "lightdistancecontrolfarz"),
+	DEFINE_KEYFIELD(m_flLightDistanceNear, FIELD_FLOAT, "lightdistancenear"),
+	DEFINE_KEYFIELD(m_flLightDistanceFar, FIELD_FLOAT, "lightdistancefar"),
 	DEFINE_KEYFIELD( m_nShadowQuality, FIELD_INTEGER, "shadowquality" ),
 #if IVBASE && IV_SHADOWS_ADVANCED
 	DEFINE_KEYFIELD( m_nShadowResMode, FIELD_INTEGER, "shadowresmode" ),
@@ -83,6 +87,10 @@ BEGIN_DATADESC( CEnvProjectedTexture )
 	DEFINE_INPUTFUNC( FIELD_COLOR32, "LightColor", InputSetLightColor ),
 	DEFINE_INPUTFUNC( FIELD_FLOAT, "Ambient", InputSetAmbient ),
 	DEFINE_INPUTFUNC( FIELD_STRING, "SpotlightTexture", InputSetSpotlightTexture ),
+	DEFINE_INPUTFUNC(FIELD_BOOLEAN, "SetLightDistanceSupport", InputSetLightDistanceSupportState),
+	DEFINE_INPUTFUNC(FIELD_BOOLEAN, "SetLightDistanceControlFarZ", InputSetLightDistanceControlFarZ),
+	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetLightDistanceNear", InputSetLightDistanceNear),
+	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetLightDistanceFar", InputSetLightDistanceFar),
 #ifdef MAPBASE
 	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetLightStyle", InputSetLightStyle ),
 	DEFINE_INPUTFUNC( FIELD_STRING, "SetPattern", InputSetPattern ),
@@ -133,6 +141,10 @@ IMPLEMENT_SERVERCLASS_ST( CEnvProjectedTexture, DT_EnvProjectedTexture )
 	SendPropInt( SENDINFO( m_nSpotlightTextureFrame ) ),
 	SendPropFloat( SENDINFO( m_flNearZ ), 16, SPROP_ROUNDDOWN, 0.0f,  500.0f ),
 	SendPropFloat( SENDINFO( m_flFarZ ),  18, SPROP_ROUNDDOWN, 0.0f, 1500.0f ),
+	SendPropBool(SENDINFO(m_bLightDistanceSupport)),
+	SendPropBool(SENDINFO(m_bLightDistanceControlFarZ)),
+	SendPropFloat(SENDINFO(m_flLightDistanceNear)),
+	SendPropFloat(SENDINFO(m_flLightDistanceFar)),
 	SendPropInt( SENDINFO( m_nShadowQuality ), 1, SPROP_UNSIGNED ),  // Just one bit for now
 #if IVBASE && IV_SHADOWS_ADVANCED
 	SendPropInt(SENDINFO(m_nShadowResMode), 1, SPROP_UNSIGNED),
@@ -186,6 +198,10 @@ CEnvProjectedTexture::CEnvProjectedTexture( void )
 	m_flAmbient = 0.0f;
 	m_flNearZ = 4.0f;
 	m_flFarZ = 750.0f;
+	m_bLightDistanceSupport = false;
+	m_bLightDistanceControlFarZ = false;
+	m_flLightDistanceNear = 512;
+	m_flLightDistanceFar = 1024;
 	m_nShadowQuality = 0;
 #if IVBASE && IV_SHADOWS_ADVANCED
 	m_nShadowResMode = 1;
@@ -475,7 +491,7 @@ void CEnvProjectedTexture::Spawn( void )
 		else if ( m_iszPattern != NULL_STRING )
 			engine->LightStyle( m_iStyle, (char *) STRING( m_iszPattern ) );
 		else
-			engine->LightStyle( m_iStyle, "m" );
+			engine->LightStyle( m_iStyle, "z" );
 	}
 
 	BaseClass::Spawn();

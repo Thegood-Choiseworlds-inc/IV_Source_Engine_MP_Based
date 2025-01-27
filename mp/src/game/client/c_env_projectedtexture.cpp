@@ -36,6 +36,8 @@ extern ConVar r_flashlightdepthres_hight;
 extern ConVar r_flashlightdepthres_glight;
 #endif
 
+ConVar r_projectedtexture_distance_check_support("r_projectedtexture_distance_check_support", "1", 0, "Projected Textures Distance Between Player Checking Support");
+
 float C_EnvProjectedTexture::m_flVisibleBBoxMinHeight = -FLT_MAX;
 
 
@@ -62,6 +64,10 @@ IMPLEMENT_CLIENTCLASS_DT( C_EnvProjectedTexture, DT_EnvProjectedTexture, CEnvPro
 	RecvPropInt(	 RECVINFO( m_nSpotlightTextureFrame ) ),
 	RecvPropFloat(	 RECVINFO( m_flNearZ )	),
 	RecvPropFloat(	 RECVINFO( m_flFarZ )	),
+	RecvPropBool(RECVINFO(m_bLightDistanceSupport)),
+	RecvPropBool(RECVINFO(m_bLightDistanceControlFarZ)),
+	RecvPropFloat(RECVINFO(m_flLightDistanceNear)),
+	RecvPropFloat(RECVINFO(m_flLightDistanceFar)),
 	RecvPropInt(	 RECVINFO( m_nShadowQuality )	),
 #if IVBASE && IV_SHADOWS_ADVANCED
 	RecvPropInt(RECVINFO(m_nShadowResMode)),
@@ -92,6 +98,10 @@ C_EnvProjectedTexture *C_EnvProjectedTexture::Create( )
 
 	pEnt->m_flNearZ = 4.0f;
 	pEnt->m_flFarZ = 2000.0f;
+	pEnt->m_bLightDistanceSupport = false;
+	pEnt->m_bLightDistanceControlFarZ = false;
+	pEnt->m_flLightDistanceNear = 512;
+	pEnt->m_flLightDistanceFar = 1024;
 //	strcpy( pEnt->m_SpotlightTextureName, "particle/rj" );
 	pEnt->m_bLightWorld = true;
 	pEnt->m_bLightOnlyTarget = false;
@@ -192,6 +202,14 @@ void C_EnvProjectedTexture::OnDataChanged( DataUpdateType_t updateType )
 	BaseClass::OnDataChanged( updateType );
 }
 
+static float smoothstep(float edge0, float edge1, float x)
+{
+	// Scale, and clamp x to 0..1 range
+	x = clamp((x - edge0) / (edge1 - edge0), 0, 1);
+
+	return x * x * (3.0f - 2.0f * x);
+}
+
 static ConVar asw_perf_wtf("asw_perf_wtf", "0", FCVAR_DEVELOPMENTONLY, "Disable updating of projected shadow textures from UpdateLight" );
 void C_EnvProjectedTexture::UpdateLight( void )
 {
@@ -250,11 +268,41 @@ void C_EnvProjectedTexture::UpdateLight( void )
 		bVisible = IsBBoxVisible();		
 	}
 
+	float currient_far_z = m_flFarZ;
+
+	if (bVisible && m_bLightDistanceSupport && (m_flLightDistanceFar > 0 && m_flLightDistanceFar > m_flLightDistanceNear))
+	{
+		Vector vPos;
+		QAngle EyeAngles;
+		float flZNear, flZFar, flFov;
+
+		C_BasePlayer::GetLocalPlayer()->CalcView(vPos, EyeAngles, flZNear, flZFar, flFov);
+
+		vec_t distance_between_ents_pos = GetLocalOrigin().DistTo(vPos);
+
+		if (distance_between_ents_pos > m_flLightDistanceNear)
+		{
+			if (distance_between_ents_pos >= m_flLightDistanceFar)
+				bVisible = false;
+			else
+			{
+				float distance_to_far = m_flLightDistanceFar - distance_between_ents_pos;
+				float smoothstep_value_brightness = smoothstep(0, m_flCurrentBrightnessScale, distance_to_far);
+				m_flCurrentBrightnessScale *= smoothstep_value_brightness;
+
+				if (m_bLightDistanceControlFarZ)
+				{
+					float smoothstep_value_farz = smoothstep(0, currient_far_z, distance_to_far);
+					currient_far_z *= smoothstep_value_farz;
+				}
+			}
+		}
+	}
+
 	if ( m_bState == false || !bVisible )
 	{
 		// Spotlight's extents aren't in view
 		ShutDownLightHandle();
-
 		return;
 	}
 
@@ -338,7 +386,7 @@ void C_EnvProjectedTexture::UpdateLight( void )
 		state.m_vecLightOrigin = vPos;
 		BasisToQuaternion( vForward, vRight, vUp, state.m_quatOrientation );
 		state.m_NearZ = m_flNearZ;
-		state.m_FarZ = m_flFarZ;
+		state.m_FarZ = currient_far_z;
 
 		// quickly check the proposed light's bbox against the view frustum to determine whether we
 		// should bother to create it, if it doesn't exist, or cull it, if it does.
@@ -351,7 +399,7 @@ void C_EnvProjectedTexture::UpdateLight( void )
 		const float tanHalfAngle = tan( m_flLightFOV * ( M_PI/180.0f ) * 0.5f );
 #endif
 		const float halfWidthNear = tanHalfAngle * m_flNearZ;
-		const float halfWidthFar = tanHalfAngle * m_flFarZ;
+		const float halfWidthFar = tanHalfAngle * currient_far_z;
 		// now we can build coordinates in local space: the near rectangle is eg 
 		// (0, -halfWidthNear, -halfWidthNear), (0,  halfWidthNear, -halfWidthNear), 
 		// (0,  halfWidthNear,  halfWidthNear), (0, -halfWidthNear,  halfWidthNear)
@@ -362,8 +410,8 @@ void C_EnvProjectedTexture::UpdateLight( void )
 		};
 
 		VectorAligned vFarRect[4] = { 
-			VectorAligned( m_flFarZ, -halfWidthFar, -halfWidthFar), VectorAligned( m_flFarZ,  halfWidthFar, -halfWidthFar),
-			VectorAligned( m_flFarZ,  halfWidthFar,  halfWidthFar), VectorAligned( m_flFarZ, -halfWidthFar,  halfWidthFar) 
+			VectorAligned(currient_far_z, -halfWidthFar, -halfWidthFar), VectorAligned(currient_far_z, halfWidthFar, -halfWidthFar),
+			VectorAligned(currient_far_z, halfWidthFar, halfWidthFar), VectorAligned(currient_far_z, -halfWidthFar, halfWidthFar)
 		};
 
 		matrix3x4_t matOrientation( vForward, -vRight, vUp, vPos );
@@ -428,7 +476,7 @@ void C_EnvProjectedTexture::UpdateLight( void )
 		state.m_fConstantAtten = m_flConstantAtten;
 		state.m_fLinearAtten = m_flLinearAtten;
 		state.m_fQuadraticAtten = m_flQuadraticAtten;
-		state.m_FarZAtten = m_flFarZ;
+		state.m_FarZAtten = currient_far_z;
 		state.m_Color[0] = (m_CurrentLinearFloatLightColor.x * ( 1.0f / 255.0f ) * flAlpha) * m_flCurrentBrightnessScale;
 		state.m_Color[1] = (m_CurrentLinearFloatLightColor.y * ( 1.0f / 255.0f ) * flAlpha) * m_flCurrentBrightnessScale;
 		state.m_Color[2] = (m_CurrentLinearFloatLightColor.z * ( 1.0f / 255.0f ) * flAlpha) * m_flCurrentBrightnessScale;

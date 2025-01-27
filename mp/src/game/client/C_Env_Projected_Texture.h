@@ -86,6 +86,10 @@ private:
 	char		m_SpotlightTextureName[ MAX_PATH ];
 	CTextureReference m_SpotlightTexture;
 	int			m_nSpotlightTextureFrame;
+	bool m_bLightDistanceSupport;
+	bool m_bLightDistanceControlFarZ;
+	float m_flLightDistanceNear;
+	float m_flLightDistanceFar;
 	int			m_nShadowQuality;
 #if IVBASE && IV_SHADOWS_ADVANCED
 	int			m_nShadowResMode;
