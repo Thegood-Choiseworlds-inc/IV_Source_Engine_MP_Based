@@ -3862,7 +3862,7 @@ void CRendering3dView::ReleaseLists()
 }
 
 
-static ConVar r_flashlightdepth_drawtranslucents("r_flashlightdepth_drawtranslucents", "1", FCVAR_NONE, "Pass Translucents Materials for Depth View");
+static ConVar r_flashlightdepth_drawtranslucents("r_flashlightdepth_drawtranslucents", "0", FCVAR_CHEAT, "Pass Translucents Materials for Depth View");
 
 //-----------------------------------------------------------------------------
 //
