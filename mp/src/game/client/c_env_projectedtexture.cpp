@@ -37,6 +37,7 @@ extern ConVar r_flashlightdepthres_glight;
 #endif
 
 ConVar r_projectedtexture_distance_check_support("r_projectedtexture_distance_check_support", "1", 0, "Projected Textures Distance Between Player Checking Support");
+ConVar r_projectedtexture_distance_check_far_z_relative_support("r_projectedtexture_distance_check_far_z_relative_support", "0", 0, "Projected Textures Distance Far Z Relative Check Support");
 
 ConVar r_projectedtexture_distance_override("r_projectedtexture_distance_override", "0", FCVAR_CHEAT, "Projected Textures Distance Override for Developer Testing");
 ConVar r_projectedtexture_distance_override_near_z("r_projectedtexture_distance_override_near_z", "512", FCVAR_CHEAT, "Projected Textures Distance Override Near Z");
@@ -303,7 +304,8 @@ void C_EnvProjectedTexture::UpdateLight( void )
 				float lerp_value_brightness = lerpFloat(m_flCurrentBrightnessScale, 0, smoothstep_value);
 				m_flCurrentBrightnessScale = lerp_value_brightness;
 
-				if ((r_projectedtexture_distance_override.GetBool() && r_projectedtexture_distance_far_z_checking.GetBool()) || m_bLightDistanceControlFarZ)
+				if ((r_projectedtexture_distance_override.GetBool() && r_projectedtexture_distance_far_z_checking.GetBool()) ||
+					(r_projectedtexture_distance_check_far_z_relative_support.GetBool() && m_bLightDistanceControlFarZ))
 				{
 					float lerp_value_farz = lerpFloat(currient_far_z, 0, smoothstep_value);
 					currient_far_z = lerp_value_farz;
@@ -311,6 +313,8 @@ void C_EnvProjectedTexture::UpdateLight( void )
 
 				if (m_flCurrentBrightnessScale <= 0 || currient_far_z <= 0 || currient_far_z <= m_flNearZ)
 					bVisible = false;
+				else
+					m_bForceUpdate = true;
 			}
 		}
 	}
