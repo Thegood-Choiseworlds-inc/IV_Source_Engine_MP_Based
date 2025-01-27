@@ -298,18 +298,18 @@ void C_EnvProjectedTexture::UpdateLight( void )
 				bVisible = false;
 			else
 			{
-				float distance_to_far = far_distance - distance_between_ents_pos;
-				float smoothstep_value = smoothstep(near_distance, far_distance, distance_to_far);
-				float lerp_value_brightness = lerpFloat(0, m_flCurrentBrightnessScale, smoothstep_value);
+				//float distance_to_far = far_distance - distance_between_ents_pos;
+				float smoothstep_value = smoothstep(near_distance, far_distance, distance_between_ents_pos);
+				float lerp_value_brightness = lerpFloat(m_flCurrentBrightnessScale, 0, smoothstep_value);
 				m_flCurrentBrightnessScale = lerp_value_brightness;
 
 				if ((r_projectedtexture_distance_override.GetBool() && r_projectedtexture_distance_far_z_checking.GetBool()) || m_bLightDistanceControlFarZ)
 				{
-					float lerp_value_farz = lerpFloat(0, currient_far_z, smoothstep_value);
+					float lerp_value_farz = lerpFloat(currient_far_z, 0, smoothstep_value);
 					currient_far_z = lerp_value_farz;
 				}
 
-				if (m_flCurrentBrightnessScale <= 0 || currient_far_z <= 0)
+				if (m_flCurrentBrightnessScale <= 0 || currient_far_z <= 0 || currient_far_z <= m_flNearZ)
 					bVisible = false;
 			}
 		}
