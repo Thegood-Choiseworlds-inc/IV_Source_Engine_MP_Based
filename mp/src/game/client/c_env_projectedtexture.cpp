@@ -38,6 +38,11 @@ extern ConVar r_flashlightdepthres_glight;
 
 ConVar r_projectedtexture_distance_check_support("r_projectedtexture_distance_check_support", "1", 0, "Projected Textures Distance Between Player Checking Support");
 
+ConVar r_projectedtexture_distance_override("r_projectedtexture_distance_override", "0", FCVAR_CHEAT, "Projected Textures Distance Override for Developer Testing");
+ConVar r_projectedtexture_distance_override_near_z("r_projectedtexture_distance_override_near_z", "512", FCVAR_CHEAT, "Projected Textures Distance Override Near Z");
+ConVar r_projectedtexture_distance_override_far_z("r_projectedtexture_distance_override_far_z", "1024", FCVAR_CHEAT, "Projected Textures Distance Override Far Z");
+ConVar r_projectedtexture_distance_far_z_checking("r_projectedtexture_distance_far_z_checking", "0", FCVAR_CHEAT, "Projected Textures Distance Override Far Z Checking");
+
 float C_EnvProjectedTexture::m_flVisibleBBoxMinHeight = -FLT_MAX;
 
 
@@ -210,6 +215,11 @@ static float smoothstep(float edge0, float edge1, float x)
 	return x * x * (3.0f - 2.0f * x);
 }
 
+static float lerpFloat(float v0, float v1, float t)
+{
+	return (1 - t) * v0 + t * v1;
+}
+
 static ConVar asw_perf_wtf("asw_perf_wtf", "0", FCVAR_DEVELOPMENTONLY, "Disable updating of projected shadow textures from UpdateLight" );
 void C_EnvProjectedTexture::UpdateLight( void )
 {
@@ -270,24 +280,37 @@ void C_EnvProjectedTexture::UpdateLight( void )
 
 	float currient_far_z = m_flFarZ;
 
-	if (r_projectedtexture_distance_check_support.GetBool() && (bVisible && m_bLightDistanceSupport && (m_flLightDistanceFar > 0 && m_flLightDistanceFar > m_flLightDistanceNear)))
+	if (r_projectedtexture_distance_check_support.GetBool() && (bVisible && (m_bLightDistanceSupport || r_projectedtexture_distance_override.GetBool())
+		&& ((r_projectedtexture_distance_override.GetBool() && r_projectedtexture_distance_override_far_z.GetFloat() > 0
+		&& r_projectedtexture_distance_override_far_z.GetFloat() > r_projectedtexture_distance_override_near_z.GetFloat())
+		|| (m_flLightDistanceFar > 0 && m_flLightDistanceFar > m_flLightDistanceNear))))
 	{
 		Vector vPos = C_BasePlayer::GetLocalPlayer()->GetLocalOrigin();
 
+		float near_distance = r_projectedtexture_distance_override.GetBool() ? r_projectedtexture_distance_override_near_z.GetFloat() : m_flLightDistanceNear;
+		float far_distance = r_projectedtexture_distance_override.GetBool() ? r_projectedtexture_distance_override_far_z.GetFloat() : m_flLightDistanceFar;
+
 		vec_t distance_between_ents_pos = GetLocalOrigin().DistTo(vPos);
 
-		if (distance_between_ents_pos > m_flLightDistanceNear)
+		if (distance_between_ents_pos > near_distance)
 		{
-			if (distance_between_ents_pos >= m_flLightDistanceFar)
+			if (distance_between_ents_pos >= far_distance)
 				bVisible = false;
 			else
 			{
-				float distance_to_far = m_flLightDistanceFar - distance_between_ents_pos;
-				float smoothstep_value = smoothstep(distance_between_ents_pos, m_flLightDistanceFar, distance_to_far);
-				m_flCurrentBrightnessScale *= smoothstep_value;
+				float distance_to_far = far_distance - distance_between_ents_pos;
+				float smoothstep_value = smoothstep(near_distance, far_distance, distance_to_far);
+				float lerp_value_brightness = lerpFloat(0, m_flCurrentBrightnessScale, smoothstep_value);
+				m_flCurrentBrightnessScale = lerp_value_brightness;
 
-				if (m_bLightDistanceControlFarZ)
-					currient_far_z *= smoothstep_value;
+				if ((r_projectedtexture_distance_override.GetBool() && r_projectedtexture_distance_far_z_checking.GetBool()) || m_bLightDistanceControlFarZ)
+				{
+					float lerp_value_farz = lerpFloat(0, currient_far_z, smoothstep_value);
+					currient_far_z = lerp_value_farz;
+				}
+
+				if (m_flCurrentBrightnessScale <= 0 || currient_far_z <= 0)
+					bVisible = false;
 			}
 		}
 	}
