@@ -272,11 +272,7 @@ void C_EnvProjectedTexture::UpdateLight( void )
 
 	if (r_projectedtexture_distance_check_support.GetBool() && (bVisible && m_bLightDistanceSupport && (m_flLightDistanceFar > 0 && m_flLightDistanceFar > m_flLightDistanceNear)))
 	{
-		Vector vPos;
-		QAngle EyeAngles;
-		float flZNear, flZFar, flFov;
-
-		C_BasePlayer::GetLocalPlayer()->CalcView(vPos, EyeAngles, flZNear, flZFar, flFov);
+		Vector vPos = C_BasePlayer::GetLocalPlayer()->GetLocalOrigin();
 
 		vec_t distance_between_ents_pos = GetLocalOrigin().DistTo(vPos);
 
@@ -287,14 +283,11 @@ void C_EnvProjectedTexture::UpdateLight( void )
 			else
 			{
 				float distance_to_far = m_flLightDistanceFar - distance_between_ents_pos;
-				float smoothstep_value_brightness = smoothstep(0, m_flCurrentBrightnessScale, distance_to_far);
-				m_flCurrentBrightnessScale *= smoothstep_value_brightness;
+				float smoothstep_value = smoothstep(distance_between_ents_pos, m_flLightDistanceFar, distance_to_far);
+				m_flCurrentBrightnessScale *= smoothstep_value;
 
 				if (m_bLightDistanceControlFarZ)
-				{
-					float smoothstep_value_farz = smoothstep(0, currient_far_z, distance_to_far);
-					currient_far_z *= smoothstep_value_farz;
-				}
+					currient_far_z *= smoothstep_value;
 			}
 		}
 	}
