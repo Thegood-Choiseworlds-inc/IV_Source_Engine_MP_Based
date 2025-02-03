@@ -312,9 +312,9 @@ float4 main( PS_INPUT i ) : COLOR
 		float3 cFlashlightCookieColor = tex2Dproj( g_tFlashlightCookieSampler, vFlashlightTexCoord.xyzw );
 #endif
 
-#if !defined( _X360 )
+/*#if !defined( _X360 )
 		cFlashlightCookieColor *= vFlashlightTexCoord.www > float3(0,0,0);	// Catch back projection (PC-only)
-#endif
+#endif*/
 
 		// Shadow depth map
 #if FLASHLIGHTSHADOWS && !defined( SHADER_MODEL_PS_2_0 )
