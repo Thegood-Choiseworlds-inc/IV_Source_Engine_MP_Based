@@ -9,6 +9,7 @@
 // DYNAMIC: "PIXELFOGTYPE"				"0..1"
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"						[ps20b]
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"						[ps30] [PC]
+// DYNAMIC: "PROJECTEDSHADOWFILTERMODE"			"0..1"
 
 // We don't care about flashlight depth unless the flashlight is on
 // SKIP: ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTSHADOWS == 1 )		[ps20b]
@@ -34,6 +35,7 @@ const float4 g_FogTweakParams			: register( c0 );
 #define g_fFogExponentTweak	g_FogTweakParams.x
 #define g_fFogScaleTweak	g_FogTweakParams.y
 
+const float4 g_ShadowTweaks					: register( c19 );
 const float4 g_FlashlightAttenuationFactors	: register( c22 );
 const float3 g_FlashlightPos				: register( c23 );
 const float4x4 g_FlashlightWorldToTexture	: register( c24 ); // through c27
@@ -79,7 +81,7 @@ float4 main( PS_INPUT i ) : COLOR
 		float3 flashlightColor = DoFlashlight( g_FlashlightPos, i.worldPos_projPosZ.xyz, flashlightSpacePosition,
 			float3( 0.0f, 0.0f, 1.0f ), g_FlashlightAttenuationFactors.xyz, 
 			g_FlashlightAttenuationFactors.w, FlashlightSampler, ShadowDepthSampler,
-			RandRotSampler, nShadowSampleLevel, bDoShadows, false, vProjPos, false, float4(3/1024.0f, 0.0005f, 0.0f, 0.0f), false );
+			RandRotSampler, nShadowSampleLevel, bDoShadows, false, PROJECTEDSHADOWFILTERMODE, vProjPos, false, g_ShadowTweaks, false );
 			
 		flFactor *= (flashlightColor.x + flashlightColor.y + flashlightColor.z);
 

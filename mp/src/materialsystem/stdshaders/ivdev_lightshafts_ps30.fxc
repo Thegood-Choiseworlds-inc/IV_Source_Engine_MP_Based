@@ -5,6 +5,7 @@
 // STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..0" [XBOX]
 
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"
+// DYNAMIC: "PROJECTEDSHADOWFILTERMODE"			"0..1"
 
 #include "common_flashlight_fxc.h"
 #include "shader_constant_register_map.h"
@@ -36,7 +37,7 @@ float4 main( PS_INPUT i ) : COLOR
 	float3 flashlightColor = DoFlashlight( g_FlashlightPos, i.vWorldPos, i.spotTexCoord,
 		float3(1,0,0), g_FlashlightAttenuationFactors.xyz, g_FlashlightAttenuationFactors.w,
 		FlashlightCookieSampler, ShadowDepthSampler, RandRotSampler,
-		FLASHLIGHTDEPTHFILTERMODE, FLASHLIGHTSHADOWS, false, i.vProjPos.xy / i.vProjPos.w, false, g_ShadowTweaks, false );
+		FLASHLIGHTDEPTHFILTERMODE, FLASHLIGHTSHADOWS, false, PROJECTEDSHADOWFILTERMODE, i.vProjPos.xy / i.vProjPos.w, false, g_ShadowTweaks, false );
 
 	// Scrolling noise with adjustable strength
 	float fNoise = tex2D( NoiseSampler, (i.spotTexCoord.xy / i.spotTexCoord.w) + g_NoiseScroll.xy ).x;

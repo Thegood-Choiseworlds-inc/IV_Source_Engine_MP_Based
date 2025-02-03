@@ -23,6 +23,7 @@
 // DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"		"0..1" [ps20b] [PC]
 // DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"		"0..0" [ps20b] [XBOX]
 // DYNAMIC: "FLASHLIGHTSHADOWS"				"0..1" [ps20b]
+// DYNAMIC: "PROJECTEDSHADOWFILTERMODE"			"0..1"
 
 //	SKIP: $DETAILTEXTURE && ( $BUMPMAP && !$DETAIL_ALPHA_MASK_BASE_TEXTURE )
 //  SKIP: !$BUMPMAP && $DIFFUSEBUMPMAP
@@ -170,7 +171,7 @@ float4 main( PS_INPUT i ) : COLOR
 		diffuseLighting = DoFlashlight( g_FlashlightPos, i.worldPos_projPosZ.xyz, flashlightSpacePosition,
 			worldSpaceNormal, g_FlashlightAttenuationFactors.xyz, 
 			g_FlashlightAttenuationFactors.w, FlashlightSampler, FlashlightSampler, NormalizeSampler,
-			nShadowSampleLevel,	bDoShadows, false, float2(0, 0), false );
+			nShadowSampleLevel,	bDoShadows, false, PROJECTEDSHADOWFILTERMODE, float2(0, 0), false );
 	}
 	else
 	{

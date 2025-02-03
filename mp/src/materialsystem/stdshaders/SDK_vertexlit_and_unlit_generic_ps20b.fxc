@@ -35,6 +35,7 @@
 // DYNAMIC: "LIGHTING_PREVIEW"          "0..0"	[XBOX]
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"	[ps20b]
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"	[ps30]
+// DYNAMIC: "PROJECTEDSHADOWFILTERMODE"			"0..1"
 // DYNAMIC: "STATIC_LIGHT_LIGHTMAP"	    "0..1"  [ps20b] [ps30]
 // DYNAMIC: "STATIC_LIGHT_LIGHTMAP"	    "0..0"  [ps20]
 // DYNAMIC: "DEBUG_LUXELS"				"0..1"	[ps20b] [ps30]
@@ -432,7 +433,7 @@ float4 main( PS_INPUT i ) : COLOR
 		float3 flashlightColor = DoFlashlight( g_FlashlightPos, i.worldPos_projPosZ.xyz, flashlightSpacePosition,
 			i.worldSpaceNormal, g_FlashlightAttenuationFactors.xyz, 
 			g_FlashlightAttenuationFactors.w, FlashlightSampler, ShadowDepthSampler,
-			RandRotSampler, nShadowSampleLevel, bDoShadows, false, i.projPos.xy / i.projPos.w, false, g_EnvmapContrast_ShadowTweaks, bUseWorldNormal );
+			RandRotSampler, nShadowSampleLevel, bDoShadows, false, PROJECTEDSHADOWFILTERMODE, i.projPos.xy / i.projPos.w, false, g_EnvmapContrast_ShadowTweaks, bUseWorldNormal );
 
 #if defined ( _X360 )
 		diffuseLighting += flashlightColor;

@@ -14,6 +14,7 @@
 // DYNAMIC: "PIXELFOGTYPE"				"0..1"
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"	[ps20b]
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"	[ps30]
+// DYNAMIC: "PROJECTEDSHADOWFILTERMODE"			"0..1"
 
 #include "common_flashlight_fxc.h"
 #include "shader_constant_register_map.h"
@@ -55,7 +56,7 @@ float4 main( PS_INPUT i ) : COLOR
 	result *= cFlashlightColor.rgb;
 
 #if FLASHLIGHTSHADOWS && ( defined( SHADER_MODEL_PS_2_B ) || defined( SHADER_MODEL_PS_3_0 ) )
-	result *= DoFlashlightShadow( FlashlightDepthSampler, RandomRotationSampler, vProjCoords, i.projPos.xy / i.projPos.z, FLASHLIGHTDEPTHFILTERMODE, g_ShadowTweaks, true );
+	result *= DoFlashlightShadow( FlashlightDepthSampler, RandomRotationSampler, vProjCoords, i.projPos.xy / i.projPos.z, FLASHLIGHTDEPTHFILTERMODE, g_ShadowTweaks, true, PROJECTEDSHADOWFILTERMODE );
 #endif
 	result *= 0.35f;	// Without this, unshadowed teeth always seem to glow
 
