@@ -5,7 +5,7 @@
 // STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..0" [XBOX]
 
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"
-// DYNAMIC: "PROJECTEDSHADOWFILTERMODE"			"0..1"
+// DYNAMIC: "PROJECTEDSHADOWFILTERMODE"			"0..2"
 
 #include "common_flashlight_fxc.h"
 #include "shader_constant_register_map.h"
