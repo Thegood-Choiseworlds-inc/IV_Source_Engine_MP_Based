@@ -12,6 +12,8 @@
 
 #if defined(SHADER_MODEL_PS_3_0)
 #define NEW_SHADOW_FILTERS // Comment if you want to enable retail shadow filter.
+#else
+#define PROJECTEDSHADOWFILTERMODE 0
 #endif
 
 #define FLASHLIGHT_SHADOW_TEXTURE_RESOLUTION ( 1024.0f )
@@ -223,6 +225,7 @@ float DoShadowNvidiaPCF5x5Gaussian( sampler DepthSampler, const float4 shadowMap
 	return flOneTaps + flSevenTaps + flFourTapsA + flFourTapsB + fl20Taps + fl33Taps + flCenterTap;
 }
 
+#if defined( NEW_SHADOW_FILTERS )
 float DoShadowNvidiaPCF3x3Gaussian( sampler DepthSampler, const float3 shadowMapPos, const float2 vShadowTweaks )
 {
 	float fTexelEpsilonX = vShadowTweaks.x;
@@ -252,6 +255,7 @@ float DoShadowNvidiaPCF3x3Gaussian( sampler DepthSampler, const float3 shadowMap
 	// Sum all 9 Taps
 	return flOneTaps + flTwoTaps + flCenterTap;
 }
+#endif
 
 float DoShadowATICheap( sampler DepthSampler, const float4 shadowMapPos )
 {
@@ -651,8 +655,7 @@ float DoShadowPoisson360( sampler DepthSampler, sampler RandomRotationSampler, c
 
 #endif // _X360
 
-
-float DoFlashlightShadow( sampler DepthSampler, sampler RandomRotationSampler, float3 vProjCoords, float2 vScreenPos, int nShadowLevel, float4 vShadowTweaks, bool bAllowHighQuality, int nShadowFilterMode = 0 )
+float DoFlashlightShadow( sampler DepthSampler, sampler RandomRotationSampler, float3 vProjCoords, float2 vScreenPos, int nShadowLevel, float4 vShadowTweaks, bool bAllowHighQuality, int nShadowFilterMode )
 {
 	float flShadow = 1.0f;
 
