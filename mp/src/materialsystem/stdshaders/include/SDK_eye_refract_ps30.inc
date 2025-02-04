@@ -1,6 +1,7 @@
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $FLASHLIGHT != 0 ) && ( $NUM_LIGHTS > 0 )
 // ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTSHADOWS == 1 )
+// !$FLASHLIGHT && $PROJECTEDSHADOWFILTERMODE
 // ( $RAYTRACESPHERE == 0 ) && ( $SPHERETEXKILLCOMBO == 1 )
 // defined $HDRTYPE && defined $HDRENABLED && !$HDRTYPE && $HDRENABLED
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
@@ -99,7 +100,7 @@ public:
 	{
 		Assert( m_bFLASHLIGHT && m_bLIGHTWARPTEXTURE && m_bSPHERETEXKILLCOMBO && m_bRAYTRACESPHERE && m_bFLASHLIGHTDEPTHFILTERMODE );
 		AssertMsg( !( ( m_nRAYTRACESPHERE == 0 ) && ( m_nSPHERETEXKILLCOMBO == 1 ) ), "Invalid combo combination ( ( RAYTRACESPHERE == 0 ) && ( SPHERETEXKILLCOMBO == 1 ) )" );
-		return ( 10 * m_nFLASHLIGHT ) + ( 20 * m_nLIGHTWARPTEXTURE ) + ( 40 * m_nSPHERETEXKILLCOMBO ) + ( 80 * m_nRAYTRACESPHERE ) + ( 160 * m_nFLASHLIGHTDEPTHFILTERMODE ) + 0;
+		return ( 30 * m_nFLASHLIGHT ) + ( 60 * m_nLIGHTWARPTEXTURE ) + ( 120 * m_nSPHERETEXKILLCOMBO ) + ( 240 * m_nRAYTRACESPHERE ) + ( 480 * m_nFLASHLIGHTDEPTHFILTERMODE ) + 0;
 	}
 };
 
@@ -110,9 +111,11 @@ class SDK_eye_refract_ps30_Dynamic_Index
 {
 	unsigned int m_nNUM_LIGHTS : 3;
 	unsigned int m_nFLASHLIGHTSHADOWS : 2;
+	unsigned int m_nPROJECTEDSHADOWFILTERMODE : 2;
 #ifdef _DEBUG
 	bool m_bNUM_LIGHTS : 1;
 	bool m_bFLASHLIGHTSHADOWS : 1;
+	bool m_bPROJECTEDSHADOWFILTERMODE : 1;
 #endif	// _DEBUG
 public:
 	void SetNUM_LIGHTS( int i )
@@ -133,22 +136,33 @@ public:
 #endif	// _DEBUG
 	}
 
+	void SetPROJECTEDSHADOWFILTERMODE( int i )
+	{
+		Assert( i >= 0 && i <= 2 );
+		m_nPROJECTEDSHADOWFILTERMODE = i;
+#ifdef _DEBUG
+		m_bPROJECTEDSHADOWFILTERMODE = true;
+#endif	// _DEBUG
+	}
+
 	SDK_eye_refract_ps30_Dynamic_Index( IShaderDynamicAPI* pShaderAPI )
 	{
 		m_nNUM_LIGHTS = 0;
 		m_nFLASHLIGHTSHADOWS = 0;
+		m_nPROJECTEDSHADOWFILTERMODE = 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = false;
 		m_bFLASHLIGHTSHADOWS = false;
+		m_bPROJECTEDSHADOWFILTERMODE = false;
 #endif	// _DEBUG
 	}
 
 	int GetIndex() const
 	{
-		Assert( m_bNUM_LIGHTS && m_bFLASHLIGHTSHADOWS );
-		return ( 1 * m_nNUM_LIGHTS ) + ( 5 * m_nFLASHLIGHTSHADOWS ) + 0;
+		Assert( m_bNUM_LIGHTS && m_bFLASHLIGHTSHADOWS && m_bPROJECTEDSHADOWFILTERMODE );
+		return ( 1 * m_nNUM_LIGHTS ) + ( 5 * m_nFLASHLIGHTSHADOWS ) + ( 10 * m_nPROJECTEDSHADOWFILTERMODE ) + 0;
 	}
 };
 
-#define shaderDynamicTest_SDK_eye_refract_ps30 psh_forgot_to_set_dynamic_NUM_LIGHTS + psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS
+#define shaderDynamicTest_SDK_eye_refract_ps30 psh_forgot_to_set_dynamic_NUM_LIGHTS + psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + psh_forgot_to_set_dynamic_PROJECTEDSHADOWFILTERMODE
 

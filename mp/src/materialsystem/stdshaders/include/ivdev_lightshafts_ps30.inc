@@ -43,7 +43,7 @@ public:
 	int GetIndex() const
 	{
 		Assert( m_bFLASHLIGHTDEPTHFILTERMODE );
-		return ( 2 * m_nFLASHLIGHTDEPTHFILTERMODE ) + 0;
+		return ( 6 * m_nFLASHLIGHTDEPTHFILTERMODE ) + 0;
 	}
 };
 
@@ -53,8 +53,10 @@ public:
 class ivdev_lightshafts_ps30_Dynamic_Index
 {
 	unsigned int m_nFLASHLIGHTSHADOWS : 2;
+	unsigned int m_nPROJECTEDSHADOWFILTERMODE : 2;
 #ifdef _DEBUG
 	bool m_bFLASHLIGHTSHADOWS : 1;
+	bool m_bPROJECTEDSHADOWFILTERMODE : 1;
 #endif	// _DEBUG
 public:
 	void SetFLASHLIGHTSHADOWS( int i )
@@ -66,20 +68,31 @@ public:
 #endif	// _DEBUG
 	}
 
+	void SetPROJECTEDSHADOWFILTERMODE( int i )
+	{
+		Assert( i >= 0 && i <= 2 );
+		m_nPROJECTEDSHADOWFILTERMODE = i;
+#ifdef _DEBUG
+		m_bPROJECTEDSHADOWFILTERMODE = true;
+#endif	// _DEBUG
+	}
+
 	ivdev_lightshafts_ps30_Dynamic_Index( IShaderDynamicAPI* pShaderAPI )
 	{
 		m_nFLASHLIGHTSHADOWS = 0;
+		m_nPROJECTEDSHADOWFILTERMODE = 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTSHADOWS = false;
+		m_bPROJECTEDSHADOWFILTERMODE = false;
 #endif	// _DEBUG
 	}
 
 	int GetIndex() const
 	{
-		Assert( m_bFLASHLIGHTSHADOWS );
-		return ( 1 * m_nFLASHLIGHTSHADOWS ) + 0;
+		Assert( m_bFLASHLIGHTSHADOWS && m_bPROJECTEDSHADOWFILTERMODE );
+		return ( 1 * m_nFLASHLIGHTSHADOWS ) + ( 2 * m_nPROJECTEDSHADOWFILTERMODE ) + 0;
 	}
 };
 
-#define shaderDynamicTest_ivdev_lightshafts_ps30 psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS
+#define shaderDynamicTest_ivdev_lightshafts_ps30 psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + psh_forgot_to_set_dynamic_PROJECTEDSHADOWFILTERMODE
 

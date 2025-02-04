@@ -2,6 +2,7 @@
 // ( $FLASHLIGHT != 0 ) && ( $NUM_LIGHTS > 0 )
 // ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTSHADOWS == 1 )
 // ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTDEPTHFILTERMODE != 0 )
+// !$FLASHLIGHT && $PROJECTEDSHADOWFILTERMODE
 // (! $DETAILTEXTURE) && ( $DETAIL_BLEND_MODE != 0 )
 // ( $FLASHLIGHT == 1 ) && ( $LIGHTWARPTEXTURE == 1 )
 // ( $DIFFUSELIGHTING == 0 ) && ( $LIGHTWARPTEXTURE == 1 )
@@ -233,7 +234,7 @@ public:
 		AssertMsg( !( m_nNORMALMAPALPHAENVMAPMASK && !m_nCUBEMAP ), "Invalid combo combination ( NORMALMAPALPHAENVMAPMASK && !CUBEMAP )" );
 		AssertMsg( !( m_nNORMALMAPALPHAENVMAPMASK && m_nENVMAPMASK ), "Invalid combo combination ( NORMALMAPALPHAENVMAPMASK && ENVMAPMASK )" );
 		AssertMsg( !( m_nENVMAPMASK && !m_nCUBEMAP ), "Invalid combo combination ( ENVMAPMASK && !CUBEMAP )" );
-		return ( 80 * m_nCUBEMAP ) + ( 160 * m_nDIFFUSELIGHTING ) + ( 320 * m_nLIGHTWARPTEXTURE ) + ( 640 * m_nSELFILLUM ) + ( 1280 * m_nSELFILLUMFRESNEL ) + ( 2560 * m_nNORMALMAPALPHAENVMAPMASK ) + ( 5120 * m_nHALFLAMBERT ) + ( 10240 * m_nFLASHLIGHT ) + ( 20480 * m_nDETAILTEXTURE ) + ( 40960 * m_nDETAIL_BLEND_MODE ) + ( 286720 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 860160 * m_nBLENDTINTBYBASEALPHA ) + ( 1720320 * m_nENVMAPMASK ) + 0;
+		return ( 240 * m_nCUBEMAP ) + ( 480 * m_nDIFFUSELIGHTING ) + ( 960 * m_nLIGHTWARPTEXTURE ) + ( 1920 * m_nSELFILLUM ) + ( 3840 * m_nSELFILLUMFRESNEL ) + ( 7680 * m_nNORMALMAPALPHAENVMAPMASK ) + ( 15360 * m_nHALFLAMBERT ) + ( 30720 * m_nFLASHLIGHT ) + ( 61440 * m_nDETAILTEXTURE ) + ( 122880 * m_nDETAIL_BLEND_MODE ) + ( 860160 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 2580480 * m_nBLENDTINTBYBASEALPHA ) + ( 5160960 * m_nENVMAPMASK ) + 0;
 	}
 };
 
@@ -245,12 +246,14 @@ class SDK_vertexlit_and_unlit_generic_bump_ps30_Dynamic_Index
 	unsigned int m_nNUM_LIGHTS : 3;
 	unsigned int m_nAMBIENT_LIGHT : 2;
 	unsigned int m_nFLASHLIGHTSHADOWS : 2;
+	unsigned int m_nPROJECTEDSHADOWFILTERMODE : 2;
 	unsigned int m_nSTATIC_LIGHT_LIGHTMAP : 2;
 	unsigned int m_nDEBUG_LUXELS : 2;
 #ifdef _DEBUG
 	bool m_bNUM_LIGHTS : 1;
 	bool m_bAMBIENT_LIGHT : 1;
 	bool m_bFLASHLIGHTSHADOWS : 1;
+	bool m_bPROJECTEDSHADOWFILTERMODE : 1;
 	bool m_bSTATIC_LIGHT_LIGHTMAP : 1;
 	bool m_bDEBUG_LUXELS : 1;
 #endif	// _DEBUG
@@ -282,6 +285,15 @@ public:
 #endif	// _DEBUG
 	}
 
+	void SetPROJECTEDSHADOWFILTERMODE( int i )
+	{
+		Assert( i >= 0 && i <= 2 );
+		m_nPROJECTEDSHADOWFILTERMODE = i;
+#ifdef _DEBUG
+		m_bPROJECTEDSHADOWFILTERMODE = true;
+#endif	// _DEBUG
+	}
+
 	void SetSTATIC_LIGHT_LIGHTMAP( int i )
 	{
 		Assert( i >= 0 && i <= 1 );
@@ -305,12 +317,14 @@ public:
 		m_nNUM_LIGHTS = 0;
 		m_nAMBIENT_LIGHT = 0;
 		m_nFLASHLIGHTSHADOWS = 0;
+		m_nPROJECTEDSHADOWFILTERMODE = 0;
 		m_nSTATIC_LIGHT_LIGHTMAP = 0;
 		m_nDEBUG_LUXELS = 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = false;
 		m_bAMBIENT_LIGHT = false;
 		m_bFLASHLIGHTSHADOWS = false;
+		m_bPROJECTEDSHADOWFILTERMODE = false;
 		m_bSTATIC_LIGHT_LIGHTMAP = false;
 		m_bDEBUG_LUXELS = false;
 #endif	// _DEBUG
@@ -318,11 +332,11 @@ public:
 
 	int GetIndex() const
 	{
-		Assert( m_bNUM_LIGHTS && m_bAMBIENT_LIGHT && m_bFLASHLIGHTSHADOWS && m_bSTATIC_LIGHT_LIGHTMAP && m_bDEBUG_LUXELS );
+		Assert( m_bNUM_LIGHTS && m_bAMBIENT_LIGHT && m_bFLASHLIGHTSHADOWS && m_bPROJECTEDSHADOWFILTERMODE && m_bSTATIC_LIGHT_LIGHTMAP && m_bDEBUG_LUXELS );
 		AssertMsg( !( ( m_nSTATIC_LIGHT_LIGHTMAP == 0 ) && ( m_nDEBUG_LUXELS == 1 ) ), "Invalid combo combination ( ( STATIC_LIGHT_LIGHTMAP == 0 ) && ( DEBUG_LUXELS == 1 ) )" );
-		return ( 1 * m_nNUM_LIGHTS ) + ( 5 * m_nAMBIENT_LIGHT ) + ( 10 * m_nFLASHLIGHTSHADOWS ) + ( 20 * m_nSTATIC_LIGHT_LIGHTMAP ) + ( 40 * m_nDEBUG_LUXELS ) + 0;
+		return ( 1 * m_nNUM_LIGHTS ) + ( 5 * m_nAMBIENT_LIGHT ) + ( 10 * m_nFLASHLIGHTSHADOWS ) + ( 20 * m_nPROJECTEDSHADOWFILTERMODE ) + ( 60 * m_nSTATIC_LIGHT_LIGHTMAP ) + ( 120 * m_nDEBUG_LUXELS ) + 0;
 	}
 };
 
-#define shaderDynamicTest_SDK_vertexlit_and_unlit_generic_bump_ps30 psh_forgot_to_set_dynamic_NUM_LIGHTS + psh_forgot_to_set_dynamic_AMBIENT_LIGHT + psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + psh_forgot_to_set_dynamic_STATIC_LIGHT_LIGHTMAP + psh_forgot_to_set_dynamic_DEBUG_LUXELS
+#define shaderDynamicTest_SDK_vertexlit_and_unlit_generic_bump_ps30 psh_forgot_to_set_dynamic_NUM_LIGHTS + psh_forgot_to_set_dynamic_AMBIENT_LIGHT + psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + psh_forgot_to_set_dynamic_PROJECTEDSHADOWFILTERMODE + psh_forgot_to_set_dynamic_STATIC_LIGHT_LIGHTMAP + psh_forgot_to_set_dynamic_DEBUG_LUXELS
 

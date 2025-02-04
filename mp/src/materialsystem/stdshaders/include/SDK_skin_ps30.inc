@@ -3,6 +3,7 @@
 // (! $DETAILTEXTURE) && ( $DETAIL_BLEND_MODE != 0 )
 // ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTSHADOWS == 1 )
 // ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTDEPTHFILTERMODE != 0 )
+// !$FLASHLIGHT && $PROJECTEDSHADOWFILTERMODE
 // ( $SELFILLUM == 0 ) && ( $SELFILLUMFRESNEL == 1 )
 // ( $FLASHLIGHT == 1 ) && ( $SELFILLUMFRESNEL == 1 )
 // ( $FLASHLIGHT == 1 ) && ( $SELFILLUM == 1 )
@@ -256,7 +257,7 @@ public:
 		AssertMsg( !( m_nBLENDTINTBYBASEALPHA && m_nSELFILLUM ), "Invalid combo combination ( BLENDTINTBYBASEALPHA && SELFILLUM )" );
 		AssertMsg( !( m_nENVMAPMASK && !m_nCUBEMAP ), "Invalid combo combination ( ENVMAPMASK && !CUBEMAP )" );
 		AssertMsg( !( m_nFASTPATH_NOBUMP && ( m_nRIMLIGHT || ( m_nDETAILTEXTURE || ( m_nPHONGWARPTEXTURE || ( m_nSELFILLUM || m_nBLENDTINTBYBASEALPHA ) ) ) ) ), "Invalid combo combination ( FASTPATH_NOBUMP && ( RIMLIGHT || ( DETAILTEXTURE || ( PHONGWARPTEXTURE || ( SELFILLUM || BLENDTINTBYBASEALPHA ) ) ) ) )" );
-		return ( 160 * m_nCONVERT_TO_SRGB ) + ( 160 * m_nCUBEMAP ) + ( 320 * m_nSELFILLUM ) + ( 640 * m_nSELFILLUMFRESNEL ) + ( 1280 * m_nFLASHLIGHT ) + ( 2560 * m_nLIGHTWARPTEXTURE ) + ( 5120 * m_nPHONGWARPTEXTURE ) + ( 10240 * m_nWRINKLEMAP ) + ( 20480 * m_nDETAIL_BLEND_MODE ) + ( 143360 * m_nDETAILTEXTURE ) + ( 286720 * m_nRIMLIGHT ) + ( 573440 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 1720320 * m_nFASTPATH_NOBUMP ) + ( 3440640 * m_nBLENDTINTBYBASEALPHA ) + ( 6881280 * m_nPHONG_HALFLAMBERT ) + ( 13762560 * m_nENVMAPMASK ) + 0;
+		return ( 480 * m_nCONVERT_TO_SRGB ) + ( 480 * m_nCUBEMAP ) + ( 960 * m_nSELFILLUM ) + ( 1920 * m_nSELFILLUMFRESNEL ) + ( 3840 * m_nFLASHLIGHT ) + ( 7680 * m_nLIGHTWARPTEXTURE ) + ( 15360 * m_nPHONGWARPTEXTURE ) + ( 30720 * m_nWRINKLEMAP ) + ( 61440 * m_nDETAIL_BLEND_MODE ) + ( 430080 * m_nDETAILTEXTURE ) + ( 860160 * m_nRIMLIGHT ) + ( 1720320 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 5160960 * m_nFASTPATH_NOBUMP ) + ( 10321920 * m_nBLENDTINTBYBASEALPHA ) + ( 20643840 * m_nPHONG_HALFLAMBERT ) + ( 41287680 * m_nENVMAPMASK ) + 0;
 	}
 };
 
@@ -270,6 +271,7 @@ class SDK_skin_ps30_Dynamic_Index
 	unsigned int m_nNUM_LIGHTS : 3;
 	unsigned int m_nWRITE_DEPTH_TO_DESTALPHA : 2;
 	unsigned int m_nFLASHLIGHTSHADOWS : 2;
+	unsigned int m_nPROJECTEDSHADOWFILTERMODE : 2;
 	unsigned int m_nPHONG_USE_EXPONENT_FACTOR : 2;
 #ifdef _DEBUG
 	bool m_bWRITEWATERFOGTODESTALPHA : 1;
@@ -277,6 +279,7 @@ class SDK_skin_ps30_Dynamic_Index
 	bool m_bNUM_LIGHTS : 1;
 	bool m_bWRITE_DEPTH_TO_DESTALPHA : 1;
 	bool m_bFLASHLIGHTSHADOWS : 1;
+	bool m_bPROJECTEDSHADOWFILTERMODE : 1;
 	bool m_bPHONG_USE_EXPONENT_FACTOR : 1;
 #endif	// _DEBUG
 public:
@@ -325,6 +328,15 @@ public:
 #endif	// _DEBUG
 	}
 
+	void SetPROJECTEDSHADOWFILTERMODE( int i )
+	{
+		Assert( i >= 0 && i <= 2 );
+		m_nPROJECTEDSHADOWFILTERMODE = i;
+#ifdef _DEBUG
+		m_bPROJECTEDSHADOWFILTERMODE = true;
+#endif	// _DEBUG
+	}
+
 	void SetPHONG_USE_EXPONENT_FACTOR( int i )
 	{
 		Assert( i >= 0 && i <= 1 );
@@ -341,6 +353,7 @@ public:
 		m_nNUM_LIGHTS = 0;
 		m_nWRITE_DEPTH_TO_DESTALPHA = 0;
 		m_nFLASHLIGHTSHADOWS = 0;
+		m_nPROJECTEDSHADOWFILTERMODE = 0;
 		m_nPHONG_USE_EXPONENT_FACTOR = 0;
 #ifdef _DEBUG
 		m_bWRITEWATERFOGTODESTALPHA = false;
@@ -348,19 +361,20 @@ public:
 		m_bNUM_LIGHTS = false;
 		m_bWRITE_DEPTH_TO_DESTALPHA = false;
 		m_bFLASHLIGHTSHADOWS = false;
+		m_bPROJECTEDSHADOWFILTERMODE = false;
 		m_bPHONG_USE_EXPONENT_FACTOR = false;
 #endif	// _DEBUG
 	}
 
 	int GetIndex() const
 	{
-		Assert( m_bWRITEWATERFOGTODESTALPHA && m_bPIXELFOGTYPE && m_bNUM_LIGHTS && m_bWRITE_DEPTH_TO_DESTALPHA && m_bFLASHLIGHTSHADOWS && m_bPHONG_USE_EXPONENT_FACTOR );
+		Assert( m_bWRITEWATERFOGTODESTALPHA && m_bPIXELFOGTYPE && m_bNUM_LIGHTS && m_bWRITE_DEPTH_TO_DESTALPHA && m_bFLASHLIGHTSHADOWS && m_bPROJECTEDSHADOWFILTERMODE && m_bPHONG_USE_EXPONENT_FACTOR );
 		AssertMsg( !( ( m_nPIXELFOGTYPE == 0 ) && ( m_nWRITEWATERFOGTODESTALPHA != 0 ) ), "Invalid combo combination ( ( PIXELFOGTYPE == 0 ) && ( WRITEWATERFOGTODESTALPHA != 0 ) )" );
 		AssertMsg( !( 1 && ( 1 && ( ( m_nPIXELFOGTYPE != 1 ) && m_nWRITEWATERFOGTODESTALPHA ) ) ), "Invalid combo combination ( 1 && ( 1 && ( ( PIXELFOGTYPE != 1 ) && WRITEWATERFOGTODESTALPHA ) ) )" );
 		AssertMsg( !( 1 && ( 1 && ( ( m_nPIXELFOGTYPE != 1 ) && m_nWRITEWATERFOGTODESTALPHA ) ) ), "Invalid combo combination ( 1 && ( 1 && ( ( PIXELFOGTYPE != 1 ) && WRITEWATERFOGTODESTALPHA ) ) )" );
-		return ( 1 * m_nWRITEWATERFOGTODESTALPHA ) + ( 2 * m_nPIXELFOGTYPE ) + ( 4 * m_nNUM_LIGHTS ) + ( 20 * m_nWRITE_DEPTH_TO_DESTALPHA ) + ( 40 * m_nFLASHLIGHTSHADOWS ) + ( 80 * m_nPHONG_USE_EXPONENT_FACTOR ) + 0;
+		return ( 1 * m_nWRITEWATERFOGTODESTALPHA ) + ( 2 * m_nPIXELFOGTYPE ) + ( 4 * m_nNUM_LIGHTS ) + ( 20 * m_nWRITE_DEPTH_TO_DESTALPHA ) + ( 40 * m_nFLASHLIGHTSHADOWS ) + ( 80 * m_nPROJECTEDSHADOWFILTERMODE ) + ( 240 * m_nPHONG_USE_EXPONENT_FACTOR ) + 0;
 	}
 };
 
-#define shaderDynamicTest_SDK_skin_ps30 psh_forgot_to_set_dynamic_WRITEWATERFOGTODESTALPHA + psh_forgot_to_set_dynamic_PIXELFOGTYPE + psh_forgot_to_set_dynamic_NUM_LIGHTS + psh_forgot_to_set_dynamic_WRITE_DEPTH_TO_DESTALPHA + psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + psh_forgot_to_set_dynamic_PHONG_USE_EXPONENT_FACTOR
+#define shaderDynamicTest_SDK_skin_ps30 psh_forgot_to_set_dynamic_WRITEWATERFOGTODESTALPHA + psh_forgot_to_set_dynamic_PIXELFOGTYPE + psh_forgot_to_set_dynamic_NUM_LIGHTS + psh_forgot_to_set_dynamic_WRITE_DEPTH_TO_DESTALPHA + psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + psh_forgot_to_set_dynamic_PROJECTEDSHADOWFILTERMODE + psh_forgot_to_set_dynamic_PHONG_USE_EXPONENT_FACTOR
 

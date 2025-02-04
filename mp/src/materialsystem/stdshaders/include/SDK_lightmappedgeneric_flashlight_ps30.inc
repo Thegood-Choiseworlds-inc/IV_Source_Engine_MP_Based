@@ -187,7 +187,7 @@ public:
 		AssertMsg( !( m_nBASETEXTURETRANSFORM2 && !m_nWORLDVERTEXTRANSITION ), "Invalid combo combination ( BASETEXTURETRANSFORM2 && !WORLDVERTEXTRANSITION )" );
 		AssertMsg( !( m_nBASETEXTURETRANSFORM2 && m_nSEAMLESS ), "Invalid combo combination ( BASETEXTURETRANSFORM2 && SEAMLESS )" );
 		AssertMsg( !( m_nBASETEXTURETRANSFORM2 && m_nPHONG ), "Invalid combo combination ( BASETEXTURETRANSFORM2 && PHONG )" );
-		return ( 4 * m_nNORMALMAP ) + ( 12 * m_nNORMALMAP2 ) + ( 24 * m_nWORLDVERTEXTRANSITION ) + ( 48 * m_nFANCY_BLENDING ) + ( 96 * m_nSEAMLESS ) + ( 192 * m_nDETAILTEXTURE ) + ( 384 * m_nDETAIL_BLEND_MODE ) + ( 768 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 2304 * m_nPHONG ) + ( 4608 * m_nPHONGMASK ) + ( 18432 * m_nBASETEXTURETRANSFORM2 ) + 0;
+		return ( 12 * m_nNORMALMAP ) + ( 36 * m_nNORMALMAP2 ) + ( 72 * m_nWORLDVERTEXTRANSITION ) + ( 144 * m_nFANCY_BLENDING ) + ( 288 * m_nSEAMLESS ) + ( 576 * m_nDETAILTEXTURE ) + ( 1152 * m_nDETAIL_BLEND_MODE ) + ( 2304 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 6912 * m_nPHONG ) + ( 13824 * m_nPHONGMASK ) + ( 55296 * m_nBASETEXTURETRANSFORM2 ) + 0;
 	}
 };
 
@@ -198,9 +198,11 @@ class SDK_lightmappedgeneric_flashlight_ps30_Dynamic_Index
 {
 	unsigned int m_nPIXELFOGTYPE : 2;
 	unsigned int m_nFLASHLIGHTSHADOWS : 2;
+	unsigned int m_nPROJECTEDSHADOWFILTERMODE : 2;
 #ifdef _DEBUG
 	bool m_bPIXELFOGTYPE : 1;
 	bool m_bFLASHLIGHTSHADOWS : 1;
+	bool m_bPROJECTEDSHADOWFILTERMODE : 1;
 #endif	// _DEBUG
 public:
 	void SetPIXELFOGTYPE( int i )
@@ -221,22 +223,33 @@ public:
 #endif	// _DEBUG
 	}
 
+	void SetPROJECTEDSHADOWFILTERMODE( int i )
+	{
+		Assert( i >= 0 && i <= 2 );
+		m_nPROJECTEDSHADOWFILTERMODE = i;
+#ifdef _DEBUG
+		m_bPROJECTEDSHADOWFILTERMODE = true;
+#endif	// _DEBUG
+	}
+
 	SDK_lightmappedgeneric_flashlight_ps30_Dynamic_Index( IShaderDynamicAPI* pShaderAPI )
 	{
 		m_nPIXELFOGTYPE = 0;
 		m_nFLASHLIGHTSHADOWS = 0;
+		m_nPROJECTEDSHADOWFILTERMODE = 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = false;
 		m_bFLASHLIGHTSHADOWS = false;
+		m_bPROJECTEDSHADOWFILTERMODE = false;
 #endif	// _DEBUG
 	}
 
 	int GetIndex() const
 	{
-		Assert( m_bPIXELFOGTYPE && m_bFLASHLIGHTSHADOWS );
-		return ( 1 * m_nPIXELFOGTYPE ) + ( 2 * m_nFLASHLIGHTSHADOWS ) + 0;
+		Assert( m_bPIXELFOGTYPE && m_bFLASHLIGHTSHADOWS && m_bPROJECTEDSHADOWFILTERMODE );
+		return ( 1 * m_nPIXELFOGTYPE ) + ( 2 * m_nFLASHLIGHTSHADOWS ) + ( 4 * m_nPROJECTEDSHADOWFILTERMODE ) + 0;
 	}
 };
 
-#define shaderDynamicTest_SDK_lightmappedgeneric_flashlight_ps30 psh_forgot_to_set_dynamic_PIXELFOGTYPE + psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS
+#define shaderDynamicTest_SDK_lightmappedgeneric_flashlight_ps30 psh_forgot_to_set_dynamic_PIXELFOGTYPE + psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + psh_forgot_to_set_dynamic_PROJECTEDSHADOWFILTERMODE
 

@@ -4,6 +4,7 @@
 // $SIMPLEOVERLAY && !$FLOWMAP
 // $FLOWMAP && $MULTITEXTURE
 // ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTSHADOWS == 1 )
+// !$FLASHLIGHT && $PROJECTEDSHADOWFILTERMODE
 // ( $FLASHLIGHT || $LIGHTMAPWATERFOG ) && ( ( $BASETEXTURE && !$FLOWMAP ) || $MULTITEXTURE )
 // defined $HDRTYPE && defined $HDRENABLED && !$HDRTYPE && $HDRENABLED
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
@@ -191,7 +192,7 @@ public:
 		AssertMsg( !( m_nSIMPLEOVERLAY && !m_nFLOWMAP ), "Invalid combo combination ( SIMPLEOVERLAY && !FLOWMAP )" );
 		AssertMsg( !( m_nFLOWMAP && m_nMULTITEXTURE ), "Invalid combo combination ( FLOWMAP && MULTITEXTURE )" );
 		AssertMsg( !( ( m_nFLASHLIGHT || m_nLIGHTMAPWATERFOG ) && ( ( m_nBASETEXTURE && !m_nFLOWMAP ) || m_nMULTITEXTURE ) ), "Invalid combo combination ( ( FLASHLIGHT || LIGHTMAPWATERFOG ) && ( ( BASETEXTURE && !FLOWMAP ) || MULTITEXTURE ) )" );
-		return ( 4 * m_nBASETEXTURE ) + ( 8 * m_nMULTITEXTURE ) + ( 16 * m_nREFLECT ) + ( 32 * m_nREFRACT ) + ( 64 * m_nABOVEWATER ) + ( 128 * m_nFLOWMAP ) + ( 256 * m_nFLOW_DEBUG ) + ( 768 * m_nFLASHLIGHT ) + ( 1536 * m_nLIGHTMAPWATERFOG ) + ( 3072 * m_nFORCEFRESNEL ) + ( 6144 * m_nSIMPLEOVERLAY ) + 0;
+		return ( 12 * m_nBASETEXTURE ) + ( 24 * m_nMULTITEXTURE ) + ( 48 * m_nREFLECT ) + ( 96 * m_nREFRACT ) + ( 192 * m_nABOVEWATER ) + ( 384 * m_nFLOWMAP ) + ( 768 * m_nFLOW_DEBUG ) + ( 2304 * m_nFLASHLIGHT ) + ( 4608 * m_nLIGHTMAPWATERFOG ) + ( 9216 * m_nFORCEFRESNEL ) + ( 18432 * m_nSIMPLEOVERLAY ) + 0;
 	}
 };
 
@@ -202,9 +203,11 @@ class IVWater_ps30_Dynamic_Index
 {
 	unsigned int m_nPIXELFOGTYPE : 2;
 	unsigned int m_nFLASHLIGHTSHADOWS : 2;
+	unsigned int m_nPROJECTEDSHADOWFILTERMODE : 2;
 #ifdef _DEBUG
 	bool m_bPIXELFOGTYPE : 1;
 	bool m_bFLASHLIGHTSHADOWS : 1;
+	bool m_bPROJECTEDSHADOWFILTERMODE : 1;
 #endif	// _DEBUG
 public:
 	void SetPIXELFOGTYPE( int i )
@@ -225,22 +228,33 @@ public:
 #endif	// _DEBUG
 	}
 
+	void SetPROJECTEDSHADOWFILTERMODE( int i )
+	{
+		Assert( i >= 0 && i <= 2 );
+		m_nPROJECTEDSHADOWFILTERMODE = i;
+#ifdef _DEBUG
+		m_bPROJECTEDSHADOWFILTERMODE = true;
+#endif	// _DEBUG
+	}
+
 	IVWater_ps30_Dynamic_Index( IShaderDynamicAPI* pShaderAPI )
 	{
 		m_nPIXELFOGTYPE = 0;
 		m_nFLASHLIGHTSHADOWS = 0;
+		m_nPROJECTEDSHADOWFILTERMODE = 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = false;
 		m_bFLASHLIGHTSHADOWS = false;
+		m_bPROJECTEDSHADOWFILTERMODE = false;
 #endif	// _DEBUG
 	}
 
 	int GetIndex() const
 	{
-		Assert( m_bPIXELFOGTYPE && m_bFLASHLIGHTSHADOWS );
-		return ( 1 * m_nPIXELFOGTYPE ) + ( 2 * m_nFLASHLIGHTSHADOWS ) + 0;
+		Assert( m_bPIXELFOGTYPE && m_bFLASHLIGHTSHADOWS && m_bPROJECTEDSHADOWFILTERMODE );
+		return ( 1 * m_nPIXELFOGTYPE ) + ( 2 * m_nFLASHLIGHTSHADOWS ) + ( 4 * m_nPROJECTEDSHADOWFILTERMODE ) + 0;
 	}
 };
 
-#define shaderDynamicTest_IVWater_ps30 psh_forgot_to_set_dynamic_PIXELFOGTYPE + psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS
+#define shaderDynamicTest_IVWater_ps30 psh_forgot_to_set_dynamic_PIXELFOGTYPE + psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + psh_forgot_to_set_dynamic_PROJECTEDSHADOWFILTERMODE
 
