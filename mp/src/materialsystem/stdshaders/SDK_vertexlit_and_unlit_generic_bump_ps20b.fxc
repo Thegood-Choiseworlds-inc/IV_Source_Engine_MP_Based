@@ -41,6 +41,8 @@
 // SKIP: ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTDEPTHFILTERMODE != 0 ) [ps20b]
 // SKIP: ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTDEPTHFILTERMODE != 0 ) [ps30]
 
+// SKIP: !$FLASHLIGHT && $PROJECTEDSHADOWFILTERMODE
+
 // SKIP: (! $DETAILTEXTURE) && ( $DETAIL_BLEND_MODE != 0 )
 
 // Don't do diffuse warp on flashlight

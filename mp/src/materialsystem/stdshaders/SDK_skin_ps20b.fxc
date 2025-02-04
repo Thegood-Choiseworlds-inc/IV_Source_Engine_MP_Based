@@ -43,6 +43,8 @@
 // SKIP: ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTDEPTHFILTERMODE != 0 ) [ps20b]
 // SKIP: ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTDEPTHFILTERMODE != 0 ) [ps30]
 
+// SKIP: !$FLASHLIGHT && $PROJECTEDSHADOWFILTERMODE
+
 // Only need self illum fresnel when self illum enabled
 // SKIP: ( $SELFILLUM == 0 ) && ( $SELFILLUMFRESNEL == 1 )
 // SKIP: ( $FLASHLIGHT == 1 ) && ( $SELFILLUMFRESNEL == 1 )

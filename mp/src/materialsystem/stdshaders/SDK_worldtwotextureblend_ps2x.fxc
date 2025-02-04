@@ -35,6 +35,8 @@
 // We don't care about flashlight depth unless the flashlight is on
 // SKIP: ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTSHADOWS == 1 )	[ps20b]
 
+// SKIP: !$FLASHLIGHT && $PROJECTEDSHADOWFILTERMODE
+
 #if defined( SHADER_MODEL_PS_2_0 )
 #	define WRITE_DEPTH_TO_DESTALPHA 0
 #endif
