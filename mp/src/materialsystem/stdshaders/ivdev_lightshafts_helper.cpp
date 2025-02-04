@@ -14,6 +14,8 @@
 #include "tier0/memdbgon.h"
 
 
+extern ConVar r_flashlightdepth_filter_mode;
+
 void InitParamsLightShafts( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, LightShaftsVars_t &info )
 {
 	// Set material flags
@@ -245,6 +247,7 @@ void DrawLightShafts( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 
 		DECLARE_DYNAMIC_PIXEL_SHADER( ivdev_lightshafts_ps30 );
 		SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, flashlightState.m_bEnableShadows && ( pFlashlightDepthTexture != NULL ) );
+		SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, r_flashlightdepth_filter_mode.GetBool());
 		SET_DYNAMIC_PIXEL_SHADER( ivdev_lightshafts_ps30 );
 	}
 	pShader->Draw();

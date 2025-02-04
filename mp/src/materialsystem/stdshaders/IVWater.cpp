@@ -30,6 +30,8 @@ ConVar iv_shader_ivwater_enable("iv_shader_ivwater_enable", "1", FCVAR_ARCHIVE, 
 ConVar iv_shader_ivwater_enable_flashlight("iv_shader_ivwater_enable_flashlight", "1", FCVAR_ARCHIVE, "IVWater Flashlight Effect State");
 ConVar iv_shader_ivwater_enable_flashlight_shadows("iv_shader_ivwater_enable_flashlight_shadows", "1", FCVAR_ARCHIVE, "Enable/Disable IVWater Shader Shadows");
 
+extern ConVar r_flashlightdepth_filter_mode;
+
 DEFINE_FALLBACK_SHADER( IVWater, IVWater_DX9_HDR )
 
 BEGIN_VS_SHADER( IVWater_DX90, 
@@ -829,6 +831,7 @@ BEGIN_VS_SHADER( IVWater_DX90,
 			{
 				DECLARE_DYNAMIC_PIXEL_SHADER(IVWater_ps30);
 				SET_DYNAMIC_PIXEL_SHADER_COMBO(FLASHLIGHTSHADOWS, bFlashlightShadows);
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, r_flashlightdepth_filter_mode.GetBool());
 				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
 				SET_DYNAMIC_PIXEL_SHADER(IVWater_ps30);
 			}

@@ -32,6 +32,9 @@
 DEFINE_FALLBACK_SHADER( SDK_Teeth, SDK_Teeth_DX9 )
 
 extern ConVar r_flashlight_version2;
+
+extern ConVar r_flashlightdepth_filter_mode;
+
 BEGIN_VS_SHADER( SDK_Teeth_DX9, "Help for SDK_Teeth_DX9" )
 
 	BEGIN_SHADER_PARAMS
@@ -533,6 +536,7 @@ BEGIN_VS_SHADER( SDK_Teeth_DX9, "Help for SDK_Teeth_DX9" )
 				DECLARE_DYNAMIC_PIXEL_SHADER( SDK_teeth_flashlight_ps30 );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, r_flashlightdepth_filter_mode.GetBool());
 				SET_DYNAMIC_PIXEL_SHADER( SDK_teeth_flashlight_ps30 );
 			}
 #endif

@@ -22,6 +22,8 @@
 
 static ConVar r_lightwarpidentity( "r_lightwarpidentity","0", FCVAR_CHEAT );
 
+extern ConVar r_flashlightdepth_filter_mode;
+
 void InitParams_Eyes_Refract( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, Eye_Refract_Vars_t &info )
 {
 	// FLASHLIGHTFIXME
@@ -379,6 +381,7 @@ void Draw_Eyes_Refract_Internal( CBaseVSShader *pShader, IMaterialVar** params, 
 			DECLARE_DYNAMIC_PIXEL_SHADER( SDK_eye_refract_ps30 );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( NUM_LIGHTS, lightState.m_nNumLights );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
+			SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, r_flashlightdepth_filter_mode.GetBool());
 			SET_DYNAMIC_PIXEL_SHADER( SDK_eye_refract_ps30 );
 		}
 #endif

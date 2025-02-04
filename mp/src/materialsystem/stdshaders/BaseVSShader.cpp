@@ -61,6 +61,8 @@ ConVar mapbase_version_shaders( "mapbase_version_shaders", MAPBASE_VERSION, FCVA
 ConVar mat_specular_disable_on_missing( "mat_specular_disable_on_missing", "1", FCVAR_ARCHIVE, "Disables specular reflections on a material when the envmap cannot be found." );
 #endif
 
+ConVar r_flashlightdepth_filter_mode("r_flashlightdepth_filter_mode", "1", FCVAR_NONE, "Flaslight Depth Filter Mode. 0 - Legacy Noise Like Filter (More Optimized); 1 - Gausian Blur 9 Taps '3x3'; 1 - Gausian Blur 25 Taps '5x5'. 1 and 2 is Portal 2 Like, but more Stable than in Portal 2 Code");
+
 // These functions are to be called from the shaders.
 
 //-----------------------------------------------------------------------------
@@ -2137,6 +2139,7 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 			DECLARE_DYNAMIC_PIXEL_SHADER( SDK_flashlight_ps30 );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE,  pShaderAPI->GetPixelFogCombo() );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, flashlightState.m_bEnableShadows && ( pFlashlightDepthTexture != NULL ) );
+			SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, r_flashlightdepth_filter_mode.GetBool());
 			SET_DYNAMIC_PIXEL_SHADER( SDK_flashlight_ps30 );
 		}
 		else if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )

@@ -25,6 +25,8 @@ static ConVar mat_fullbright( "mat_fullbright", "0", FCVAR_CHEAT );
 static ConVar r_lightwarpidentity( "r_lightwarpidentity", "0", FCVAR_CHEAT );
 static ConVar r_rimlight( "r_rimlight", "1", FCVAR_CHEAT );
 
+extern ConVar r_flashlightdepth_filter_mode;
+
 // Textures may be bound to the following samplers:
 //	SHADER_SAMPLER0	 Base (Albedo) / Gloss in alpha
 //	SHADER_SAMPLER1	 Specular warp (including iridescence)
@@ -759,6 +761,7 @@ void DrawSkin_DX9_Internal( CBaseVSShader *pShader, IMaterialVar** params, IShad
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( WRITE_DEPTH_TO_DESTALPHA, bWriteDepthToAlpha );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
+			SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, r_flashlightdepth_filter_mode.GetBool());
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( PHONG_USE_EXPONENT_FACTOR, bHasPhongExponentFactor );
 			SET_DYNAMIC_PIXEL_SHADER( SDK_skin_ps30 );
 

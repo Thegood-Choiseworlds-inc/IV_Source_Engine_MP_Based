@@ -45,6 +45,8 @@ ConVar mat_force_envmap_light_max("mat_force_envmap_light_max", "1.0", FCVAR_CHE
 ConVar ivdev_engine_force_lightmapped_phong("ivdev_engine_force_lightmapped_phong", "0", FCVAR_DEVELOPMENTONLY, "Engine CallBack Force Phong On Lightmapped Materials");
 ConVar ivdev_engine_force_envmap_anisotropy("ivdev_engine_force_envmap_anisotropy", "0", FCVAR_DEVELOPMENTONLY, "Engine CallBack Force Envmap Anisotropy On Lightmapped Materials");
 
+extern ConVar r_flashlightdepth_filter_mode;
+
 class CLightmappedGeneric_DX9_Context : public CBasePerMaterialContextData
 {
 public:
@@ -742,6 +744,7 @@ void DrawLightmappedGenericFlashlight_DX9_Internal( CBaseVSShader *pShader, IMat
 			DECLARE_DYNAMIC_PIXEL_SHADER( SDK_lightmappedgeneric_flashlight_ps30 );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE,  pShaderAPI->GetPixelFogCombo() );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, flashlightState.m_bEnableShadows );
+			SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, r_flashlightdepth_filter_mode.GetBool());
 			SET_DYNAMIC_PIXEL_SHADER( SDK_lightmappedgeneric_flashlight_ps30 );
 		}
 		else if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )

@@ -25,6 +25,8 @@
 ConVar mat_decalmodulate_flashdraw( "mat_decalmodulate_flashdraw", "0" );
 #endif
 
+extern ConVar r_flashlightdepth_filter_mode;
+
 DEFINE_FALLBACK_SHADER( SDK_DecalModulate, SDK_DecalModulate_DX9 )
 
 BEGIN_VS_SHADER( SDK_DecalModulate_dx9, 
@@ -319,6 +321,7 @@ BEGIN_VS_SHADER( SDK_DecalModulate_dx9,
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
 #ifdef MAPBASE
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, r_flashlightdepth_filter_mode.GetBool());
 #endif
 				SET_DYNAMIC_PIXEL_SHADER( SDK_decalmodulate_ps30 );
 

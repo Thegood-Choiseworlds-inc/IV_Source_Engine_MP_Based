@@ -34,6 +34,8 @@ static ConVar mat_fullbright( "mat_fullbright","0", FCVAR_CHEAT );
 static ConVar r_lightwarpidentity( "r_lightwarpidentity","0", FCVAR_CHEAT );
 static ConVar mat_luxels( "mat_luxels", "0", FCVAR_CHEAT );
 
+extern ConVar r_flashlightdepth_filter_mode;
+
 
 static inline bool WantsSkinShader( IMaterialVar** params, const VertexLitGeneric_DX9_Vars_t &info )
 {
@@ -1448,6 +1450,7 @@ static void DrawVertexLitGeneric_DX9_Internal( CBaseVSShader *pShader, IMaterial
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( NUM_LIGHTS, lightState.m_nNumLights );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( AMBIENT_LIGHT, lightState.m_bAmbientLight ? 1 : 0 );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, r_flashlightdepth_filter_mode.GetBool());
 //				SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO(STATIC_LIGHT_LIGHTMAP, lightState.m_bStaticLightTexel ? 1 : 0);
 				SET_DYNAMIC_PIXEL_SHADER_COMBO(DEBUG_LUXELS, bHasMatLuxel ? 1 : 0);
@@ -1535,6 +1538,7 @@ static void DrawVertexLitGeneric_DX9_Internal( CBaseVSShader *pShader, IMaterial
 				DECLARE_DYNAMIC_PIXEL_SHADER( SDK_vertexlit_and_unlit_generic_ps30 );
 //				SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, r_flashlightdepth_filter_mode.GetBool());
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( STATIC_LIGHT_LIGHTMAP,  lightState.m_bStaticLightTexel  ? 1 : 0 );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( DEBUG_LUXELS, bHasMatLuxel ? 1 : 0 );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO(	LIGHTING_PREVIEW,
