@@ -381,7 +381,7 @@ void Draw_Eyes_Refract_Internal( CBaseVSShader *pShader, IMaterialVar** params, 
 			DECLARE_DYNAMIC_PIXEL_SHADER( SDK_eye_refract_ps30 );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( NUM_LIGHTS, lightState.m_nNumLights );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
-			SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, r_flashlightdepth_filter_mode.GetBool());
+			SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, IV_CHECK_SHADOWDEPTH_FILTER_COMBO(bFlashlightShadows));
 			SET_DYNAMIC_PIXEL_SHADER( SDK_eye_refract_ps30 );
 		}
 #endif
