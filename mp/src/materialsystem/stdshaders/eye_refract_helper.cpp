@@ -241,10 +241,12 @@ void Draw_Eyes_Refract_Internal( CBaseVSShader *pShader, IMaterialVar** params, 
 		ITexture *pFlashlightDepthTexture = NULL;
 		FlashlightState_t flashlightState;
 		bool bFlashlightShadows = false;
+		int shadowdepth_filter_mode = 0;
 		if ( bDrawFlashlightAdditivePass == true )
 		{
 			flashlightState = pShaderAPI->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
 			bFlashlightShadows = flashlightState.m_bEnableShadows && ( pFlashlightDepthTexture != NULL );
+			shadowdepth_filter_mode = flashlightState.m_nShadowQuality;
 		}
 
 		pShader->BindTexture( SHADER_SAMPLER0, info.m_nCorneaTexture );				// Cornea normal
@@ -381,7 +383,7 @@ void Draw_Eyes_Refract_Internal( CBaseVSShader *pShader, IMaterialVar** params, 
 			DECLARE_DYNAMIC_PIXEL_SHADER( SDK_eye_refract_ps30 );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( NUM_LIGHTS, lightState.m_nNumLights );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
-			SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, IV_CHECK_SHADOWDEPTH_FILTER_COMBO(bFlashlightShadows));
+			SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, IV_CHECK_SHADOWDEPTH_FILTER_COMBO(bFlashlightShadows, shadowdepth_filter_mode));
 			SET_DYNAMIC_PIXEL_SHADER( SDK_eye_refract_ps30 );
 		}
 #endif

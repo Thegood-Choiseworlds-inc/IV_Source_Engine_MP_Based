@@ -443,6 +443,8 @@ BEGIN_VS_SHADER( SDK_Teeth_DX9, "Help for SDK_Teeth_DX9" )
 			SetFlashLightColorFromState( state, pShaderAPI, PSREG_FLASHLIGHT_COLOR );
 
 			bool bFlashlightShadows = g_pHardwareConfig->SupportsPixelShaders_2_b() ? state.m_bEnableShadows && ( pFlashlightDepthTexture != NULL ) : false;
+			int shadowdepth_filter_mode = state.m_nShadowQuality;
+
 			if( pFlashlightDepthTexture && g_pConfig->ShadowDepthTexture() && state.m_bEnableShadows )
 			{
 				BindTexture( SHADER_SAMPLER2, pFlashlightDepthTexture, 0 );
@@ -536,7 +538,7 @@ BEGIN_VS_SHADER( SDK_Teeth_DX9, "Help for SDK_Teeth_DX9" )
 				DECLARE_DYNAMIC_PIXEL_SHADER( SDK_teeth_flashlight_ps30 );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, IV_CHECK_SHADOWDEPTH_FILTER_COMBO(bFlashlightShadows));
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, IV_CHECK_SHADOWDEPTH_FILTER_COMBO(bFlashlightShadows, shadowdepth_filter_mode));
 				SET_DYNAMIC_PIXEL_SHADER( SDK_teeth_flashlight_ps30 );
 			}
 #endif

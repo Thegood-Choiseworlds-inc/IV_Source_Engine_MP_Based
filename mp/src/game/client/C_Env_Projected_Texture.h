@@ -102,6 +102,9 @@ private:
 	float		m_flShadowAtten;
 	float		m_flShadowFilter;
 
+	float m_flShadowDepthBias;
+	float m_flShadowSlopeScaleDepthBias;
+
 	bool m_bVolumetric;
 	float m_flNoiseStrength;
 	int m_nNumPlanes;

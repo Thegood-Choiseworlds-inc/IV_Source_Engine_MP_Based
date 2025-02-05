@@ -1476,7 +1476,7 @@ bool CClientShadowMgr::Init()
 
 	materials->AddRestoreFunc( ShadowRestoreFunc );
 
-#ifdef MAPBASE
+/*#ifdef MAPBASE
 	// These need to be referenced here since the cvars don't exist in the initial declaration
 	mat_slopescaledepthbias_shadowmap = ConVarRef( "mat_slopescaledepthbias_shadowmap" );
 	mat_depthbias_shadowmap = ConVarRef( "mat_depthbias_shadowmap" );
@@ -1487,7 +1487,7 @@ bool CClientShadowMgr::Init()
 	mat_slopescaledepthbias_shadowmap.SetValue( "16" ); // Would do something like 2 here, but it causes citizens to look weird under flashlights
 	mat_depthbias_shadowmap.SetValue( "0.00005" );
 #endif
-#endif
+#endif*/
 
 	return true;
 }
@@ -4826,12 +4826,12 @@ void CClientShadowMgr::ComputeShadowDepthTextures( const CViewSetup &viewSetup )
 
 			Assert(0);
 			shadowmgr->SetFlashlightDepthTexture( shadow.m_ShadowHandle, NULL, 0 );
-#ifdef MAPBASE
+/*#ifdef MAPBASE
 			if ( j <= ( INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST ) )
 			{
 				pRenderContext->SetIntRenderingParameter( INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + j, 0 );
 			}
-#endif
+#endif*/
 			continue;
 		}
 
@@ -4901,7 +4901,7 @@ void CClientShadowMgr::ComputeShadowDepthTextures( const CViewSetup &viewSetup )
 		view->UpdateShadowDepthTexture( dummy_out, shadowDepthTexture, shadowView );
 #endif
 
-#ifdef MAPBASE
+/*#ifdef MAPBASE
 		if ( j <= ( INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST ) )
 		{
 			pRenderContext->SetIntRenderingParameter( INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + j, int((ITexture*)shadowDepthTexture) );
@@ -4912,7 +4912,7 @@ void CClientShadowMgr::ComputeShadowDepthTextures( const CViewSetup &viewSetup )
 
 			shadowmgr->UpdateFlashlightState( shadow.m_ShadowHandle, state );
 		}
-#endif
+#endif*/
 
 		// Associate the shadow depth texture and stencil bit with the flashlight for use during scene rendering
 		shadowmgr->SetFlashlightDepthTexture( shadow.m_ShadowHandle, shadowDepthTexture, 0 );

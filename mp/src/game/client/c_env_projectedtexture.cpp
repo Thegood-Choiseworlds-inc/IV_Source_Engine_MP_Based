@@ -25,8 +25,8 @@
 #include "tier0/memdbgon.h"
 
 #ifdef ASW_PROJECTED_TEXTURES
-extern ConVarRef mat_slopescaledepthbias_shadowmap;
-extern ConVarRef mat_depthbias_shadowmap;
+//extern ConVarRef mat_slopescaledepthbias_shadowmap;
+//extern ConVarRef mat_depthbias_shadowmap;
 
 extern ConVar r_flashlightvolumetrics;
 
@@ -43,6 +43,9 @@ ConVar r_projectedtexture_distance_override("r_projectedtexture_distance_overrid
 ConVar r_projectedtexture_distance_override_near_z("r_projectedtexture_distance_override_near_z", "512", FCVAR_CHEAT, "Projected Textures Distance Override Near Z");
 ConVar r_projectedtexture_distance_override_far_z("r_projectedtexture_distance_override_far_z", "1024", FCVAR_CHEAT, "Projected Textures Distance Override Far Z");
 ConVar r_projectedtexture_distance_far_z_checking("r_projectedtexture_distance_far_z_checking", "0", FCVAR_CHEAT, "Projected Textures Distance Override Far Z Checking");
+
+ConVar r_projectedtexture_depth_bias("r_projectedtexture_depth_bias", ".000025", FCVAR_CHEAT, "Default Projected Texture Depth Bias");
+ConVar r_projectedtexture_slopescale_depth_bias("r_projectedtexture_slopescale_depth_bias", "3", FCVAR_CHEAT, "Default Projected Texture Slope Scale Depth Bias");
 
 float C_EnvProjectedTexture::m_flVisibleBBoxMinHeight = -FLT_MAX;
 
@@ -74,6 +77,8 @@ IMPLEMENT_CLIENTCLASS_DT( C_EnvProjectedTexture, DT_EnvProjectedTexture, CEnvPro
 	RecvPropBool(RECVINFO(m_bLightDistanceControlFarZ)),
 	RecvPropFloat(RECVINFO(m_flLightDistanceNear)),
 	RecvPropFloat(RECVINFO(m_flLightDistanceFar)),
+	RecvPropFloat(RECVINFO(m_flShadowDepthBias)),
+	RecvPropFloat(RECVINFO(m_flShadowSlopeScaleDepthBias)),
 	RecvPropInt(	 RECVINFO( m_nShadowQuality )	),
 #if IVBASE && IV_SHADOWS_ADVANCED
 	RecvPropInt(RECVINFO(m_nShadowResMode)),
@@ -108,10 +113,12 @@ C_EnvProjectedTexture *C_EnvProjectedTexture::Create( )
 	pEnt->m_bLightDistanceControlFarZ = false;
 	pEnt->m_flLightDistanceNear = 512;
 	pEnt->m_flLightDistanceFar = 1024;
+	pEnt->m_flShadowDepthBias = .000025f;
+	pEnt->m_flShadowSlopeScaleDepthBias = 3;
 //	strcpy( pEnt->m_SpotlightTextureName, "particle/rj" );
 	pEnt->m_bLightWorld = true;
 	pEnt->m_bLightOnlyTarget = false;
-	pEnt->m_nShadowQuality = 1;
+	pEnt->m_nShadowQuality = 2;
 #if IVBASE && IV_SHADOWS_ADVANCED
 	pEnt->m_nShadowResMode = 1;
 #endif
@@ -501,8 +508,8 @@ void C_EnvProjectedTexture::UpdateLight( void )
 		state.m_Color[1] = (m_CurrentLinearFloatLightColor.y * ( 1.0f / 255.0f ) * flAlpha) * m_flCurrentBrightnessScale;
 		state.m_Color[2] = (m_CurrentLinearFloatLightColor.z * ( 1.0f / 255.0f ) * flAlpha) * m_flCurrentBrightnessScale;
 		state.m_Color[3] = 0.0f; // fixme: need to make ambient work m_flAmbient;
-		state.m_flShadowSlopeScaleDepthBias = mat_slopescaledepthbias_shadowmap.GetFloat();
-		state.m_flShadowDepthBias = mat_depthbias_shadowmap.GetFloat();
+		state.m_flShadowSlopeScaleDepthBias = m_flShadowSlopeScaleDepthBias <= 0 ? r_projectedtexture_slopescale_depth_bias.GetFloat() : m_flShadowSlopeScaleDepthBias;
+		state.m_flShadowDepthBias = m_flShadowDepthBias <= 0 ? r_projectedtexture_depth_bias.GetFloat() : m_flShadowDepthBias;
 		state.m_flShadowAtten = m_flShadowAtten;
 #if IVBASE && IV_SHADOWS_ADVANCED
 		state.m_flShadowMapResolution = m_nShadowResMode == 3 ? r_flashlightdepthres_glight.GetFloat() :

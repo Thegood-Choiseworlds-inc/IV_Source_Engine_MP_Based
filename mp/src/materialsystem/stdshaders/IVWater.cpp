@@ -697,6 +697,7 @@ BEGIN_VS_SHADER( IVWater_DX90,
 #endif
 
 			bool bFlashlightShadows = hasFlashlight && iv_shader_ivwater_enable_flashlight_shadows.GetBool();
+			int shadowdepth_filter_mode = 0;
 			//bool bUberlight = false;
 			if( hasFlashlight )
 			{
@@ -744,10 +745,11 @@ BEGIN_VS_SHADER( IVWater_DX90,
 				VMatrix worldToTexture;
 				ITexture *pFlashlightDepthTexture;
 				FlashlightState_t flashlightState = pShaderAPI->GetFlashlightStateEx(worldToTexture, &pFlashlightDepthTexture);
+				shadowdepth_filter_mode = flashlightState.m_nShadowQuality;
 
 				pShaderAPI->SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_4, worldToTexture.Base(), 4);
 
-				if (pFlashlightDepthTexture == NULL)
+				/*if (pFlashlightDepthTexture == NULL)
 				{
 					const int iFlashlightShadowIndex = (flashlightState.m_nShadowQuality >> 16) - 1;
 
@@ -756,7 +758,7 @@ BEGIN_VS_SHADER( IVWater_DX90,
 					{
 						pFlashlightDepthTexture = (ITexture*)pShaderAPI->GetIntRenderingParameter(INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + iFlashlightShadowIndex);
 					}
-				}
+				}*/
 
 				SetFlashLightColorFromState(flashlightState, pShaderAPI, PSREG_FLASHLIGHT_COLOR);
 
@@ -831,7 +833,7 @@ BEGIN_VS_SHADER( IVWater_DX90,
 			{
 				DECLARE_DYNAMIC_PIXEL_SHADER(IVWater_ps30);
 				SET_DYNAMIC_PIXEL_SHADER_COMBO(FLASHLIGHTSHADOWS, bFlashlightShadows);
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, IV_CHECK_SHADOWDEPTH_FILTER_COMBO(bFlashlightShadows));
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, IV_CHECK_SHADOWDEPTH_FILTER_COMBO(bFlashlightShadows, shadowdepth_filter_mode));
 				SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
 				SET_DYNAMIC_PIXEL_SHADER(IVWater_ps30);
 			}

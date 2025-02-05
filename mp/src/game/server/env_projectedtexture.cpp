@@ -42,6 +42,8 @@ BEGIN_DATADESC( CEnvProjectedTexture )
 	DEFINE_KEYFIELD(m_bLightDistanceControlFarZ, FIELD_BOOLEAN, "lightdistancecontrolfarz"),
 	DEFINE_KEYFIELD(m_flLightDistanceNear, FIELD_FLOAT, "lightdistancenear"),
 	DEFINE_KEYFIELD(m_flLightDistanceFar, FIELD_FLOAT, "lightdistancefar"),
+	DEFINE_KEYFIELD(m_flShadowDepthBias, FIELD_FLOAT, "shadowdepthbias"),
+	DEFINE_KEYFIELD(m_flShadowSlopeScaleDepthBias, FIELD_FLOAT, "shadowslopescaledepthbias"),
 	DEFINE_KEYFIELD( m_nShadowQuality, FIELD_INTEGER, "shadowquality" ),
 #if IVBASE && IV_SHADOWS_ADVANCED
 	DEFINE_KEYFIELD( m_nShadowResMode, FIELD_INTEGER, "shadowresmode" ),
@@ -91,6 +93,8 @@ BEGIN_DATADESC( CEnvProjectedTexture )
 	DEFINE_INPUTFUNC(FIELD_BOOLEAN, "SetLightDistanceControlFarZ", InputSetLightDistanceControlFarZ),
 	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetLightDistanceNear", InputSetLightDistanceNear),
 	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetLightDistanceFar", InputSetLightDistanceFar),
+	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetShadowDepthBias", InputSetShadowDepthBias),
+	DEFINE_INPUTFUNC(FIELD_FLOAT, "SetShadowSlopeScaleDepthBias", InputSetShadowSlopeScaleDepthBias),
 #ifdef MAPBASE
 	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetLightStyle", InputSetLightStyle ),
 	DEFINE_INPUTFUNC( FIELD_STRING, "SetPattern", InputSetPattern ),
@@ -145,6 +149,8 @@ IMPLEMENT_SERVERCLASS_ST( CEnvProjectedTexture, DT_EnvProjectedTexture )
 	SendPropBool(SENDINFO(m_bLightDistanceControlFarZ)),
 	SendPropFloat(SENDINFO(m_flLightDistanceNear)),
 	SendPropFloat(SENDINFO(m_flLightDistanceFar)),
+	SendPropFloat(SENDINFO(m_flShadowDepthBias)),
+	SendPropFloat(SENDINFO(m_flShadowSlopeScaleDepthBias)),
 	SendPropInt( SENDINFO( m_nShadowQuality ), 1, SPROP_UNSIGNED ),  // Just one bit for now
 #if IVBASE && IV_SHADOWS_ADVANCED
 	SendPropInt(SENDINFO(m_nShadowResMode), 1, SPROP_UNSIGNED),
@@ -202,7 +208,9 @@ CEnvProjectedTexture::CEnvProjectedTexture( void )
 	m_bLightDistanceControlFarZ = false;
 	m_flLightDistanceNear = 512;
 	m_flLightDistanceFar = 1024;
-	m_nShadowQuality = 0;
+	m_flShadowDepthBias = .000025f;
+	m_flShadowSlopeScaleDepthBias = 3;
+	m_nShadowQuality = 2;
 #if IVBASE && IV_SHADOWS_ADVANCED
 	m_nShadowResMode = 1;
 #endif

@@ -391,6 +391,7 @@ void CFlashlightEffect::UpdateLightNew( const Vector &vecPos, const Vector &vecF
 	state.m_bEnableShadows = r_flashlightdepthtexture.GetBool();
 	state.m_flShadowMapResolution = r_flashlightdepthres.GetInt();
 	state.m_flShadowFilterSize = 3;
+	state.m_nShadowQuality = 0; //IV Note: Attached to Filter Mode in That Engine Build!!!
 
 	//state.m_pSpotlightTexture = m_FlashlightTexture;
 	state.m_nSpotlightTextureFrame = 0;
@@ -587,7 +588,8 @@ void CHeadlightEffect::UpdateLight( const Vector &vecPos, const Vector &vecDir, 
 	state.m_bEnableShadows = true;
 	state.m_pSpotlightTexture = m_FlashlightTexture;
 	state.m_nSpotlightTextureFrame = 0;
-	
+	state.m_nShadowQuality = 0; //IV Note: Attached to Filter Mode in That Engine Build!!!
+
 	if( GetFlashlightHandle() == CLIENTSHADOW_INVALID_HANDLE )
 	{
 		SetFlashlightHandle( g_pClientShadowMgr->CreateFlashlight( state ) );

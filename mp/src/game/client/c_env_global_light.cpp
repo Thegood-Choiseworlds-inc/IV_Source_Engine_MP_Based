@@ -19,8 +19,8 @@
 //extern ConVar cl_sunlight_ortho_size;
 //extern ConVar cl_sunlight_depthbias;
 
-extern ConVarRef mat_slopescaledepthbias_shadowmap;
-extern ConVarRef mat_depthbias_shadowmap;
+//extern ConVarRef mat_slopescaledepthbias_shadowmap;
+//extern ConVarRef mat_depthbias_shadowmap;
 
 #ifdef IV_SHADOWS_ADVANCED
 extern ConVar r_flashlightdepthres_glight;
@@ -34,10 +34,9 @@ ConVar cl_globallight_freeze( "cl_globallight_freeze", "0" );
 ConVar cl_globallight_xoffset( "cl_globallight_xoffset", "0" );
 ConVar cl_globallight_yoffset( "cl_globallight_yoffset", "0" );
 
-//static ConVar cl_globallight_slopescaledepthbias_shadowmap( "cl_globallight_slopescaledepthbias_shadowmap", "16", FCVAR_CHEAT );
-//static ConVar cl_globallight_shadowfiltersize( "cl_globallight_shadowfiltersize", "0.1", FCVAR_CHEAT );
-//static ConVar cl_globallight_depthbias_shadowmap( "cl_globallight_depthbias_shadowmap", "0.00001", FCVAR_CHEAT );
-//static ConVar cl_globallight_depthres( "cl_globallight_depthres", "8192", FCVAR_CHEAT );
+ConVar cl_globallight_slopescaledepthbias_shadowmap( "cl_globallight_slopescaledepthbias_shadowmap", "3", FCVAR_CHEAT );
+ConVar cl_globallight_depthbias_shadowmap( "cl_globallight_depthbias_shadowmap", ".000025", FCVAR_CHEAT );
+
 #else
 ConVar cl_globallight_xoffset( "cl_globallight_xoffset", "-800" );
 ConVar cl_globallight_yoffset( "cl_globallight_yoffset", "1600" );
@@ -45,10 +44,11 @@ ConVar cl_globallight_yoffset( "cl_globallight_yoffset", "1600" );
 
 //farz and nearz
 ConVar cl_globallight_z_distance_override("cl_globallight_z_distance_override", "0", FCVAR_CHEAT, "Override Default NearZ/FarZ Global Light Distance with Console Values");
-ConVar cl_globallight_near_z_override("ivdev_globallight_near_z_override", "90000", FCVAR_CHEAT, "NearZ Distance Of Global Light");
-ConVar cl_globallight_far_z_override("ivdev_globallight_far_z_override", "200000", FCVAR_CHEAT, "FarZ Distance Of Global Light");
+ConVar cl_globallight_near_z_override("cl_globallight_near_z_override", "90000", FCVAR_CHEAT, "NearZ Distance Of Global Light");
+ConVar cl_globallight_far_z_override("cl_globallight_far_z_override", "200000", FCVAR_CHEAT, "FarZ Distance Of Global Light");
 
 ConVar cl_globallight_affect_to_local_light_shadows("cl_globallight_affect_to_local_light_shadows", "0", FCVAR_CHEAT, "Enable/Disable Affecting to Local Light Rended To Texture Shadows");
+ConVar cl_globallight_shadow_filter_mode("cl_globallight_shadow_filter_mode", "1", FCVAR_NONE, "Global Light Shadow Filter Mode");
 
 //------------------------------------------------------------------------------
 // Purpose : Sunlights shadow control entity
@@ -324,8 +324,8 @@ void C_GlobalLight::ClientThink()
 		//state.m_bDrawShadowFrustum = true; // Don't draw that huge debug thing
 		state.m_flShadowMapResolution = m_bHightResMode ? r_flashlightdepthres_glight.GetFloat() * 2 : r_flashlightdepthres_glight.GetFloat();
 		state.m_flShadowFilterSize = m_bHightResMode ? .7 : .5;
-		state.m_flShadowSlopeScaleDepthBias = m_bCustomBiasEnable ? m_flSlopeScaleDepthBias : mat_slopescaledepthbias_shadowmap.GetFloat();
-		state.m_flShadowDepthBias = m_bCustomBiasEnable ? m_flDepthBias : mat_depthbias_shadowmap.GetFloat();
+		state.m_flShadowSlopeScaleDepthBias = m_bCustomBiasEnable ? m_flSlopeScaleDepthBias : cl_globallight_slopescaledepthbias_shadowmap.GetFloat();
+		state.m_flShadowDepthBias = m_bCustomBiasEnable ? m_flDepthBias : cl_globallight_depthbias_shadowmap.GetFloat();
 		state.m_bEnableShadows = m_bEnableShadows;
 		state.m_pSpotlightTexture = m_SpotlightTexture;
 		state.m_nSpotlightTextureFrame = m_nSpotlightTextureFrame;
@@ -338,7 +338,7 @@ void C_GlobalLight::ClientThink()
 		state.m_nSpotlightTextureFrame = 0;
 #endif
 
-		state.m_nShadowQuality = 1; // Allow entity to affect shadow quality
+		state.m_nShadowQuality = cl_globallight_shadow_filter_mode.GetInt(); // Allow entity to affect shadow quality
 //		state.m_bShadowHighRes = true;
 
 		if ( m_bOldEnableShadows != m_bEnableShadows )

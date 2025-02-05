@@ -212,12 +212,14 @@ BEGIN_VS_SHADER( SDK_DecalModulate_dx9,
 #ifdef MAPBASE // This fixes blood decals, etc. not showing up under flashlights.
 			//bHasFlashlight = pShaderAPI->InFlashlightMode();
 			bool bFlashlightShadows = false;
+			int shadowdepth_filter_mode = 0;
 			if ( bHasFlashlight )
 			{
 				VMatrix worldToTexture;
 				ITexture *pFlashlightDepthTexture;
 				FlashlightState_t state = pShaderAPI->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
 				bFlashlightShadows = state.m_bEnableShadows && ( pFlashlightDepthTexture != NULL );
+				shadowdepth_filter_mode = state.m_nShadowQuality;
 
 				if( pFlashlightDepthTexture && g_pConfig->ShadowDepthTexture() && state.m_bEnableShadows )
 				{
@@ -321,7 +323,7 @@ BEGIN_VS_SHADER( SDK_DecalModulate_dx9,
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
 #ifdef MAPBASE
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
-				SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, IV_CHECK_SHADOWDEPTH_FILTER_COMBO(bFlashlightShadows));
+				SET_DYNAMIC_PIXEL_SHADER_COMBO(PROJECTEDSHADOWFILTERMODE, IV_CHECK_SHADOWDEPTH_FILTER_COMBO(bFlashlightShadows, shadowdepth_filter_mode));
 #endif
 				SET_DYNAMIC_PIXEL_SHADER( SDK_decalmodulate_ps30 );
 

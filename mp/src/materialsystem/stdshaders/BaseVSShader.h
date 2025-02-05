@@ -30,7 +30,7 @@
 extern ConVar mat_specular_disable_on_missing;
 #endif
 
-#define IV_CHECK_SHADOWDEPTH_FILTER_COMBO(flashlightstate) flashlightstate ? r_flashlightdepth_filter_mode.GetInt() : 0
+#define IV_CHECK_SHADOWDEPTH_FILTER_COMBO(flashlightstate, shadow_mode) flashlightstate ? shadow_mode < 0 ? r_flashlightdepth_filter_mode.GetInt() : shadow_mode : 0
 
 //-----------------------------------------------------------------------------
 // Helper macro for vertex shaders

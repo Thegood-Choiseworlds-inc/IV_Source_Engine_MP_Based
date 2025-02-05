@@ -52,6 +52,8 @@ public:
 	void InputSetLightColor( inputdata_t &inputdata );
 	void InputSetSpotlightTexture( inputdata_t &inputdata );
 	void InputSetAmbient( inputdata_t &inputdata );
+	void InputSetShadowDepthBias(inputdata_t &inputdata) { m_flShadowDepthBias = inputdata.value.Float(); }
+	void InputSetShadowSlopeScaleDepthBias(inputdata_t &inputdata) { m_flShadowSlopeScaleDepthBias = inputdata.value.Float(); }
 	void InputSetLightDistanceSupportState(inputdata_t &inputdata) { m_bLightDistanceSupport = inputdata.value.Bool(); }
 	void InputSetLightDistanceControlFarZ(inputdata_t &inputdata) { m_bLightDistanceControlFarZ = inputdata.value.Bool(); }
 	void InputSetLightDistanceNear(inputdata_t &inputdata) { m_flLightDistanceNear = inputdata.value.Float(); }
@@ -115,6 +117,8 @@ private:
 	CNetworkVar(bool, m_bLightDistanceControlFarZ);
 	CNetworkVar(float, m_flLightDistanceNear);
 	CNetworkVar(float, m_flLightDistanceFar);
+	CNetworkVar(float, m_flShadowDepthBias);
+	CNetworkVar(float, m_flShadowSlopeScaleDepthBias);
 	CNetworkVar( int, m_nShadowQuality );
 #if IVBASE && IV_SHADOWS_ADVANCED
 	CNetworkVar(int, m_nShadowResMode);
