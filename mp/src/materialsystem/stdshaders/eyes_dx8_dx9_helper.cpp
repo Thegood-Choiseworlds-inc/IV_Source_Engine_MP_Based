@@ -34,6 +34,7 @@
 ConVar r_flashlight_version2( "r_flashlight_version2", "0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
 
 extern ConVar r_flashlightdepth_filter_mode;
+extern ConVar r_flashlight_use_two_step_shadowdepth_pass;
 
 void InitParamsEyes_DX8_DX9( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, 
 							Eyes_DX8_DX9_Vars_t &info )
@@ -248,6 +249,17 @@ static void DrawFlashlight( bool bDX9, CBaseVSShader *pShader, IMaterialVar** pa
 			VMatrix worldToTexture;
 			ITexture *pFlashlightDepthTexture;
 			FlashlightState_t flashlightState = pShaderAPI->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
+
+			if (r_flashlight_use_two_step_shadowdepth_pass.GetBool() && (pFlashlightDepthTexture == NULL || pFlashlightDepthTexture->GetActualWidth() != flashlightState.m_flShadowMapResolution))
+			{
+				const int iFlashlightShadowIndex = ((int)flashlightState.m_Color[3] >> INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST) - 1;
+				if (iFlashlightShadowIndex >= 0
+					&& iFlashlightShadowIndex <= (INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST))
+				{
+					pFlashlightDepthTexture = (ITexture*)pShaderAPI->GetIntRenderingParameter(INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + iFlashlightShadowIndex);
+				}
+			}
+
 			SetFlashLightColorFromState( flashlightState, pShaderAPI );
 
 			if( pFlashlightDepthTexture && g_pConfig->ShadowDepthTexture() && flashlightState.m_bEnableShadows )

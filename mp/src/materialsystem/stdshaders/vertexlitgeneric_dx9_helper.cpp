@@ -35,6 +35,7 @@ static ConVar r_lightwarpidentity( "r_lightwarpidentity","0", FCVAR_CHEAT );
 static ConVar mat_luxels( "mat_luxels", "0", FCVAR_CHEAT );
 
 extern ConVar r_flashlightdepth_filter_mode;
+extern ConVar r_flashlight_use_two_step_shadowdepth_pass;
 
 
 static inline bool WantsSkinShader( IMaterialVar** params, const VertexLitGeneric_DX9_Vars_t &info )
@@ -1337,6 +1338,16 @@ static void DrawVertexLitGeneric_DX9_Internal( CBaseVSShader *pShader, IMaterial
 			FlashlightState_t state = pShaderAPI->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
 			bFlashlightShadows = state.m_bEnableShadows && ( pFlashlightDepthTexture != NULL );
 			shadowdepth_filter_mode = state.m_nShadowQuality;
+
+			if (r_flashlight_use_two_step_shadowdepth_pass.GetBool() && (pFlashlightDepthTexture == NULL || pFlashlightDepthTexture->GetActualWidth() != state.m_flShadowMapResolution))
+			{
+				const int iFlashlightShadowIndex = ((int)state.m_Color[3] >> INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST) - 1;
+				if (iFlashlightShadowIndex >= 0
+					&& iFlashlightShadowIndex <= (INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST))
+				{
+					pFlashlightDepthTexture = (ITexture*)pShaderAPI->GetIntRenderingParameter(INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + iFlashlightShadowIndex);
+				}
+			}
 
 			if( pFlashlightDepthTexture && g_pConfig->ShadowDepthTexture() && state.m_bEnableShadows )
 			{

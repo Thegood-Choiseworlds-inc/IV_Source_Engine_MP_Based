@@ -62,6 +62,7 @@ ConVar mat_specular_disable_on_missing( "mat_specular_disable_on_missing", "1", 
 #endif
 
 ConVar r_flashlightdepth_filter_mode("r_flashlightdepth_filter_mode", "1", FCVAR_NONE, "Flaslight Depth Filter Mode. 0 - Legacy Noise Like Filter (More Optimized); 1 - Gausian Blur 9 Taps '3x3'; 1 - Gausian Blur 25 Taps '5x5'. 1 and 2 is Portal 2 Like, but more Stable than in Portal 2 Code");
+ConVar r_flashlight_use_two_step_shadowdepth_pass("r_flashlight_use_two_step_shadowdepth_pass", "1", FCVAR_NONE, "Use Two Steps Storaging Shadow Depth for Correct Passing Shadow for Materials (Used for Fix Decals Incorrect Shadow Pass)");
 
 // These functions are to be called from the shaders.
 
@@ -1996,16 +1997,15 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 		ITexture *pFlashlightDepthTexture;
 		FlashlightState_t flashlightState = pShaderAPI->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
 
-		/*if ( pFlashlightDepthTexture == NULL )
+		if (r_flashlight_use_two_step_shadowdepth_pass.GetBool() && (pFlashlightDepthTexture == NULL || pFlashlightDepthTexture->GetActualWidth() != flashlightState.m_flShadowMapResolution))
 		{
-			const int iFlashlightShadowIndex = ( flashlightState.m_nShadowQuality >> 16 ) - 1;
-
-			if ( iFlashlightShadowIndex >= 0
-				&& iFlashlightShadowIndex <= ( INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST ) )
+			const int iFlashlightShadowIndex = ((int)flashlightState.m_Color[3] >> INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST) - 1;
+			if (iFlashlightShadowIndex >= 0
+				&& iFlashlightShadowIndex <= (INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST))
 			{
-				pFlashlightDepthTexture = (ITexture*)pShaderAPI->GetIntRenderingParameter( INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + iFlashlightShadowIndex );
+				pFlashlightDepthTexture = (ITexture*)pShaderAPI->GetIntRenderingParameter(INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + iFlashlightShadowIndex);
 			}
-		}*/
+		}
 
 		float flFlashlightPos[4] = { XYZ( flashlightState.m_vecLightOrigin ) };
 		pShaderAPI->SetPixelShaderConstant( PSREG_FRESNEL_SPEC_PARAMS, flFlashlightPos );

@@ -31,6 +31,7 @@ ConVar iv_shader_ivwater_enable_flashlight("iv_shader_ivwater_enable_flashlight"
 ConVar iv_shader_ivwater_enable_flashlight_shadows("iv_shader_ivwater_enable_flashlight_shadows", "1", FCVAR_ARCHIVE, "Enable/Disable IVWater Shader Shadows");
 
 extern ConVar r_flashlightdepth_filter_mode;
+extern ConVar r_flashlight_use_two_step_shadowdepth_pass;
 
 DEFINE_FALLBACK_SHADER( IVWater, IVWater_DX9_HDR )
 
@@ -749,16 +750,15 @@ BEGIN_VS_SHADER( IVWater_DX90,
 
 				pShaderAPI->SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_4, worldToTexture.Base(), 4);
 
-				/*if (pFlashlightDepthTexture == NULL)
+				if (r_flashlight_use_two_step_shadowdepth_pass.GetBool() && (pFlashlightDepthTexture == NULL || pFlashlightDepthTexture->GetActualWidth() != flashlightState.m_flShadowMapResolution))
 				{
-					const int iFlashlightShadowIndex = (flashlightState.m_nShadowQuality >> 16) - 1;
-
+					const int iFlashlightShadowIndex = ((int)flashlightState.m_Color[3] >> INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST) - 1;
 					if (iFlashlightShadowIndex >= 0
 						&& iFlashlightShadowIndex <= (INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST))
 					{
 						pFlashlightDepthTexture = (ITexture*)pShaderAPI->GetIntRenderingParameter(INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + iFlashlightShadowIndex);
 					}
-				}*/
+				}
 
 				SetFlashLightColorFromState(flashlightState, pShaderAPI, PSREG_FLASHLIGHT_COLOR);
 

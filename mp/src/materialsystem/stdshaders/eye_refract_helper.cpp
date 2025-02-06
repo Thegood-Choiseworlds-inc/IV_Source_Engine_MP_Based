@@ -23,6 +23,7 @@
 static ConVar r_lightwarpidentity( "r_lightwarpidentity","0", FCVAR_CHEAT );
 
 extern ConVar r_flashlightdepth_filter_mode;
+extern ConVar r_flashlight_use_two_step_shadowdepth_pass;
 
 void InitParams_Eyes_Refract( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, Eye_Refract_Vars_t &info )
 {
@@ -247,6 +248,16 @@ void Draw_Eyes_Refract_Internal( CBaseVSShader *pShader, IMaterialVar** params, 
 			flashlightState = pShaderAPI->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
 			bFlashlightShadows = flashlightState.m_bEnableShadows && ( pFlashlightDepthTexture != NULL );
 			shadowdepth_filter_mode = flashlightState.m_nShadowQuality;
+
+			if (r_flashlight_use_two_step_shadowdepth_pass.GetBool() && (pFlashlightDepthTexture == NULL || pFlashlightDepthTexture->GetActualWidth() != flashlightState.m_flShadowMapResolution))
+			{
+				const int iFlashlightShadowIndex = ((int)flashlightState.m_Color[3] >> INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST) - 1;
+				if (iFlashlightShadowIndex >= 0
+					&& iFlashlightShadowIndex <= (INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST))
+				{
+					pFlashlightDepthTexture = (ITexture*)pShaderAPI->GetIntRenderingParameter(INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + iFlashlightShadowIndex);
+				}
+			}
 		}
 
 		pShader->BindTexture( SHADER_SAMPLER0, info.m_nCorneaTexture );				// Cornea normal

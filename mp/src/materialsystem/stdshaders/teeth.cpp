@@ -34,6 +34,7 @@ DEFINE_FALLBACK_SHADER( SDK_Teeth, SDK_Teeth_DX9 )
 extern ConVar r_flashlight_version2;
 
 extern ConVar r_flashlightdepth_filter_mode;
+extern ConVar r_flashlight_use_two_step_shadowdepth_pass;
 
 BEGIN_VS_SHADER( SDK_Teeth_DX9, "Help for SDK_Teeth_DX9" )
 
@@ -440,6 +441,17 @@ BEGIN_VS_SHADER( SDK_Teeth_DX9, "Help for SDK_Teeth_DX9" )
 			VMatrix worldToTexture;
 			ITexture *pFlashlightDepthTexture;
 			FlashlightState_t state = pShaderAPI->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
+
+			if (r_flashlight_use_two_step_shadowdepth_pass.GetBool() && (pFlashlightDepthTexture == NULL || pFlashlightDepthTexture->GetActualWidth() != state.m_flShadowMapResolution))
+			{
+				const int iFlashlightShadowIndex = ((int)state.m_Color[3] >> INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST) - 1;
+				if (iFlashlightShadowIndex >= 0
+					&& iFlashlightShadowIndex <= (INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST))
+				{
+					pFlashlightDepthTexture = (ITexture*)pShaderAPI->GetIntRenderingParameter(INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + iFlashlightShadowIndex);
+				}
+			}
+
 			SetFlashLightColorFromState( state, pShaderAPI, PSREG_FLASHLIGHT_COLOR );
 
 			bool bFlashlightShadows = g_pHardwareConfig->SupportsPixelShaders_2_b() ? state.m_bEnableShadows && ( pFlashlightDepthTexture != NULL ) : false;

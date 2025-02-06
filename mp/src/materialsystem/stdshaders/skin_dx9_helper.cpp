@@ -26,6 +26,7 @@ static ConVar r_lightwarpidentity( "r_lightwarpidentity", "0", FCVAR_CHEAT );
 static ConVar r_rimlight( "r_rimlight", "1", FCVAR_CHEAT );
 
 extern ConVar r_flashlightdepth_filter_mode;
+extern ConVar r_flashlight_use_two_step_shadowdepth_pass;
 
 // Textures may be bound to the following samplers:
 //	SHADER_SAMPLER0	 Base (Albedo) / Gloss in alpha
@@ -683,6 +684,16 @@ void DrawSkin_DX9_Internal( CBaseVSShader *pShader, IMaterialVar** params, IShad
 			FlashlightState_t state = pShaderAPI->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
 			bFlashlightShadows = state.m_bEnableShadows && ( pFlashlightDepthTexture != NULL );
 			shadowdepth_filter_mode = state.m_nShadowQuality;
+
+			if (r_flashlight_use_two_step_shadowdepth_pass.GetBool() && (pFlashlightDepthTexture == NULL || pFlashlightDepthTexture->GetActualWidth() != state.m_flShadowMapResolution))
+			{
+				const int iFlashlightShadowIndex = ((int)state.m_Color[3] >> INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST) - 1;
+				if (iFlashlightShadowIndex >= 0
+					&& iFlashlightShadowIndex <= (INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST))
+				{
+					pFlashlightDepthTexture = (ITexture*)pShaderAPI->GetIntRenderingParameter(INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + iFlashlightShadowIndex);
+				}
+			}
 
 			SetFlashLightColorFromState( state, pShaderAPI, PSREG_FLASHLIGHT_COLOR );
 

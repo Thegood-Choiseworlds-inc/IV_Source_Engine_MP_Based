@@ -26,6 +26,7 @@ ConVar mat_decalmodulate_flashdraw( "mat_decalmodulate_flashdraw", "0" );
 #endif
 
 extern ConVar r_flashlightdepth_filter_mode;
+extern ConVar r_flashlight_use_two_step_shadowdepth_pass;
 
 DEFINE_FALLBACK_SHADER( SDK_DecalModulate, SDK_DecalModulate_DX9 )
 
@@ -221,10 +222,27 @@ BEGIN_VS_SHADER( SDK_DecalModulate_dx9,
 				bFlashlightShadows = state.m_bEnableShadows && ( pFlashlightDepthTexture != NULL );
 				shadowdepth_filter_mode = state.m_nShadowQuality;
 
+				if (r_flashlight_use_two_step_shadowdepth_pass.GetBool() && (pFlashlightDepthTexture == NULL || pFlashlightDepthTexture->GetActualWidth() != state.m_flShadowMapResolution))
+				{
+					const int iFlashlightShadowIndex = ((int)state.m_Color[3] >> INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST) - 1;
+					if (iFlashlightShadowIndex >= 0
+						&& iFlashlightShadowIndex <= (INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST))
+					{
+						pFlashlightDepthTexture = (ITexture*)pShaderAPI->GetIntRenderingParameter(INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + iFlashlightShadowIndex);
+					}
+				}
+
 				if( pFlashlightDepthTexture && g_pConfig->ShadowDepthTexture() && state.m_bEnableShadows )
 				{
 					BindTexture( SHADER_SAMPLER8, pFlashlightDepthTexture, 0 );
 					pShaderAPI->BindStandardTexture( SHADER_SAMPLER6, TEXTURE_SHADOW_NOISE_2D );
+
+					// Tweaks associated with a given flashlight
+					float tweaks[4];
+					tweaks[0] = ShadowFilterFromState(state);
+					tweaks[1] = ShadowAttenFromState(state);
+					HashShadow2DJitter(state.m_flShadowJitterSeed, &tweaks[2], &tweaks[3]);
+					pShaderAPI->SetPixelShaderConstant(19, tweaks, 1);
 				}
 
 				SetFlashLightColorFromState( state, pShaderAPI, 28 );

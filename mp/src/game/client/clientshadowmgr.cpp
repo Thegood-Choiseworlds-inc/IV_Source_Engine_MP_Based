@@ -1426,7 +1426,7 @@ static void ShadowRestoreFunc( int nChangeFlags )
 #if IVBASE && !IV_SHADOWS_ADVANCED
 #define MAX_PJ_SHADOWS 3
 #elif IV_SHADOWS_ADVANCED
-#define MAX_PJ_SHADOWS 12
+#define MAX_PJ_SHADOWS 8
 #endif
 #else
 #define MAX_PJ_SHADOWS 5
@@ -1566,6 +1566,11 @@ void CClientShadowMgr::InitDepthTextureShadows()
 #endif
 		Msg("Begin Creating Shadow Depth Render Targets...\n");
 		Msg("===========================================================================================\n");
+		if (m_nMaxDepthTextureShadows != INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST)
+		{
+			Assert(0);
+			Warning("Invalid Flashlight Depth Texture Count!!! ***Depth Texture Not Projected in Currient Game!!! FIXME!!!***");
+		}
 #if IVBASE && IV_SHADOWS_ADVANCED
 		Msg("Advanced Shadows Mode Enabled!!!\n");
 #endif
@@ -1601,7 +1606,7 @@ void CClientShadowMgr::InitDepthTextureShadows()
 				depthTex.InitRenderTarget(m_nDepthTextureResolution_glight, m_nDepthTextureResolution_glight, RT_SIZE_NO_CHANGE, dstFormat, MATERIAL_RT_DEPTH_NONE, false, strRTName);
 				Assert(depthTex->GetActualWidth() == m_nDepthTextureResolution_glight);
 			}
-			else if (i <= 6)
+			else if (i < 4)
 			{
 				depthTex.InitRenderTarget(m_nDepthTextureResolution_hight, m_nDepthTextureResolution_hight, RT_SIZE_NO_CHANGE, dstFormat, MATERIAL_RT_DEPTH_NONE, false, strRTName);
 				Assert(depthTex->GetActualWidth() == m_nDepthTextureResolution_hight);
@@ -1635,7 +1640,7 @@ void CClientShadowMgr::InitDepthTextureShadows()
 				m_nDepthTextureResolution_glight = depthTex->GetActualWidth();
 				r_flashlightdepthres_glight.SetValue(m_nDepthTextureResolution_glight);
 			}
-			else if (i <= 6 && i > 0)
+			else if (i < 4 && i > 0)
 			{
 				m_nDepthTextureResolution_hight = depthTex->GetActualWidth();
 				r_flashlightdepthres_hight.SetValue(m_nDepthTextureResolution_hight);
@@ -4421,6 +4426,12 @@ int CClientShadowMgr::BuildActiveShadowDepthList( const CViewSetup &viewSetup, i
 	GeneratePerspectiveFrustum( viewSetup.origin, viewSetup.angles, viewSetup.zNear, viewSetup.zFar, viewSetup.fov, viewSetup.m_flAspectRatio, viewFrustum );
 #endif
 
+	float fDots[1024];
+
+	// Get a general look position for 
+	Vector vViewForward;
+	AngleVectors(viewSetup.angles, &vViewForward);
+
 	int nActiveDepthShadowCount = 0;
 	for ( ClientShadowHandle_t i = m_Shadows.Head(); i != m_Shadows.InvalidIndex(); i = m_Shadows.Next(i) )
 	{
@@ -4470,8 +4481,28 @@ int CClientShadowMgr::BuildActiveShadowDepthList( const CViewSetup &viewSetup, i
 			continue;
 		}
 
+		// Calculate the approximate distance to the nearest side
+		Vector vLightDirection = flashlightState.m_vecLightOrigin - viewSetup.origin;
+		VectorNormalize(vLightDirection);
+		fDots[nActiveDepthShadowCount] = vLightDirection.Dot(vViewForward);
+
 		pActiveDepthShadows[nActiveDepthShadowCount++] = i;
 	}
+
+	// sort them
+	for (int i = 0; i < nActiveDepthShadowCount - 1; i++)
+	{
+		for (int j = 0; j < nActiveDepthShadowCount - i - 1; j++)
+		{
+			if (fDots[j] < fDots[j + 1])
+			{
+				ClientShadowHandle_t nTemp = pActiveDepthShadows[j];
+				pActiveDepthShadows[j] = pActiveDepthShadows[j + 1];
+				pActiveDepthShadows[j + 1] = nTemp;
+			}
+		}
+	}
+
 	return nActiveDepthShadowCount;
 }
 
@@ -4771,6 +4802,9 @@ void CClientShadowMgr::DrawVolumetrics_Internal(FlashlightState_t &flashlightSta
 	}
 }
 
+ConVar cl_check_projeted_textures_on_active_map("cl_check_projeted_textures_on_active_map", "0", FCVAR_CHEAT, "Check Active Projected Textures on Currient Loaded Map");
+ConVarRef r_flashlight_use_two_step_shadowdepth_pass("r_flashlight_use_two_step_shadowdepth_pass");
+
 //-----------------------------------------------------------------------------
 // Re-render shadow depth textures that lie in the leaf list
 //-----------------------------------------------------------------------------
@@ -4795,6 +4829,21 @@ void CClientShadowMgr::ComputeShadowDepthTextures( const CViewSetup &viewSetup )
 	// Build list of active render-to-texture shadows
 	ClientShadowHandle_t pActiveDepthShadows[1024];
 	int nActiveDepthShadowCount = BuildActiveShadowDepthList( viewSetup, ARRAYSIZE( pActiveDepthShadows ), pActiveDepthShadows );
+
+	int max_allowed_projected_shadows_count = INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST;
+	if (nActiveDepthShadowCount > max_allowed_projected_shadows_count)
+	{
+		static int fails_count = 0;
+		Assert(0);
+
+		if (fails_count < 10)
+		{
+			Warning("Invalid Flashlight Depth List!!! Max Allowed - '%d!!!\n'", max_allowed_projected_shadows_count);
+			fails_count++;
+		}
+
+		return;
+	}
 
 	// Iterate over all existing textures and allocate shadow textures
 	bool bDebugFrustum = r_flashlightdrawfrustum.GetBool();
@@ -4826,14 +4875,21 @@ void CClientShadowMgr::ComputeShadowDepthTextures( const CViewSetup &viewSetup )
 
 			Assert(0);
 			shadowmgr->SetFlashlightDepthTexture( shadow.m_ShadowHandle, NULL, 0 );
-/*#ifdef MAPBASE
-			if ( j <= ( INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST ) )
-			{
-				pRenderContext->SetIntRenderingParameter( INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + j, 0 );
-			}
-#endif*/
+#ifdef MAPBASE
+			if (r_flashlight_use_two_step_shadowdepth_pass.GetBool())
+				pRenderContext->SetIntRenderingParameter(INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + j, 0);
+#endif
 			continue;
 		}
+
+#ifdef MAPBASE
+		if (r_flashlight_use_two_step_shadowdepth_pass.GetBool())
+		{
+			pRenderContext->SetIntRenderingParameter(INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + j, int((ITexture*)shadowDepthTexture));
+			flashlightState.m_Color[3] = (j + 1) << INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST;
+			shadowmgr->UpdateFlashlightState(shadow.m_ShadowHandle, flashlightState);
+		}
+#endif
 
 		CViewSetup shadowView;
 #ifndef MAPBASE
@@ -4901,21 +4957,19 @@ void CClientShadowMgr::ComputeShadowDepthTextures( const CViewSetup &viewSetup )
 		view->UpdateShadowDepthTexture( dummy_out, shadowDepthTexture, shadowView );
 #endif
 
-/*#ifdef MAPBASE
-		if ( j <= ( INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST ) )
-		{
-			pRenderContext->SetIntRenderingParameter( INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + j, int((ITexture*)shadowDepthTexture) );
-
-			FlashlightState_t state = shadowmgr->GetFlashlightState( shadow.m_ShadowHandle );
-
-			state.m_nShadowQuality = state.m_nShadowQuality | ( ( j + 1 ) << 16 );
-
-			shadowmgr->UpdateFlashlightState( shadow.m_ShadowHandle, state );
-		}
-#endif*/
-
 		// Associate the shadow depth texture and stencil bit with the flashlight for use during scene rendering
 		shadowmgr->SetFlashlightDepthTexture( shadow.m_ShadowHandle, shadowDepthTexture, 0 );
+
+		if (cl_check_projeted_textures_on_active_map.GetInt() > 1)
+		{
+			engine->Con_NPrintf(j, "[Flashlight #%d] Shadow Resolution - '%d'; NearZ - '%d'; FarZ - '%d'; Filter Scale - '%d'; Filter Mode - '%d'; Currient Brightness - '%d'", (j + 1), flashlightState.m_flShadowMapResolution,
+				flashlightState.m_NearZ, flashlightState.m_FarZ, flashlightState.m_flShadowFilterSize, flashlightState.m_nShadowQuality, flashlightState.m_fBrightnessScale);
+		}
+	}
+
+	if (cl_check_projeted_textures_on_active_map.GetBool())
+	{
+		engine->Con_NPrintf(nActiveDepthShadowCount, "%d Total active flashlights. Out of Max - %d", nActiveDepthShadowCount, max_allowed_projected_shadows_count);
 	}
 
 	SetViewFlashlightState( nActiveDepthShadowCount, pActiveDepthShadows );

@@ -18,6 +18,7 @@
 #include "tier0/memdbgon.h"
 
 extern ConVar r_flashlight_version2;
+extern ConVar r_flashlight_use_two_step_shadowdepth_pass;
 
 // FIXME: Need to make a dx9 version so that "CENTROID" works.
 BEGIN_VS_SHADER( SDK_WorldTwoTextureBlend, 
@@ -330,6 +331,16 @@ END_SHADER_PARAMS
 				ITexture *pFlashlightDepthTexture;
 				FlashlightState_t state = pShaderAPI->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
 				bFlashlightShadows = state.m_bEnableShadows && ( pFlashlightDepthTexture != NULL );
+
+				if (r_flashlight_use_two_step_shadowdepth_pass.GetBool() && (pFlashlightDepthTexture == NULL || pFlashlightDepthTexture->GetActualWidth() != state.m_flShadowMapResolution))
+				{
+					const int iFlashlightShadowIndex = ((int)state.m_Color[3] >> INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST) - 1;
+					if (iFlashlightShadowIndex >= 0
+						&& iFlashlightShadowIndex <= (INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST))
+					{
+						pFlashlightDepthTexture = (ITexture*)pShaderAPI->GetIntRenderingParameter(INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + iFlashlightShadowIndex);
+					}
+				}
 
 				SetFlashLightColorFromState( state, pShaderAPI );
 

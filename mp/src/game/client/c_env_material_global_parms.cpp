@@ -57,7 +57,7 @@ C_MatGlobalParmsControl::C_MatGlobalParmsControl()
 		IV_Force_Reload_All_Materials();
 	}*/
 
-	Warning("Material Global Parms Logic is Unfinished Yet and Disabled by Default!!! Use Material Parms Override in Console Insead of That Entity!!!");
+	Warning("Material Global Parms Logic is Unfinished Yet and Disabled by Default!!! Use Material Parms Override in Console Insead of That Entity!!!\n");
 }
 
 //------------------------------------------------------------------------------
@@ -90,7 +90,7 @@ void C_MatGlobalParmsControl::OnDataChanged(DataUpdateType_t updateType)
 	//IV Note: Force Reload All Materials for Apply Changes!!!
 	IV_Force_Reload_All_Materials();*/
 
-	Warning("[MATERIALS DATA CHANGE ABORTED!!!] Material Global Parms Logic is Unfinished Yet and Disabled by Default!!! Use Material Parms Override in Console Insead of That Entity!!!");
+	Warning("[MATERIALS DATA CHANGE ABORTED!!!] Material Global Parms Logic is Unfinished Yet and Disabled by Default!!! Use Material Parms Override in Console Insead of That Entity!!!\n");
 }
 
 //------------------------------------------------------------------------------

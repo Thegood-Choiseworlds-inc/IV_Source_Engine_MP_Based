@@ -46,6 +46,7 @@ ConVar ivdev_engine_force_lightmapped_phong("ivdev_engine_force_lightmapped_phon
 ConVar ivdev_engine_force_envmap_anisotropy("ivdev_engine_force_envmap_anisotropy", "0", FCVAR_DEVELOPMENTONLY, "Engine CallBack Force Envmap Anisotropy On Lightmapped Materials");
 
 extern ConVar r_flashlightdepth_filter_mode;
+extern ConVar r_flashlight_use_two_step_shadowdepth_pass;
 
 class CLightmappedGeneric_DX9_Context : public CBasePerMaterialContextData
 {
@@ -600,16 +601,15 @@ void DrawLightmappedGenericFlashlight_DX9_Internal( CBaseVSShader *pShader, IMat
 		ITexture *pFlashlightDepthTexture;
 		FlashlightState_t flashlightState = pShaderAPI->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
 
-		/*if ( pFlashlightDepthTexture == NULL )
+		if (r_flashlight_use_two_step_shadowdepth_pass.GetBool() && (pFlashlightDepthTexture == NULL || pFlashlightDepthTexture->GetActualWidth() != flashlightState.m_flShadowMapResolution))
 		{
-			const int iFlashlightShadowIndex = ( flashlightState.m_nShadowQuality >> 16 ) - 1;
-
-			if ( iFlashlightShadowIndex >= 0
-				&& iFlashlightShadowIndex <= ( INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST ) )
+			const int iFlashlightShadowIndex = ((int)flashlightState.m_Color[3] >> INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST) - 1;
+			if (iFlashlightShadowIndex >= 0
+				&& iFlashlightShadowIndex <= (INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_LAST - INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST))
 			{
-				pFlashlightDepthTexture = (ITexture*)pShaderAPI->GetIntRenderingParameter( INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + iFlashlightShadowIndex );
+				pFlashlightDepthTexture = (ITexture*)pShaderAPI->GetIntRenderingParameter(INT_FLASHLIGHT_DEPTHTEXTURE_FALLBACK_FIRST + iFlashlightShadowIndex);
 			}
-		}*/
+		}
 
 		SetFlashLightColorFromState( flashlightState, pShaderAPI );
 
